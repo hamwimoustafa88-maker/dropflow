@@ -175,5 +175,12 @@
   "opt.aspect.free": "Free",
   "opt.aspect.original": "Original",
   "settings.language.invalid": "Pick a language from the list.",
-  "settings.concurrency.invalid": "Parallel jobs must be between 1 and 16."
+  "settings.concurrency.invalid": "Parallel jobs must be between 1 and 16.",
+  "tray.update": "Check for updates",
+  "update.checking": "Checking for updates…",
+  "update.none": "DropFlow is up to date.",
+  "update.available": "Version {0} is available",
+  "update.install": "Update and restart",
+  "update.failed": "Could not check for updates.",
+  "update.notInstalled": "Updates work for the installed version of DropFlow."
 }

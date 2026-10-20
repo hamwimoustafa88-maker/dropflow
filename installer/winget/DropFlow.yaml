@@ -1,0 +1,35 @@
+# Winget manifest templates for DropFlow. Fill the placeholders with installer/winget/make-manifests.ps1
+# and submit the result to https://github.com/microsoft/winget-pkgs (see docs/release.md).
+# Schema 1.9.0 (singleton manifest).
+PackageIdentifier: DropFlow.DropFlow
+PackageVersion: "{{VERSION}}"
+PackageLocale: en-US
+Publisher: DropFlow
+PublisherUrl: "{{REPO_URL}}"
+PackageName: DropFlow
+PackageUrl: "{{REPO_URL}}"
+License: GPL-3.0-or-later
+LicenseUrl: "{{REPO_URL}}/blob/main/LICENSE"
+ShortDescription: Drag, tap, convert. An offline file converter for Windows.
+Description: >-
+  DropFlow shows a radial wheel while you drag a file. Convert images, audio, video, PDF and documents,
+  compress, crop, trim, merge and more — all on your device, nothing is uploaded.
+Moniker: dropflow
+Tags:
+  - converter
+  - pdf
+  - image
+  - video
+  - offline
+  - open-source
+Installers:
+  - Architecture: x64
+    InstallerType: exe
+    Scope: user
+    InstallerUrl: "{{INSTALLER_URL}}"
+    InstallerSha256: "{{INSTALLER_SHA256}}"
+    InstallerSwitches:
+      Silent: --silent
+      SilentWithProgress: --silent
+ManifestType: singleton
+ManifestVersion: 1.9.0

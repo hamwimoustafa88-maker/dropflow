@@ -83,6 +83,7 @@ internal sealed class AppHost : IDisposable
     private SettingsWindow? _settingsWindow;
     private HistoryWindow? _historyWindow;
     private Task<IReadOnlyList<string>>? _selectionTask;
+    private readonly UpdateService _updates = new("https://github.com/hamwimoustafa88-maker/dropflow");
 
     public AppHost(Dispatcher ui)
     {
@@ -149,6 +150,9 @@ internal sealed class AppHost : IDisposable
         CreateTray();
         StartHooks();
         RegisterHotkey();
+
+        // Quietly look for an update shortly after start (installed copies only).
+        _ = Task.Delay(TimeSpan.FromSeconds(45)).ContinueWith(_ => _ui.InvokeAsync(() => CheckForUpdatesAsync(interactive: false)), TaskScheduler.Default);
 
         if (Settings.ShowFirstRunTips)
         {
@@ -391,6 +395,31 @@ internal sealed class AppHost : IDisposable
         else ShowShelf();
     }
 
+    private async Task CheckForUpdatesAsync(bool interactive)
+    {
+        if (interactive) ShowToast(Loc["update.checking"], null, -1, [], null);
+        var check = await _updates.CheckAsync();
+        switch (check.State)
+        {
+            case UpdateState.Available:
+                ShowToast(Loc.Format("update.available", check.Version!), null, null,
+                    [(Loc["update.install"], () => _ = _updates.InstallAsync())], null);
+                break;
+            case UpdateState.UpToDate when interactive:
+                ShowToast(Loc["update.none"], null, null, [], TimeSpan.FromSeconds(5));
+                break;
+            case UpdateState.NotInstalled when interactive:
+                ShowToast(Loc["update.notInstalled"], null, null, [], TimeSpan.FromSeconds(6));
+                break;
+            case UpdateState.Failed when interactive:
+                ShowToast(Loc["update.failed"], check.Error, null, [], TimeSpan.FromSeconds(6));
+                break;
+            default:
+                _toast?.Hide();
+                break;
+        }
+    }
+
     // ------------------------------------------------------------------------------------------------------------------ settings
 
     private IReadOnlyList<string> ApplyFromWindow(AppSettings s, bool startup, bool menu)
@@ -446,6 +475,7 @@ internal sealed class AppHost : IDisposable
         menu.Items.Add(Item("tray.shelf", ToggleShelf));
         menu.Items.Add(Item("tray.history", ShowHistory));
         menu.Items.Add(Item("tray.settings", ShowSettings));
+        menu.Items.Add(Item("tray.update", () => _ = CheckForUpdatesAsync(interactive: true)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("tray.quit", () => Application.Current.Shutdown()));
 

@@ -1,0 +1,73 @@
+name: Release
+
+# Push a tag like v0.1.0 to build the installer, the update feed and the CLI, and publish them as a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version from the tag
+        id: v
+        shell: pwsh
+        run: echo "version=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+
+      - name: Test
+        run: dotnet test DropFlow.sln -c Release
+
+      - name: Publish the app (self-contained)
+        run: >
+          dotnet publish src/DropFlow.App -c Release -r win-x64 --self-contained
+          -p:Version=${{ steps.v.outputs.version }} -o publish/app
+
+      - name: Publish the CLI
+        run: >
+          dotnet publish src/DropFlow.Cli -c Release -r win-x64 --self-contained
+          -p:Version=${{ steps.v.outputs.version }} -o publish/cli
+
+      - name: Install Velopack's packer
+        run: dotnet tool install -g vpk
+
+      - name: Fetch the previous release so deltas can be built (first release has none)
+        continue-on-error: true
+        run: vpk download github --repoUrl ${{ github.server_url }}/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack the installer and update feed
+        shell: pwsh
+        run: |
+          $sign = @()
+          # Code signing: set the SIGN_PARAMS secret (for example "/a /f cert.pfx /p ... /fd sha256 /tr http://timestamp.digicert.com /td sha256").
+          # Without it the installer is unsigned and Windows SmartScreen will warn on first run.
+          if ($env:SIGN_PARAMS) { $sign = @("--signParams", $env:SIGN_PARAMS) }
+          vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }} `
+            --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico @sign
+        env:
+          SIGN_PARAMS: ${{ secrets.SIGN_PARAMS }}
+
+      - name: Zip the CLI and write checksums
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/cli/* -DestinationPath Releases/dropflow-cli-win-x64.zip
+          Get-ChildItem Releases -File | Where-Object { $_.Name -notlike '*.json' -and $_.Name -notlike 'SHA256SUMS*' } |
+            ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
+            Out-File Releases/SHA256SUMS.txt -Encoding ascii
+
+      - name: Publish the GitHub Release
+        run: >
+          vpk upload github --repoUrl ${{ github.server_url }}/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }} --publish --releaseName "DropFlow ${{ steps.v.outputs.version }}" --tag ${{ github.ref_name }}
+
+      - name: Attach the CLI zip and checksums
+        run: gh release upload ${{ github.ref_name }} Releases/dropflow-cli-win-x64.zip Releases/SHA256SUMS.txt --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

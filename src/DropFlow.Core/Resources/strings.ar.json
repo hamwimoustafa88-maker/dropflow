@@ -175,5 +175,12 @@
   "opt.aspect.free": "حر",
   "opt.aspect.original": "الأصلية",
   "settings.language.invalid": "اختر لغة من القائمة.",
-  "settings.concurrency.invalid": "عدد المهام المتوازية بين 1 و16."
+  "settings.concurrency.invalid": "عدد المهام المتوازية بين 1 و16.",
+  "tray.update": "البحث عن تحديثات",
+  "update.checking": "جارٍ البحث عن تحديثات…",
+  "update.none": "DropFlow محدَّث.",
+  "update.available": "الإصدار {0} متاح",
+  "update.install": "حدّث وأعد التشغيل",
+  "update.failed": "تعذّر البحث عن تحديثات.",
+  "update.notInstalled": "التحديثات تعمل مع النسخة المثبّتة من DropFlow."
 }

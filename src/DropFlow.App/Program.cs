@@ -11,6 +11,9 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // Velopack installer/updater hooks (--veloapp-install etc.) run here and exit; a normal launch continues.
+        Velopack.VelopackApp.Build().Run();
+
         var command = AppCommandLine.Parse(args);
         using var instance = SingleInstance.Acquire(InstanceName);
 

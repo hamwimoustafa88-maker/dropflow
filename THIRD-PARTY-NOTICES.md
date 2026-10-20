@@ -10,6 +10,8 @@ licenses are listed in `docs/plan.md` §3; this file lists what is **actually us
 | Tailwind CSS (+ @tailwindcss/turbopack) | 4.x | MIT | Styling (`web/`) | 2026-10-20 |
 | next-intl | 4.14.9 | MIT | Arabic/English routing and messages (`web/`) | 2026-10-20 |
 | TypeScript, ESLint, eslint-config-next, @types/* | 5.x / 9.x | Apache-2.0 / MIT | Dev tooling (`web/`) | 2026-10-20 |
+| xunit, xunit.runner.visualstudio | 2.x | Apache-2.0 | Desktop unit tests | 2026-10-20 |
+| Microsoft.NET.Test.Sdk | 17.x | MIT | Desktop test host | 2026-10-20 |
 | IBM Plex Sans Arabic, IBM Plex Mono (fonts) | — | SIL OFL 1.1 | Typography, self-hosted at build via `next/font/google` | 2026-10-20 |
 
 Notes

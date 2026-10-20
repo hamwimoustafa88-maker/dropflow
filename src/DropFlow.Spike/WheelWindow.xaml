@@ -1,0 +1,21 @@
+<Window x:Class="DropFlow.Spike.WheelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DropFlow wheel (spike)"
+        Width="360" Height="360"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        WindowStartupLocation="Manual" Left="-32000" Top="-32000"
+        AllowDrop="True" Focusable="False">
+    <!-- #01000000 is nearly invisible but still hit-testable; a fully transparent layered window would not receive OLE drops. -->
+    <Grid Background="#01000000"
+          AllowDrop="True"
+          DragEnter="OnDragEnter" DragOver="OnDragOver" DragLeave="OnDragLeave" Drop="OnDrop">
+        <Ellipse x:Name="Ring" Margin="8" Fill="#E6121A38" Stroke="#818CF8" StrokeThickness="4" />
+        <Ellipse Margin="120" Fill="#0A0F22" Stroke="#2A3563" StrokeThickness="2" />
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+            <TextBlock x:Name="TitleText" Text="Convert" FontSize="26" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
+            <TextBlock x:Name="HintText" Text="drop files here" FontSize="13" Foreground="#A5AEDA" HorizontalAlignment="Center" Margin="0,4,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>

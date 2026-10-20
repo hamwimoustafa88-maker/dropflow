@@ -5,8 +5,10 @@ and a radial wheel appears to convert, process, or act on files 100% locally —
 License: GPL-3.0-or-later. Audience: Arabic + English users.
 
 **Status:** Planning + repo bootstrap done. Phase 1 landing page built in `web/` (ar/en, static, builds clean) but NOT deployed:
-CTAs are disabled "coming soon" because no release/repo URL exists yet. Desktop code not started — Phase 0 spike is next
-and needs the .NET 10 SDK, which is NOT installed (`dotnet --list-sdks` is empty).
+CTAs are disabled "coming soon" because no release/repo URL exists yet. Phase 0 spike code is written and builds
+(`src/DropFlow.Hooks` + `src/DropFlow.Spike`, 16 passing unit tests) but the **manual checklist in `docs/phase0-checklist.md`
+has not been run** (needs a human dragging files; Windows 11 and multi-monitor/DPI untested). Do not start Phase 1 desktop
+work until it passes on Windows 10 and 11. .NET 10 SDK 10.0.402 is installed (new terminals may need a restart to see it on PATH).
 **Read before any task:** `docs/plan.md` (roadmap, Arabic), `docs/feature-catalog.md` (generated tool list) and
 `docs/reference/tangerine-features.md` (parity baseline — DropFlow must never ship less than Tangerine in a category).
 
@@ -17,14 +19,18 @@ and needs the .NET 10 SDK, which is NOT installed (`dotnet --list-sdks` is empty
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
 - Web: Next.js + TypeScript + Tailwind + next-intl on Vercel; in-browser WASM (ffmpeg.wasm, pdf-lib, pdf.js,
   qpdf/Ghostscript wasm, Tesseract.js, transformers.js)
-- Tests: xUnit + FluentAssertions (desktop), Vitest + Playwright (web) · Installer: Velopack
+- Tests: xUnit with plain `Assert` (desktop — FluentAssertions 8+ is commercially licensed, do not add it), Vitest + Playwright (web) · Installer: Velopack
 
 ## Repository map
 | Path | Responsibility |
 |---|---|
 | catalog/tools.json | Single source of truth for all tools/conversions (read by desktop, web, landing) |
 | catalog/build.mjs | Validates the catalog, checks Tangerine parity, regenerates docs/feature-catalog.md |
-| src/DropFlow.* | Desktop solution (not created yet): App, Hooks, Overlay, Core, Engines, Encoder, AI, Shell, Cli |
+| DropFlow.sln | Desktop solution |
+| src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine) and `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread) |
+| src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel (`WheelWindow`, `WindowNative`) |
+| src/DropFlow.* (planned) | App, Overlay, Core, Engines, Encoder, AI, Shell, Cli — created as phases start |
+| tests/DropFlow.Hooks.Tests | xUnit tests for the state machine |
 | web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
 | tests/ | Desktop tests; tests/samples holds one sample per format |
 | tools/ | Scripts that download engine binaries (never commit binaries) |
@@ -32,7 +38,7 @@ and needs the .NET 10 SDK, which is NOT installed (`dotnet --list-sdks` is empty
 
 ## Commands
 - Catalog: `node catalog/build.mjs` (run after any edit to catalog/tools.json; must print OK)
-- Desktop (once created): `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.App`
+- Desktop: `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.Spike` (single test: `dotnet test --filter "FullyQualifiedName~Name"`)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
 
 ## Architecture rules
@@ -75,6 +81,11 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-20 — Phase 0 spike (code only): installed .NET 10 SDK 10.0.402 via winget (user approved); created DropFlow.sln,
+  src/DropFlow.Hooks (DragDetector + LowLevelInputHook), src/DropFlow.Spike (WPF, PerMonitorV2, asInvoker manifest, non-activating
+  topmost drop-target wheel using a #01000000 hit-testable background and SetWindowPos for per-monitor DPI placement),
+  tests/DropFlow.Hooks.Tests (16 tests, mutation-checked), docs/phase0-checklist.md. Spike smoke-launched OK on Windows 10 Pro 19045.
+  Dropped FluentAssertions (v8+ commercial licence) in favour of plain xUnit asserts. Manual drag tests NOT yet run.
 - 2026-10-20 — Phase 1 landing page: scaffolded web/ (Next.js 16.4, Tailwind 4, next-intl 4; ar default + en, RTL, static
   SSG, proxy redirects "/" by Accept-Language); own indigo/cyan identity + IBM Plex Sans Arabic; interactive simulated wheel
   demo (convert/tools/actions), category explorer, PDF suite, media studio, privacy, roadmap; stats come from the catalog

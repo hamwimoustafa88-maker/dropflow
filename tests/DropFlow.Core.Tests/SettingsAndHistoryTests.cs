@@ -152,6 +152,13 @@ public class SettingsValidatorTests
         Assert.Equal(["keys.duplicate", "hotkey.invalid", "language.invalid", "concurrency.invalid"], SettingsValidator.Validate(bad));
     }
 
+    [Fact]
+    public void The_two_global_shortcuts_must_differ_and_both_be_valid()
+    {
+        Assert.Equal(["hotkey.duplicate"], SettingsValidator.Validate(new AppSettings { GlobalHotkey = "Ctrl+Alt+D", ClipboardHotkey = "ctrl + alt + d" }));
+        Assert.Equal(["hotkey.invalid"], SettingsValidator.Validate(new AppSettings { ClipboardHotkey = "V" }));
+    }
+
     [Theory]
     [InlineData("Ctrl+Shift+F9")]
     [InlineData("Win+Alt+Space")]

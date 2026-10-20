@@ -182,5 +182,19 @@
   "update.available": "الإصدار {0} متاح",
   "update.install": "حدّث وأعد التشغيل",
   "update.failed": "تعذّر البحث عن تحديثات.",
-  "update.notInstalled": "التحديثات تعمل مع النسخة المثبّتة من DropFlow."
+  "update.notInstalled": "التحديثات تعمل مع النسخة المثبّتة من DropFlow.",
+  "settings.hotkey.duplicate": "يجب أن يختلف الاختصاران.",
+  "settings.clipboardHotkey": "الاختصار العام (الحافظة ← العجلة)",
+  "settings.automation": "المجلدات المراقَبة",
+  "settings.automation.hint": "الملفات الجديدة التي تصل إلى المجلد تُعالَج تلقائياً. تُحفظ النتائج في مجلد فرعي باسم «DropFlow».",
+  "settings.watch.add": "إضافة مجلد…",
+  "settings.watch.remove": "إزالة",
+  "settings.watch.empty": "لا توجد مجلدات مراقَبة بعد.",
+  "settings.watch.recipe": "نفّذ",
+  "recipe.web-photo": "صور جاهزة للويب (بلا موقع، 1920 بكسل، WebP)",
+  "recipe.share-safe-photo": "صور للمشاركة (بلا موقع، أصغر حجماً)",
+  "recipe.pdf-light": "ملفات PDF أصغر",
+  "recipe.heic-to-jpg": "صور الهاتف إلى JPG",
+  "watch.done": "تمت معالجة {0}",
+  "clipboard.empty": "لا يوجد في الحافظة ما يمكن استخدامه."
 }

@@ -34,6 +34,9 @@ public sealed record AppSettings
     /// <summary>Global shortcut that opens the floating shelf / converts the clipboard.</summary>
     public string GlobalHotkey { get; init; } = "Ctrl+Alt+D";
 
+    /// <summary>Global shortcut that opens the wheel for whatever is on the clipboard (image, files or text).</summary>
+    public string ClipboardHotkey { get; init; } = "Ctrl+Alt+V";
+
     /// <summary>Folder where downloaded engines and models live. Null = %LOCALAPPDATA%\DropFlow.</summary>
     public string? DataDirectory { get; init; }
 

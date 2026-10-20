@@ -182,5 +182,19 @@
   "update.available": "Version {0} is available",
   "update.install": "Update and restart",
   "update.failed": "Could not check for updates.",
-  "update.notInstalled": "Updates work for the installed version of DropFlow."
+  "update.notInstalled": "Updates work for the installed version of DropFlow.",
+  "settings.hotkey.duplicate": "The two shortcuts must be different.",
+  "settings.clipboardHotkey": "Global shortcut (clipboard → wheel)",
+  "settings.automation": "Watched folders",
+  "settings.automation.hint": "New files that arrive in a folder are processed automatically. Results go to a “DropFlow” subfolder.",
+  "settings.watch.add": "Add folder…",
+  "settings.watch.remove": "Remove",
+  "settings.watch.empty": "No watched folders yet.",
+  "settings.watch.recipe": "Do this",
+  "recipe.web-photo": "Web-ready photos (no location, 1920 px, WebP)",
+  "recipe.share-safe-photo": "Shareable photos (no location, smaller)",
+  "recipe.pdf-light": "Smaller PDFs",
+  "recipe.heic-to-jpg": "Phone photos to JPG",
+  "watch.done": "Processed {0}",
+  "clipboard.empty": "Nothing usable on the clipboard."
 }

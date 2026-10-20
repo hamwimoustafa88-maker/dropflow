@@ -77,10 +77,9 @@ internal static class SystemIntegration
 }
 
 /// <summary>A system-wide shortcut (RegisterHotKey) delivered through a hidden message window.</summary>
-internal sealed class GlobalHotkey : IDisposable
+internal sealed class GlobalHotkey(int id) : IDisposable
 {
     private const int WM_HOTKEY = 0x0312;
-    private const int Id = 0xD0F1;
 
     [DllImport("user32.dll")] private static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll")] private static extern bool UnregisterHotKey(nint hWnd, int id);
@@ -97,13 +96,13 @@ internal sealed class GlobalHotkey : IDisposable
         Unregister();
         _source ??= CreateWindow();
         // MOD_NOREPEAT (0x4000) so holding the keys does not fire repeatedly
-        IsRegistered = RegisterHotKey(_source.Handle, Id, hotkey.Modifiers | 0x4000, hotkey.VirtualKey);
+        IsRegistered = RegisterHotKey(_source.Handle, id, hotkey.Modifiers | 0x4000, hotkey.VirtualKey);
         return IsRegistered;
     }
 
     public void Unregister()
     {
-        if (_source is not null && IsRegistered) UnregisterHotKey(_source.Handle, Id);
+        if (_source is not null && IsRegistered) UnregisterHotKey(_source.Handle, id);
         IsRegistered = false;
     }
 
@@ -112,7 +111,7 @@ internal sealed class GlobalHotkey : IDisposable
         var src = new HwndSource(new HwndSourceParameters("DropFlow.HotkeySink") { Width = 0, Height = 0, WindowStyle = 0 });
         src.AddHook((nint hwnd, int msg, nint wParam, nint lParam, ref bool handled) =>
         {
-            if (msg == WM_HOTKEY && wParam == Id)
+            if (msg == WM_HOTKEY && wParam == id)
             {
                 Pressed?.Invoke();
                 handled = true;

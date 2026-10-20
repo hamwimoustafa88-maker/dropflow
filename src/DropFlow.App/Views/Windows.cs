@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using DropFlow.Core.Automation;
 using DropFlow.Core.History;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Settings;
-using DropFlow.Engines.Common;
 
 namespace DropFlow.App.Views;
 
@@ -112,30 +112,45 @@ internal static class Explorer
     }
 }
 
-/// <summary>Settings: language, wheel keys, startup, right-click menu, shortcut, engines.</summary>
+/// <summary>Everything the settings window needs from the host (one record, so the window has no long constructor).</summary>
+internal sealed record SettingsContext(
+    AppSettings Current,
+    bool StartupOn,
+    bool MenuOn,
+    Func<AppSettings, bool, bool, IReadOnlyList<string>> Apply,
+    IReadOnlyList<EngineId> Engines,
+    Func<EngineId, bool> IsInstalled,
+    Func<EngineId, Task<bool>> Install,
+    string Version,
+    IReadOnlyList<WatchRule> Rules,
+    IReadOnlyList<string> RecipeNames,
+    Action<IReadOnlyList<WatchRule>> SaveRules);
+
+/// <summary>Settings: language, wheel keys, startup, right-click menu, shortcuts, watched folders, engines.</summary>
 internal sealed class SettingsWindow : Window
 {
     private readonly UiKit _ui;
-    private readonly Func<AppSettings, IReadOnlyList<string>> _apply;
-    private readonly Func<EngineId, Task<bool>> _install;
-    private readonly Func<EngineId, bool> _isInstalled;
+    private readonly SettingsContext _ctx;
     private readonly ComboBox _language = new();
     private readonly ComboBox[] _keys = [new(), new(), new()];
     private readonly CheckBox _startup;
     private readonly CheckBox _menu;
     private readonly TextBox _hotkey = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5) };
+    private readonly TextBox _clipboardHotkey = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5), Margin = new Thickness(0, 0, 0, 0) };
     private readonly TextBlock _message;
+    private readonly StackPanel _watchList = new();
+    private readonly ComboBox _recipe = new() { MinHeight = 30 };
+    private readonly List<WatchRule> _rules;
 
-    public SettingsWindow(UiKit ui, AppSettings current, bool startupOn, bool menuOn, Func<AppSettings, bool, bool, IReadOnlyList<string>> apply,
-        IReadOnlyList<EngineId> engines, Func<EngineId, bool> isInstalled, Func<EngineId, Task<bool>> install, string version)
+    public SettingsWindow(UiKit ui, SettingsContext ctx)
     {
         _ui = ui;
-        _apply = s => apply(s, _startup!.IsChecked == true, _menu!.IsChecked == true);
-        _install = install;
-        _isInstalled = isInstalled;
-        ui.Style(this, 520, ui.Loc["settings.title"]);
+        _ctx = ctx;
+        _rules = [.. ctx.Rules];
+        var current = ctx.Current;
+        ui.Style(this, 540, ui.Loc["settings.title"]);
         SizeToContent = SizeToContent.Manual;
-        Height = 720;
+        Height = 780;
 
         var root = new StackPanel { Margin = new Thickness(22, 16, 22, 18) };
 
@@ -145,8 +160,7 @@ internal sealed class SettingsWindow : Window
             _language.Items.Add(new ComboBoxItem { Content = ui.Loc[key], Tag = tag });
         _language.SelectedItem = _language.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == current.Language) ?? _language.Items[0];
         _language.MinHeight = 32;
-        var langStack = new StackPanel { Children = { _language, ui.Text(ui.Loc["settings.restartNote"], 11, muted: true) } };
-        root.Children.Add(ui.Card(langStack));
+        root.Children.Add(ui.Card(new StackPanel { Children = { _language, ui.Text(ui.Loc["settings.restartNote"], 11, muted: true) } }));
 
         // keys
         root.Children.Add(ui.SectionTitle(ui.Loc["settings.keys"]));
@@ -168,43 +182,114 @@ internal sealed class SettingsWindow : Window
         root.Children.Add(ui.Card(keysPanel));
 
         // system
-        _startup = new CheckBox { Content = ui.Loc["settings.startup"], IsChecked = startupOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 2, 0, 8) };
-        _menu = new CheckBox { Content = ui.Loc["settings.contextMenu"], IsChecked = menuOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) };
+        _startup = new CheckBox { Content = ui.Loc["settings.startup"], IsChecked = ctx.StartupOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 2, 0, 8) };
+        _menu = new CheckBox { Content = ui.Loc["settings.contextMenu"], IsChecked = ctx.MenuOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) };
         _hotkey.Text = current.GlobalHotkey;
-        var sys = new StackPanel { Children = { _startup, _menu, ui.Text(ui.Loc["settings.hotkey"], 12, muted: true), _hotkey } };
+        _clipboardHotkey.Text = current.ClipboardHotkey;
+        var sys = new StackPanel
+        {
+            Children =
+            {
+                _startup, _menu,
+                ui.Text(ui.Loc["settings.hotkey"], 12, muted: true), _hotkey,
+                ui.Text(ui.Loc["settings.clipboardHotkey"], 12, muted: true), _clipboardHotkey,
+            },
+        };
         root.Children.Add(ui.Card(sys));
+
+        // watched folders
+        root.Children.Add(ui.SectionTitle(ui.Loc["settings.automation"]));
+        var auto = new StackPanel();
+        auto.Children.Add(ui.Text(ui.Loc["settings.automation.hint"], 12, muted: true));
+        auto.Children.Add(_watchList);
+        foreach (var name in ctx.RecipeNames) _recipe.Items.Add(new ComboBoxItem { Content = RecipeLabel(name), Tag = name });
+        if (_recipe.Items.Count > 0) _recipe.SelectedIndex = 0;
+        var add = ui.Secondary(ui.Loc["settings.watch.add"]);
+        add.Margin = new Thickness(8, 0, 0, 0);
+        add.Click += (_, _) => AddWatch();
+        DockPanel.SetDock(add, Dock.Right);
+        auto.Children.Add(new DockPanel { Margin = new Thickness(0, 8, 0, 0), Children = { add, _recipe } });
+        root.Children.Add(ui.Card(auto));
+        RebuildWatchList();
 
         // engines
         root.Children.Add(ui.SectionTitle(ui.Loc["settings.engines"]));
         var eng = new StackPanel { Children = { ui.Text(ui.Loc["settings.engines.hint"], 12, muted: true) } };
-        foreach (var e in engines) eng.Children.Add(EngineRow(e));
+        foreach (var e in ctx.Engines) eng.Children.Add(EngineRow(e));
         root.Children.Add(ui.Card(eng));
 
         // footer
         _message = ui.Text("", 12);
         var save = ui.Primary(ui.Loc["dialog.save"]);
-        save.Click += (_, _) => Save(current);
+        save.Click += (_, _) => Save();
         save.HorizontalAlignment = HorizontalAlignment.Right;
         root.Children.Add(_message);
         root.Children.Add(save);
-        root.Children.Add(ui.Text($"{ui.Loc.Format("settings.version", version)} · {ui.Loc["settings.license"]}", 11, muted: true));
+        root.Children.Add(ui.Text($"{ui.Loc.Format("settings.version", ctx.Version)} · {ui.Loc["settings.license"]}", 11, muted: true));
 
         Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private string RecipeLabel(string name)
+    {
+        var text = _ui.Loc["recipe." + name];
+        return text == "recipe." + name ? name : text;
+    }
+
+    private void AddWatch()
+    {
+        if (_recipe.SelectedItem is not ComboBoxItem item) return;
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = _ui.Loc["settings.watch.add"] };
+        if (dialog.ShowDialog(this) != true) return;
+        _rules.Add(new WatchRule(Guid.NewGuid().ToString("N"), dialog.FolderName, [], (string)item.Tag));
+        _ctx.SaveRules(_rules);
+        RebuildWatchList();
+    }
+
+    private void RebuildWatchList()
+    {
+        _watchList.Children.Clear();
+        if (_rules.Count == 0)
+        {
+            _watchList.Children.Add(_ui.Text(_ui.Loc["settings.watch.empty"], 12, muted: true));
+            return;
+        }
+        foreach (var rule in _rules.ToList())
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var remove = _ui.Secondary(_ui.Loc["settings.watch.remove"]);
+            remove.MinWidth = 70;
+            remove.Click += (_, _) => { _rules.RemoveAll(r => r.Id == rule.Id); _ctx.SaveRules(_rules); RebuildWatchList(); };
+            DockPanel.SetDock(remove, Dock.Right);
+            var enabled = new CheckBox { IsChecked = rule.Enabled, Foreground = _ui.Theme.Text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            enabled.Click += (_, _) =>
+            {
+                var i = _rules.FindIndex(r => r.Id == rule.Id);
+                if (i >= 0) _rules[i] = _rules[i] with { Enabled = enabled.IsChecked == true };
+                _ctx.SaveRules(_rules);
+            };
+            DockPanel.SetDock(enabled, Dock.Left);
+            var text = new StackPanel { Children = { _ui.Text(rule.Folder, 13, wrap: false), _ui.Text(RecipeLabel(rule.Recipe ?? ""), 11, muted: true, wrap: false) } };
+            row.Children.Add(remove);
+            row.Children.Add(enabled);
+            row.Children.Add(text);
+            _watchList.Children.Add(row);
+        }
     }
 
     private UIElement EngineRow(EngineId engine)
     {
         var row = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
         var name = _ui.Text(_ui.Loc["engine.name." + engine], 14, wrap: false);
-        var status = _ui.Text(_ui.Loc[_isInstalled(engine) ? "settings.engine.installed" : "settings.engine.missing"], 12, muted: true, wrap: false);
+        var status = _ui.Text(_ui.Loc[_ctx.IsInstalled(engine) ? "settings.engine.installed" : "settings.engine.missing"], 12, muted: true, wrap: false);
         status.Margin = new Thickness(10, 3, 0, 0);
         var button = _ui.Secondary(_ui.Loc["settings.engine.install"]);
         button.MinWidth = 70;
-        button.Visibility = _isInstalled(engine) ? Visibility.Collapsed : Visibility.Visible;
+        button.Visibility = _ctx.IsInstalled(engine) ? Visibility.Collapsed : Visibility.Visible;
         button.Click += async (_, _) =>
         {
             button.IsEnabled = false;
-            var ok = await _install(engine);
+            var ok = await _ctx.Install(engine);
             button.IsEnabled = true;
             status.Text = _ui.Loc[ok ? "settings.engine.installed" : "settings.engine.missing"];
             button.Visibility = ok ? Visibility.Collapsed : Visibility.Visible;
@@ -216,9 +301,9 @@ internal sealed class SettingsWindow : Window
         return row;
     }
 
-    private void Save(AppSettings current)
+    private void Save()
     {
-        var updated = current with
+        var updated = _ctx.Current with
         {
             Language = (string)((ComboBoxItem)_language.SelectedItem).Tag,
             Keys = new WheelKeys
@@ -228,8 +313,9 @@ internal sealed class SettingsWindow : Window
                 Actions = (TriggerKey)((ComboBoxItem)_keys[2].SelectedItem).Tag,
             },
             GlobalHotkey = _hotkey.Text.Trim(),
+            ClipboardHotkey = _clipboardHotkey.Text.Trim(),
         };
-        var errors = _apply(updated);
+        var errors = _ctx.Apply(updated, _startup.IsChecked == true, _menu.IsChecked == true);
         _message.Foreground = errors.Count == 0 ? _ui.Theme.Highlight : System.Windows.Media.Brushes.IndianRed;
         _message.Text = errors.Count == 0
             ? _ui.Loc["settings.saved"]

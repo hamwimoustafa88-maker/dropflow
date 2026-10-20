@@ -18,7 +18,7 @@ the dev machine and we do not download binaries without the owner's say-so; engi
 `docs/writing-a-converter.md` (the contract every converter follows).
 
 ## Stack
-- Desktop: C# / .NET 10, WPF + WPF-UI, CommunityToolkit.Mvvm, Microsoft.Extensions.Hosting
+- Desktop: C# / .NET 10, WPF with DropFlow's own theme (WPF-UI was not adopted), CommunityToolkit.Mvvm, H.NotifyIcon (tray), Velopack (updates)
 - Engines: FFmpeg (GPL), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig, LibreOffice headless (Ghostscript dropped: not in winget, AGPL),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
@@ -37,8 +37,12 @@ the dev machine and we do not download binaries without the owner's say-so; engi
 | src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation) |
 | src/DropFlow.AI | Whisper, OCR, background removal, model manager (net10.0-windows10.0.19041.0) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine) and `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread) |
+| src/DropFlow.Overlay | `WheelWindow` (non-activating topmost OLE drop target), `WheelControl`/`WheelGeometry`, option form, floating shelf |
+| src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker |
+| src/DropFlow.Cli | `dropflow` CLI (assembly name `dropflow`): list / convert / recipe commands over the same Core |
 | src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel |
-| src/DropFlow.* (planned) | App, Overlay, Encoder, Shell, Cli — created as their phases start |
+| installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md) |
+| src/DropFlow.* (planned) | Encoder window, Shell — created as their phases start |
 | tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
 | tests/*.Tests | xUnit tests, one project per src project |
 | web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
@@ -91,6 +95,15 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Phases 1/4/7/8 app layer: DropFlow.Hooks + Overlay + App run end to end (hooks → wheel → options dialog →
+  JobQueue → toast/history/undo), tray, settings (language, wheel keys, startup, right-click menu, engines), single-instance
+  with pipe forwarding + RequestBatcher for Explorer verbs, Send To, update check (Velopack/GitHub). Images engine (Magick.NET:
+  convert, compress, metadata, crop/resize/rotate, edit, annotate, background, redact, collage). Automation: recipes
+  (RecipeRunner + 4 built-ins), watched folders (`WatchService`, outputs go to `<folder>\DropFlow`), clipboard → wheel
+  (Ctrl+Alt+V, `ClipboardSource`), `dropflow` CLI, CI/release workflows + winget templates. Settings window now edits both
+  shortcuts (validator rejects duplicates) and watched folders. Core tests: 200 passing. Verified by launching the real app
+  and driving it; Windows 11, multi-monitor and in-other-apps hook behaviour are still unverified (docs/status.md).
+  — src/DropFlow.App/**, Overlay/**, Cli/**, Core/Automation/**, Core/Settings/**, installer/**, .github/**
 - 2026-10-21 — Desktop foundation (owner: "continue all sections, don't stop"): DropFlow.Core (embedded catalog, IConverter contract,
   ToolRegistry, JobQueue with bounded concurrency/cancel/aggregation, WheelBuilder, OutputPathResolver, SettingsStore, HistoryStore),
   DropFlow.Engines.Common (ProcessRunner with kill-tree timeout/cancel, EngineLocator, winget EngineInstaller — all winget ids

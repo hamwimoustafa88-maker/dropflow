@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DropFlow.App.Views;
+using DropFlow.Core.Automation;
 using DropFlow.Core.App;
 using DropFlow.Core.Catalog;
 using DropFlow.Core.History;
@@ -70,7 +71,11 @@ internal sealed class AppHost : IDisposable
     private readonly Dispatcher _ui;
     private readonly DispatcherScheduler _scheduler;
     private readonly DragDetector _detector = LowLevelInputHook.CreateSystemDetector();
-    private readonly GlobalHotkey _hotkey = new();
+    private readonly GlobalHotkey _hotkey = new(0xD0F1);
+    private readonly GlobalHotkey _clipboardHotkey = new(0xD0F2);
+    private readonly WatchStore _watchStore;
+    private readonly RecipeStore _recipeStore;
+    private WatchService? _watch;
     private readonly RequestBatcher _requests;
     private readonly ShelfModel _shelf = new();
     private readonly HashSet<BatchHandle> _tracked = [];
@@ -103,6 +108,8 @@ internal sealed class AppHost : IDisposable
         Registry = new ToolRegistry().Register(Modules.Create(Engines));
         Queue = new JobQueue(Registry, Catalog, Settings.MaxConcurrency);
         History = new HistoryStore(Paths.HistoryFile);
+        _watchStore = new WatchStore(Path.Combine(Paths.DataDir, "watch.json"));
+        _recipeStore = new RecipeStore(Path.Combine(Paths.DataDir, "recipes.json"));
         Kit = new UiKit(WheelTheme.FromSystem(), Loc);
         Disposer = new RecycleBinDisposer();
 
@@ -150,6 +157,7 @@ internal sealed class AppHost : IDisposable
         CreateTray();
         StartHooks();
         RegisterHotkey();
+        StartWatching();
 
         // Quietly look for an update shortly after start (installed copies only).
         _ = Task.Delay(TimeSpan.FromSeconds(45)).ContinueWith(_ => _ui.InvokeAsync(() => CheckForUpdatesAsync(interactive: false)), TaskScheduler.Default);
@@ -368,9 +376,11 @@ internal sealed class AppHost : IDisposable
     {
         if (_settingsWindow is { IsVisible: true }) { _settingsWindow.Activate(); return; }
         var engines = Enum.GetValues<EngineId>().Where(e => e != EngineId.None && e != EngineId.Ffprobe).ToList();
-        _settingsWindow = new SettingsWindow(Kit, Settings, SystemIntegration.IsStartupEnabled(), SystemIntegration.IsContextMenuInstalled(),
-            ApplyFromWindow, engines, e => Engines.Locate(e) is not null,
-            e => new EngineInstallService(_ui, Kit, Installer, Engines).InstallAsync(e, new Progress<string>(), CancellationToken.None), Version);
+        _settingsWindow = new SettingsWindow(Kit, new SettingsContext(
+            Settings, SystemIntegration.IsStartupEnabled(), SystemIntegration.IsContextMenuInstalled(), ApplyFromWindow,
+            engines, e => Engines.Locate(e) is not null,
+            e => new EngineInstallService(_ui, Kit, Installer, Engines).InstallAsync(e, new Progress<string>(), CancellationToken.None),
+            Version, _watchStore.Load(), AllRecipes().Select(r => r.Name).ToList(), SaveWatchRules));
         _settingsWindow.Show();
         _settingsWindow.Activate();
     }
@@ -450,11 +460,75 @@ internal sealed class AppHost : IDisposable
 
     private bool RegisterHotkey()
     {
-        var parsed = HotkeyParser.Parse(Settings.GlobalHotkey);
-        if (parsed is null) return false;
+        var shelf = HotkeyParser.Parse(Settings.GlobalHotkey);
+        var clip = HotkeyParser.Parse(Settings.ClipboardHotkey);
+        if (shelf is null || clip is null) return false;
+
         _hotkey.Pressed -= OnHotkey;
         _hotkey.Pressed += OnHotkey;
-        return _hotkey.Register(parsed.Value);
+        _clipboardHotkey.Pressed -= OnClipboardHotkey;
+        _clipboardHotkey.Pressed += OnClipboardHotkey;
+        var a = _hotkey.Register(shelf.Value);
+        var b = _clipboardHotkey.Register(clip.Value);
+        if (!a || !b) FileLog.Info($"hotkey registration: shelf={a} clipboard={b} (another program may own the shortcut)");
+        return a && b;
+    }
+
+    private void OnClipboardHotkey()
+    {
+        IReadOnlyList<string> files;
+        try { files = ClipboardSource.Export(Path.Combine(Path.GetTempPath(), "DropFlow")); }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or IOException or UnauthorizedAccessException)
+        {
+            FileLog.Error("clipboard", ex);
+            files = [];
+        }
+        if (files.Count == 0) ShowToast(Loc["clipboard.empty"], null, null, [], TimeSpan.FromSeconds(4));
+        else OpenWheelFor(files, WheelKind.Convert);
+    }
+
+    // ------------------------------------------------------------------------------------------------------------------ automation
+
+    private IReadOnlyList<Recipe> AllRecipes() => [.. BuiltInRecipes.Available(Registry), .. _recipeStore.Load()];
+
+    private void SaveWatchRules(IReadOnlyList<WatchRule> rules)
+    {
+        _watchStore.Save(rules);
+        _watch?.Apply(rules);
+    }
+
+    private void StartWatching()
+    {
+        _watch = new WatchService(OnWatchedFilesAsync);
+        _watch.Apply(_watchStore.Load());
+    }
+
+    private async Task OnWatchedFilesAsync(WatchRule rule, IReadOnlyList<string> files)
+    {
+        var recipe = AllRecipes().FirstOrDefault(r => r.Name == rule.Recipe);
+        if (recipe is null)
+        {
+            FileLog.Error($"watch rule {rule.Id}: unknown recipe '{rule.Recipe}'");
+            return;
+        }
+
+        try
+        {
+            var outDir = Path.Combine(rule.Folder, rule.OutputSubfolder);
+            Directory.CreateDirectory(outDir);
+            var result = await new RecipeRunner(Queue, Disposer).RunAsync(recipe, files, outDir);
+            _watch?.MarkProduced(result.Outputs);
+            await _ui.InvokeAsync(() =>
+            {
+                History.Add(recipe.Name, files, result);
+                if (result.Success) ShowToast(Loc.Format("watch.done", Path.GetFileName(files[0])), result.Note, null, result.Outputs.Count > 0 ? [(Loc["result.open"], () => Explorer.Reveal(result.Outputs[0]))] : [], TimeSpan.FromSeconds(6));
+                else FileLog.Error($"watched folder recipe '{recipe.Name}' failed: {result.Error}");
+            });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            FileLog.Error("watched folder", ex);
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------------ tray
@@ -494,6 +568,8 @@ internal sealed class AppHost : IDisposable
     {
         StopHooks();
         _hotkey.Dispose();
+        _clipboardHotkey.Dispose();
+        _watch?.Dispose();
         _tray?.Dispose();
         FileLog.Info("DropFlow stopped");
     }

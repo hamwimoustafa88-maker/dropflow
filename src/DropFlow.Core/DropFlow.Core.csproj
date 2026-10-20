@@ -9,6 +9,8 @@
   <ItemGroup>
     <!-- The catalog is the single source of truth (catalog/tools.json); embed it so the app needs no loose files. -->
     <EmbeddedResource Include="..\..\catalog\tools.json" LogicalName="DropFlow.Core.tools.json" />
+    <EmbeddedResource Include="Resources\strings.en.json" LogicalName="DropFlow.Core.strings.en.json" WithCulture="false" />
+    <EmbeddedResource Include="Resources\strings.ar.json" LogicalName="DropFlow.Core.strings.ar.json" WithCulture="false" />
   </ItemGroup>
 
 </Project>

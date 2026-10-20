@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using DropFlow.Core.Localization;
 using DropFlow.Core.Operations;
 using DropFlow.Overlay;
 using DropFlow.TestSupport;

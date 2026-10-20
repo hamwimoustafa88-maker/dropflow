@@ -1,3 +1,4 @@
+using DropFlow.Core.Localization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;

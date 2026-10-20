@@ -260,3 +260,39 @@ public class AppLogicTests
         Assert.Equal(2, batches.Count);
     }
 }
+
+public class HotkeyParserTests
+{
+    [Theory]
+    [InlineData("Ctrl+Alt+D", Hotkey.Ctrl | Hotkey.Alt, 'D')]
+    [InlineData("ctrl + alt + d", Hotkey.Ctrl | Hotkey.Alt, 'D')]
+    [InlineData("Shift+F9", Hotkey.Shift, 0x78)]
+    [InlineData("Win+Space", Hotkey.Win, 0x20)]
+    [InlineData("Control+5", Hotkey.Ctrl, '5')]
+    [InlineData("Alt+Left", Hotkey.Alt, 0x25)]
+    public void Valid_shortcuts_parse(string text, uint mods, int vk)
+    {
+        var h = HotkeyParser.Parse(text);
+        Assert.NotNull(h);
+        Assert.Equal(mods, h!.Value.Modifiers);
+        Assert.Equal((uint)vk, h.Value.VirtualKey);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("D")]                  // needs a modifier
+    [InlineData("Ctrl+Alt")]           // needs a key
+    [InlineData("Ctrl+D+E")]           // one key only
+    [InlineData("Ctrl+Ctrl+D")]
+    [InlineData("Ctrl+Banana")]
+    [InlineData("Ctrl+F25")]
+    public void Unusable_shortcuts_are_rejected(string text) => Assert.Null(HotkeyParser.Parse(text));
+
+    [Theory]
+    [InlineData("Ctrl+Alt+D")]
+    [InlineData("Shift+F9")]
+    [InlineData("Win+Space")]
+    [InlineData("Ctrl+Shift+Esc")]
+    public void Format_round_trips(string text) => Assert.Equal(text, HotkeyParser.Format(HotkeyParser.Parse(text)!.Value));
+}

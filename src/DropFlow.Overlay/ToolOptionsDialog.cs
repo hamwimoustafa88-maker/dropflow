@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using DropFlow.Core.Localization;
 using DropFlow.Core.Operations;
 
 namespace DropFlow.Overlay;

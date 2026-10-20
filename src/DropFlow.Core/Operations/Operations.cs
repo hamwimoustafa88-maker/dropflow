@@ -61,9 +61,10 @@ public sealed record ConversionJob(
 
 public sealed record JobProgress(double Fraction, string? Message = null);
 
-public sealed record ConversionResult(bool Success, IReadOnlyList<string> Outputs, string? Error = null, TimeSpan Duration = default)
+/// <param name="Note">Optional message for a SUCCESSFUL run the user should know about (e.g. "already optimal, original kept").</param>
+public sealed record ConversionResult(bool Success, IReadOnlyList<string> Outputs, string? Error = null, TimeSpan Duration = default, string? Note = null)
 {
-    public static ConversionResult Ok(IReadOnlyList<string> outputs, TimeSpan duration = default) => new(true, outputs, null, duration);
+    public static ConversionResult Ok(IReadOnlyList<string> outputs, TimeSpan duration = default, string? note = null) => new(true, outputs, null, duration, note);
     public static ConversionResult Fail(string error, TimeSpan duration = default) => new(false, [], error, duration);
 }
 

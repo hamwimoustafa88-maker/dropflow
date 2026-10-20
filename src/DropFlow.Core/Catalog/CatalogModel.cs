@@ -61,11 +61,34 @@ public sealed class ToolCatalog
 
     public CatalogTool? Tool(string id) => Tools.FirstOrDefault(t => t.Id == id) ?? Actions.FirstOrDefault(t => t.Id == id);
 
+    // Alternative spellings of the same format. Converters and the catalog only ever see the canonical form.
+    private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["jpeg"] = "jpg", ["jpe"] = "jpg", ["jfif"] = "jpg",
+        ["tif"] = "tiff",
+        ["heif"] = "heic",
+        ["aif"] = "aiff", ["oga"] = "ogg",
+        ["htm"] = "html", ["markdown"] = "md", ["text"] = "txt",
+        ["tar.gz"] = "tgz",
+    };
+
+    /// <summary>Canonical lower-case extension without the dot ("JPEG" and ".jpe" become "jpg").</summary>
+    public static string Normalize(string extension)
+    {
+        var ext = extension.TrimStart('.').ToLowerInvariant();
+        return Aliases.GetValueOrDefault(ext, ext);
+    }
+
     /// <summary>Category for a file extension without the dot, or null when DropFlow has no conversions for it.</summary>
     public string? CategoryForExtension(string extension) =>
-        _extensionToCategory.GetValueOrDefault(extension.TrimStart('.'));
+        _extensionToCategory.GetValueOrDefault(Normalize(extension));
 
-    public static string ExtensionOf(string path) => Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
+    /// <summary>Canonical extension of a path (also recognises ".tar.gz" as "tgz").</summary>
+    public static string ExtensionOf(string path)
+    {
+        if (path.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)) return "tgz";
+        return Normalize(Path.GetExtension(path));
+    }
 
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 

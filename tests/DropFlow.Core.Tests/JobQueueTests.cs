@@ -178,6 +178,19 @@ public class JobQueueTests
     }
 
     [Fact]
+    public async Task Notes_from_successful_jobs_are_kept_and_deduplicated()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["img.compress"], run: (job, _, _) =>
+            Task.FromResult(ConversionResult.Ok([], note: "already optimal"))));
+
+        var batch = Queue(registry).Enqueue(new ConversionJob(["a.png", "b.png"], "img.compress"));
+        var result = await batch.Completion.WaitAsync(Timeout);
+
+        Assert.True(result.Success);
+        Assert.Equal("already optimal", result.Note);
+    }
+
+    [Fact]
     public async Task BatchCompleted_fires_once_with_the_aggregate()
     {
         var registry = new ToolRegistry().Register(new FakeConverter(["convert:png"]));

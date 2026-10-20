@@ -11,4 +11,12 @@
     <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="15.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.Engines.Images.Tests" />
+  </ItemGroup>
+
 </Project>

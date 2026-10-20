@@ -56,9 +56,11 @@ public sealed class BatchHandle
         var outputs = results.SelectMany(r => r.Outputs).ToList();
         var errors = results.Where(r => !r.Success).Select(r => r.Error).Where(e => !string.IsNullOrEmpty(e)).ToList();
         var duration = results.Length == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(results.Sum(r => r.Duration.Ticks));
+        var notes = results.Select(r => r.Note).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+        var note = notes.Count == 0 ? null : string.Join("; ", notes);
         return errors.Count == 0 && results.All(r => r.Success)
-            ? ConversionResult.Ok(outputs, duration)
-            : new ConversionResult(false, outputs, string.Join("; ", errors), duration);
+            ? ConversionResult.Ok(outputs, duration, note)
+            : new ConversionResult(false, outputs, string.Join("; ", errors), duration, note);
     }
 }
 

@@ -31,6 +31,28 @@ public class CatalogTests
     public void Extensions_map_to_the_expected_category(string ext, string expected) =>
         Assert.Equal(expected, Catalog.CategoryForExtension(ext));
 
+    [Theory]
+    [InlineData("photo.JPEG", "jpg")]
+    [InlineData("a.jfif", "jpg")]
+    [InlineData("scan.tif", "tiff")]
+    [InlineData("img.HEIF", "heic")]
+    [InlineData("track.aif", "aiff")]
+    [InlineData("page.htm", "html")]
+    [InlineData("readme.markdown", "md")]
+    [InlineData("backup.tar.gz", "tgz")]
+    [InlineData("backup.TAR.GZ", "tgz")]
+    [InlineData("plain.png", "png")]
+    public void Alternative_spellings_normalise_to_the_canonical_extension(string path, string expected) =>
+        Assert.Equal(expected, ToolCatalog.ExtensionOf(path));
+
+    [Theory]
+    [InlineData("jpeg", "image")]
+    [InlineData("TIF", "image")]
+    [InlineData("heif", "image")]
+    [InlineData("htm", "document")]
+    public void Aliases_resolve_to_the_right_category(string ext, string category) =>
+        Assert.Equal(category, Catalog.CategoryForExtension(ext));
+
     [Fact]
     public void Unknown_extension_has_no_category() => Assert.Null(Catalog.CategoryForExtension("xyz"));
 

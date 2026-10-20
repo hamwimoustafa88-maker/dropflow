@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+/* DropFlow identity: indigo + cyan. Tokens only — never raw hex in components. */
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef0f8;
+  --fg: #0b1020;
+  --muted: #4b5470;
+  --border: #d8dcec;
+  --primary: #4338ca;
+  --on-primary: #ffffff;
+  --primary-soft: #e0e7ff;
+  --accent: #0e7490;
+  --accent-soft: #cffafe;
+  --ring: #4338ca;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0f22;
+    --surface: #121a38;
+    --surface-2: #1a2347;
+    --fg: #eef1ff;
+    --muted: #a5aeda;
+    --border: #2a3563;
+    --primary: #818cf8;
+    --on-primary: #0a0f22;
+    --primary-soft: #1e2759;
+    --accent: #22d3ee;
+    --accent-soft: #0d3a4a;
+    --ring: #a5b4fc;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-plex), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+button,
+a,
+[role="tab"],
+[role="radio"] {
+  cursor: pointer;
+}
+
+/* Hero backdrop */
+.hero-glow {
+  background:
+    radial-gradient(60rem 28rem at 78% -10%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+    radial-gradient(40rem 22rem at 5% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+}
+
+/* Wheel demo */
+.wedge {
+  fill: var(--surface-2);
+  stroke: var(--bg);
+  stroke-width: 3;
+  transition: fill 160ms ease, transform 160ms ease;
+  cursor: pointer;
+}
+.wedge:hover,
+.wedge[data-active="true"] {
+  fill: var(--primary);
+}
+.wedge-label {
+  fill: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  transition: fill 160ms ease;
+}
+.wedge:hover + .wedge-label,
+.wedge[data-active="true"] + .wedge-label {
+  fill: var(--on-primary);
+}
+.wheel-pop {
+  animation: wheel-pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes wheel-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.drop-pulse {
+  animation: drop-pulse 1.8s ease-in-out infinite;
+}
+@keyframes drop-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.progress-ring {
+  animation: ring-fill 900ms ease-out forwards;
+}
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: 283;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .wheel-pop,
+  .drop-pulse,
+  .progress-ring {
+    animation: none;
+  }
+  .progress-ring {
+    stroke-dashoffset: 0;
+  }
+  .wedge,
+  .wedge-label {
+    transition: none;
+  }
+}

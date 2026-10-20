@@ -4,8 +4,9 @@ An enhanced, open-source Windows 10/11 + web counterpart of Tangerine (tangerine
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
 License: GPL-3.0-or-later. Audience: Arabic + English users.
 
-**Status:** Planning + repo bootstrap done (catalog, docs, ADRs). Phase 1 landing page in `web/` in progress.
-Desktop code not started — Phase 0 spike is next and needs the .NET 10 SDK, which is NOT installed yet.
+**Status:** Planning + repo bootstrap done. Phase 1 landing page built in `web/` (ar/en, static, builds clean) but NOT deployed:
+CTAs are disabled "coming soon" because no release/repo URL exists yet. Desktop code not started — Phase 0 spike is next
+and needs the .NET 10 SDK, which is NOT installed (`dotnet --list-sdks` is empty).
 **Read before any task:** `docs/plan.md` (roadmap, Arabic), `docs/feature-catalog.md` (generated tool list) and
 `docs/reference/tangerine-features.md` (parity baseline — DropFlow must never ship less than Tangerine in a category).
 
@@ -24,7 +25,7 @@ Desktop code not started — Phase 0 spike is next and needs the .NET 10 SDK, wh
 | catalog/tools.json | Single source of truth for all tools/conversions (read by desktop, web, landing) |
 | catalog/build.mjs | Validates the catalog, checks Tangerine parity, regenerates docs/feature-catalog.md |
 | src/DropFlow.* | Desktop solution (not created yet): App, Hooks, Overlay, Core, Engines, Encoder, AI, Shell, Cli |
-| web/ | Next.js: landing (`/`), web app (`/app`, Phase 6), PWA |
+| web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
 | tests/ | Desktop tests; tests/samples holds one sample per format |
 | tools/ | Scripts that download engine binaries (never commit binaries) |
 | docs/ | plan.md, feature-catalog.md (generated), adr/, reference/ (Tangerine baseline + screenshots), archive/ |
@@ -32,7 +33,7 @@ Desktop code not started — Phase 0 spike is next and needs the .NET 10 SDK, wh
 ## Commands
 - Catalog: `node catalog/build.mjs` (run after any edit to catalog/tools.json; must print OK)
 - Desktop (once created): `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.App`
-- Web: `cd web && npm install && npm run dev` · `npm run build`
+- Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
 
 ## Architecture rules
 - Every tool is declared in catalog/tools.json, implements `IConverter` (desktop) / a worker module (web),
@@ -74,6 +75,12 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-20 — Phase 1 landing page: scaffolded web/ (Next.js 16.4, Tailwind 4, next-intl 4; ar default + en, RTL, static
+  SSG, proxy redirects "/" by Accept-Language); own indigo/cyan identity + IBM Plex Sans Arabic; interactive simulated wheel
+  demo (convert/tools/actions), category explorer, PDF suite, media studio, privacy, roadmap; stats come from the catalog
+  (catalog/build.mjs now also writes web/src/data/catalog.json). Verified: lint clean, build OK, 0 prod vulnerabilities,
+  no hydration errors, no horizontal overflow at 390/768px, locale switch + wheel + tabs work (DOM-tested; screenshots were
+  unavailable in this environment, so visual polish is unreviewed). Disabled CTAs until a release/repo URL exists.
 - 2026-10-20 — Bootstrapped the repo from the approved plan: git init (main); moved first plan to docs/archive and the
   Tangerine site text to docs/reference; wrote docs/plan.md, ADRs 0001–0005, LICENSE (GPL-3.0), README, CLAUDE.md;
   created catalog/tools.json (428 conversions, 63 tools, 7 actions) + catalog/build.mjs which enforces Tangerine parity

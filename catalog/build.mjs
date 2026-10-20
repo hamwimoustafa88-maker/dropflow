@@ -1,6 +1,6 @@
 // Validates catalog/tools.json, checks parity with the Tangerine baseline, and regenerates docs/feature-catalog.md.
 // Usage: node catalog/build.mjs   (exit code 1 on any failure)
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -83,6 +83,16 @@ for (const p of Object.keys(byPhase).sort((a, b) => a - b)) {
   md += "\n";
 }
 writeFileSync(join(root, "docs", "feature-catalog.md"), md);
+
+// Web copy: the landing/web app import this file so they never read outside web/ (Vercel root directory = web).
+const webCatalog = {
+  stats: { conversions, tools: toolCount, actions: cat.actions.length, categories: cat.categories.length },
+  categories: cat.categories,
+  tools: cat.tools,
+  actions: cat.actions,
+};
+mkdirSync(join(root, "web", "src", "data"), { recursive: true });
+writeFileSync(join(root, "web", "src", "data", "catalog.json"), JSON.stringify(webCatalog, null, 2) + "\n");
 
 if (errors.length) {
   console.error("catalog: FAILED\n - " + errors.join("\n - "));

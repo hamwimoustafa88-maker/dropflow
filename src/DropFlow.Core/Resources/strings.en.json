@@ -149,6 +149,12 @@
   "opt.text": "Text",
   "opt.opacity": "Opacity",
   "opt.degrees": "Degrees",
+  "opt.paper": "Paper size",
+  "opt.paper.a4": "A4",
+  "opt.paper.letter": "Letter",
+  "opt.landscape": "Landscape",
+  "opt.pdf.html-to-pdf.background": "Print backgrounds",
+  "opt.online": "Allow online resources",
 
   "opt.mode.preset": "Preset",
   "opt.mode.percent": "By percent",

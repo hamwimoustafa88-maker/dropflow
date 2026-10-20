@@ -149,6 +149,12 @@
   "opt.text": "النص",
   "opt.opacity": "الشفافية",
   "opt.degrees": "الدرجات",
+  "opt.paper": "حجم الورق",
+  "opt.paper.a4": "A4",
+  "opt.paper.letter": "Letter",
+  "opt.landscape": "أفقي",
+  "opt.pdf.html-to-pdf.background": "طباعة الخلفيات",
+  "opt.online": "السماح بموارد الإنترنت",
 
   "opt.mode.preset": "إعداد جاهز",
   "opt.mode.percent": "بالنسبة",

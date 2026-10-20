@@ -1,0 +1,17 @@
+# Keep text files LF in the repo and in the working tree (the tools here write LF; avoids CRLF churn on Windows)
+* text=auto eol=lf
+
+*.sln text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff2 binary
+*.zip binary

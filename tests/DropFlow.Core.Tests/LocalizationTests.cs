@@ -32,7 +32,7 @@ public class LocalizationTests
     [Fact]
     public void Arabic_strings_actually_contain_arabic_script_except_for_brand_and_technical_terms()
     {
-        var exempt = new HashSet<string> { "app.name", "settings.language.en", "opt.x", "opt.y" };
+        var exempt = new HashSet<string> { "app.name", "settings.language.en", "opt.x", "opt.y", "opt.paper.a4", "opt.paper.letter" };
         foreach (var (key, ar) in Ar.Where(kv => !exempt.Contains(kv.Key) && !kv.Key.StartsWith("engine.name.")))
             Assert.Matches(@"[؀-ۿ]", ar);
     }

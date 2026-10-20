@@ -29,8 +29,10 @@ namespace DropFlow.App.Services;
 /// <summary>Which converter modules the app loads. One line per engine project.</summary>
 internal static class Modules
 {
-    public static IReadOnlyList<IConverter> Create(IEngineProvider engines) =>
+    /// <summary>Web comes first so HTML → PDF uses the built-in browser engine instead of LibreOffice.</summary>
+    public static IReadOnlyList<IConverter> Create(IEngineProvider engines, Dispatcher ui, string webProfileFolder) =>
     [
+        .. Engines.Web.WebModule.Create(ui, webProfileFolder),
         .. Engines.Images.ImagesModule.Create(engines),
     ];
 }
@@ -105,7 +107,7 @@ internal sealed class AppHost : IDisposable
         Catalog = ToolCatalog.LoadEmbedded();
         Engines = new EngineLocator(Paths.DataDir);
         Installer = new EngineInstaller(Engines);
-        Registry = new ToolRegistry().Register(Modules.Create(Engines));
+        Registry = new ToolRegistry().Register(Modules.Create(Engines, ui, Path.Combine(Paths.DataDir, "webview")));
         Queue = new JobQueue(Registry, Catalog, Settings.MaxConcurrency);
         History = new HistoryStore(Paths.HistoryFile);
         _watchStore = new WatchStore(Path.Combine(Paths.DataDir, "watch.json"));
@@ -570,6 +572,7 @@ internal sealed class AppHost : IDisposable
         _hotkey.Dispose();
         _clipboardHotkey.Dispose();
         _watch?.Dispose();
+        foreach (var converter in Registry.Converters.OfType<IDisposable>()) converter.Dispose();
         _tray?.Dispose();
         FileLog.Info("DropFlow stopped");
     }

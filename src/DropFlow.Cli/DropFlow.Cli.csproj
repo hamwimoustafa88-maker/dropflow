@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>dropflow</AssemblyName>
+    <RootNamespace>DropFlow.Cli</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Images\DropFlow.Engines.Images.csproj" />
+  </ItemGroup>
+
+</Project>

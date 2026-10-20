@@ -2,35 +2,39 @@
 
 /* DropFlow identity: indigo + cyan. Tokens only — never raw hex in components. */
 :root {
-  --bg: #f6f7fb;
+  --bg: #f7f8fc;
   --surface: #ffffff;
-  --surface-2: #eef0f8;
-  --fg: #0b1020;
-  --muted: #4b5470;
-  --border: #d8dcec;
+  --surface-2: #eceffa;
+  --fg: #0a0f24;
+  --muted: #4a5372;
+  --border: #dadff0;
   --primary: #4338ca;
   --on-primary: #ffffff;
-  --primary-soft: #e0e7ff;
+  --primary-soft: #e3e8ff;
   --accent: #0e7490;
-  --accent-soft: #cffafe;
   --ring: #4338ca;
+  --grid: rgb(10 15 36 / 0.06);
+  --glow-a: rgb(67 56 202 / 0.22);
+  --glow-b: rgb(14 116 144 / 0.18);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0a0f22;
-    --surface: #121a38;
-    --surface-2: #1a2347;
+    --bg: #070b1c;
+    --surface: #0f1631;
+    --surface-2: #182044;
     --fg: #eef1ff;
-    --muted: #a5aeda;
-    --border: #2a3563;
-    --primary: #818cf8;
-    --on-primary: #0a0f22;
-    --primary-soft: #1e2759;
+    --muted: #a3acd8;
+    --border: #263059;
+    --primary: #8b95fb;
+    --on-primary: #070b1c;
+    --primary-soft: #1b2350;
     --accent: #22d3ee;
-    --accent-soft: #0d3a4a;
     --ring: #a5b4fc;
+    --grid: rgb(238 241 255 / 0.05);
+    --glow-a: rgb(99 102 241 / 0.32);
+    --glow-b: rgb(34 211 238 / 0.2);
     color-scheme: dark;
   }
 }
@@ -46,7 +50,6 @@
   --color-on-primary: var(--on-primary);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-plex), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
@@ -62,12 +65,13 @@ body {
   font-family: var(--font-sans);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 :focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 3px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 button,
@@ -77,19 +81,41 @@ a,
   cursor: pointer;
 }
 
-/* Hero backdrop */
-.hero-glow {
-  background:
-    radial-gradient(60rem 28rem at 78% -10%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
-    radial-gradient(40rem 22rem at 5% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+/* ---------- Backgrounds ---------- */
+.bg-grid {
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(75% 65% at 50% 28%, #000 25%, transparent 78%);
 }
 
-/* Wheel demo */
+.hero-glow {
+  background:
+    radial-gradient(46rem 26rem at 78% 8%, var(--glow-a), transparent 70%),
+    radial-gradient(34rem 20rem at 8% 0%, var(--glow-b), transparent 70%);
+}
+
+.text-gradient {
+  background: linear-gradient(105deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+/* ---------- Wheel ---------- */
 .wedge {
   fill: var(--surface-2);
-  stroke: var(--bg);
-  stroke-width: 3;
-  transition: fill 160ms ease, transform 160ms ease;
+  stroke: var(--surface);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  transition: fill 160ms ease;
   cursor: pointer;
 }
 .wedge:hover,
@@ -98,7 +124,7 @@ a,
 }
 .wedge-label {
   fill: var(--fg);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   pointer-events: none;
   transition: fill 160ms ease;
@@ -107,57 +133,112 @@ a,
 .wedge[data-active="true"] + .wedge-label {
   fill: var(--on-primary);
 }
+.orbit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orbit 60s linear infinite;
+}
 .wheel-pop {
-  animation: wheel-pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@keyframes wheel-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.86) rotate(-8deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.drop-pulse {
-  animation: drop-pulse 1.8s ease-in-out infinite;
-}
-@keyframes drop-pulse {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
+  animation: wheel-pop 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .progress-ring {
   animation: ring-fill 900ms ease-out forwards;
 }
+
+/* ---------- Marquee (always LTR: chips are Latin) ---------- */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.75rem;
+  padding-inline-end: 0.75rem;
+  animation: marquee 48s linear infinite;
+}
+.marquee-reverse .marquee-track {
+  animation-direction: reverse;
+  animation-duration: 56s;
+}
+
+/* ---------- Feature visuals ---------- */
+.wave-bar {
+  transform-origin: center;
+  animation: wave 1.3s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.playhead {
+  animation: playhead 5s linear infinite;
+}
+.float {
+  animation: float 4.5s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 2.6s ease-out infinite;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes wheel-pop {
+  from { opacity: 0; transform: scale(0.88) rotate(-8deg); }
+  to { opacity: 1; transform: none; }
+}
 @keyframes ring-fill {
-  from {
-    stroke-dashoffset: 283;
+  from { stroke-dashoffset: 283; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes marquee {
+  to { transform: translateX(-100%); }
+}
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.22); }
+  50% { transform: scaleY(1); }
+}
+@keyframes playhead {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ---------- Scroll reveal (progressive enhancement) ---------- */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
   }
-  to {
-    stroke-dashoffset: 0;
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: none; }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
+  .orbit,
   .wheel-pop,
-  .drop-pulse,
-  .progress-ring {
+  .marquee-track,
+  .wave-bar,
+  .playhead,
+  .float,
+  .pulse-ring,
+  .reveal {
     animation: none;
   }
-  .progress-ring {
-    stroke-dashoffset: 0;
-  }
-  .wedge,
-  .wedge-label {
-    transition: none;
-  }
+  .progress-ring { animation: none; stroke-dashoffset: 0; }
+  .wedge, .wedge-label { transition: none; }
 }

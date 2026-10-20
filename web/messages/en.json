@@ -1,47 +1,30 @@
 {
   "meta": {
-    "title": "DropFlow — drag, tap, convert. Offline.",
-    "description": "DropFlow is an open-source file converter for Windows and the web. Drag a file, tap a key, and a wheel converts, compresses or transcribes it on your device — nothing is uploaded."
+    "title": "DropFlow — Drag. Tap. Drop.",
+    "description": "Convert any file. Offline. Open source, for Windows and the web."
   },
   "common": {
-    "soon": "Coming soon",
+    "soon": "Soon",
     "windows": "Windows",
     "web": "Web",
-    "phase": "Phase {n}",
     "skip": "Skip to content",
     "language": "Language",
     "mainNav": "Main navigation"
   },
   "nav": {
-    "how": "How it works",
-    "formats": "Formats",
-    "pdf": "PDF",
-    "media": "Media",
-    "privacy": "Privacy",
-    "roadmap": "Roadmap"
+    "features": "Features",
+    "formats": "Formats"
   },
   "hero": {
-    "badge": "Open source · GPL-3.0 · Windows + Web",
+    "badge": "Open source",
     "titleA": "Drag.",
     "titleB": "Tap.",
     "titleC": "Drop.",
-    "subtitle": "A wheel appears while you drag a file. Convert, compress, merge or turn speech into text — right on your device. Nothing is ever uploaded.",
-    "ctaWindows": "Windows app — coming soon",
-    "ctaWeb": "Try it online — coming soon",
-    "status": "In development. The demo on this page is a simulation of the real app."
+    "subtitle": "Convert any file. Offline."
   },
   "demo": {
-    "label": "Interactive demo of the DropFlow wheel",
-    "fileLabel": "Pick a file to drag",
-    "wheelLabel": "Wheel",
-    "hint": "Choose a file, switch wheels with the keys below, then pick a wedge. Arrow keys also work.",
-    "simulated": "Simulation — no file is processed.",
-    "samples": {
-      "image": "photo.heic",
-      "video": "clip.mov",
-      "audio": "voice.wav",
-      "pdf": "report.pdf"
-    },
+    "label": "Demo",
+    "files": "File",
     "wheels": {
       "convert": "Convert",
       "tools": "Tools",
@@ -55,14 +38,14 @@
     "tool": {
       "compress": "Compress",
       "crop": "Crop",
-      "metadata": "Metadata",
-      "removeGps": "Remove GPS",
+      "metadata": "Info",
+      "removeGps": "No GPS",
       "resize": "Resize",
       "removeBg": "Cutout",
       "trim": "Trim",
       "speed": "Speed",
       "mute": "Mute",
-      "transcribe": "Speech → text",
+      "transcribe": "Transcribe",
       "normalize": "Normalize",
       "channels": "Channels",
       "bleep": "Bleep",
@@ -77,145 +60,35 @@
       "float": "Float",
       "copy": "Copy",
       "move": "Move",
-      "copyPath": "Copy path",
+      "copyPath": "Path",
       "terminal": "Terminal"
     },
-    "idle": "Choose a wedge to run it on {file}.",
-    "running": "Working on {file}…",
-    "doneConvert": "Saved {file} next to the original.",
-    "doneTool": "{tool} applied to {file}. Original kept.",
-    "doneAction": "{action} done for {file}."
+    "idle": "Pick a wedge",
+    "running": "Working…",
+    "done": "Done · {result}"
   },
-  "stats": {
+  "numbers": {
     "conversions": "Conversions",
-    "conversionsDesc": "Across images, video, audio, documents, spreadsheets and archives.",
-    "tools": "File tools",
-    "toolsDesc": "Compress, crop, trim, split, merge, redact, transcribe and more.",
-    "actions": "File actions",
-    "actionsDesc": "Share, float, copy, move, copy path and terminal."
-  },
-  "how": {
-    "title": "One gesture. Three wheels.",
-    "subtitle": "Start dragging any file or folder, then tap a key. Keys are configurable.",
-    "convert": {
-      "key": "Shift",
-      "title": "Convert",
-      "text": "Pick a target format. DropFlow saves a new copy beside the original."
-    },
-    "tools": {
-      "key": "Ctrl",
-      "title": "Tools",
-      "text": "Compress, crop, trim, split, merge, redact, transcribe — with a quick options panel when needed."
-    },
-    "actions": {
-      "key": "Alt",
-      "title": "Actions",
-      "text": "Share, keep on a floating shelf, copy, move, copy the path or open a terminal."
-    },
-    "alt": "Prefer the keyboard? Select a file, press Enter, switch wheels, pick with the arrow keys. Touch: hold, then drag."
-  },
-  "explorer": {
-    "title": "Every format you actually use",
-    "subtitle": "Pick a category to see what it converts to and which tools come with it.",
-    "tablist": "File categories",
-    "convertTo": "Converts to",
-    "acceptsFrom": "Accepts",
     "tools": "Tools",
-    "noTools": "Conversions only — file actions work on everything.",
-    "laterOutput": "{format} arrives in phase {n}",
-    "multi": "multi-file"
+    "actions": "Actions"
   },
-  "pdf": {
-    "title": "A complete PDF toolkit — offline",
-    "subtitle": "Merge, split, compress, protect, convert to and from Word, PowerPoint, Excel and images. No upload, no page limits.",
-    "convert": "Convert",
-    "organize": "Organize and edit",
-    "convertItems": [
-      "PDF → Word",
-      "PDF → PowerPoint",
-      "PDF → Excel",
-      "PDF → JPG / PNG",
-      "Word / PowerPoint / Excel → PDF",
-      "JPG / PNG → PDF",
-      "HTML → PDF",
-      "PDF → PDF/A"
-    ],
-    "note": "PDF → Word may change the layout, like every converter. Scanned pages use local OCR."
+  "features": {
+    "title": "Features",
+    "pdf": { "title": "PDF", "text": "Merge. Split. Compress. Convert." },
+    "media": { "title": "Video and audio", "text": "Pro encoder. GPU fast." },
+    "speech": { "title": "Speech to text", "text": "Arabic included.", "caption": "Hello, world" },
+    "local": { "title": "100% local", "text": "Nothing is uploaded." },
+    "lang": { "title": "Arabic and English", "text": "Built for RTL." }
   },
-  "media": {
-    "title": "A media studio in your pocket",
-    "subtitle": "Convert, compress and edit video and audio with a real encoder — then turn speech into text.",
-    "encoder": {
-      "title": "DropFlow Encoder",
-      "items": [
-        "MP4, MKV, WebM, MOV and MP3, WAV, M4A, FLAC, Opus",
-        "H.264, H.265 and AV1 with GPU acceleration when available",
-        "Presets for WhatsApp, Discord, email, YouTube and Reels",
-        "Hit a target file size, or keep the same quality at a smaller size",
-        "Queue with progress, ETA and cancel"
-      ]
-    },
-    "stt": {
-      "title": "Speech to text",
-      "items": [
-        "Runs Whisper on your device — Arabic and 90+ languages",
-        "Export SRT, VTT, TXT or DOCX",
-        "Burn the subtitles into the video in one step",
-        "Models download only when you ask"
-      ]
-    }
-  },
-  "privacy": {
-    "kicker": "Privacy",
-    "title": "Your files stay on your device.",
-    "text": "Online converters need a copy of your file on their server. DropFlow does the work locally — in the Windows app and in your browser.",
-    "cards": [
-      {
-        "title": "Windows app",
-        "text": "Conversions run on your PC with open-source engines. Network is used only for engine and model downloads you approve."
-      },
-      {
-        "title": "Web app",
-        "text": "Files are processed inside your browser with WebAssembly. No request carries file content."
-      },
-      {
-        "title": "Open source",
-        "text": "GPL-3.0. Read the code, verify the claims, build it yourself."
-      }
-    ]
-  },
-  "roadmap": {
-    "title": "Roadmap",
-    "subtitle": "Built in public, phase by phase.",
-    "status": {
-      "now": "In progress",
-      "next": "Next",
-      "later": "Planned",
-      "done": "Done"
-    },
-    "items": [
-      { "title": "Spike", "text": "Prove drag + key detection on Windows 10 and 11." },
-      { "title": "Core and landing", "text": "The wheel, image/audio/video conversions, file actions, installer." },
-      { "title": "PDF and documents", "text": "The complete PDF toolkit plus Office, slides, spreadsheets, EPUB." },
-      { "title": "Media studio", "text": "Encoder, video/audio tools, subtitles, speech to text." },
-      { "title": "Image studio and shelf", "text": "Photo editing, collage, archives, floating shelf." },
-      { "title": "Local AI", "text": "Arabic OCR, background removal, smart redaction." },
-      { "title": "Web app", "text": "The same wheel in your browser, offline-capable." },
-      { "title": "Automation", "text": "Recipes, watched folders, CLI, send to phone." },
-      { "title": "Launch", "text": "Signed releases, winget, public launch." },
-      { "title": "Accounts", "text": "Optional sign-in and paid plans — later, not now." }
-    ]
+  "formats": {
+    "title": "Every format.",
+    "tablist": "File types",
+    "tools": "Tools"
   },
   "cta": {
-    "title": "Less busywork. More flow.",
-    "text": "Be ready when the first build lands.",
-    "windows": "Windows app",
-    "web": "Web app",
-    "source": "Source code",
-    "soon": "Coming soon"
+    "title": "Drop it. Done."
   },
   "footer": {
-    "license": "Open source under GPL-3.0",
-    "tagline": "Drag, tap, drop — locally."
+    "license": "Open source · GPL-3.0"
   }
 }

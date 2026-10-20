@@ -5,15 +5,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { categories, name, toolsOf } from "@/lib/catalog";
 import type { Locale } from "@/i18n/routing";
 
+const MAX_TOOLS = 8;
 const FORMAT_LABEL: Record<string, string> = { pdfa: "PDF/A", gz: "GZ", tgz: "TGZ" };
 const fmt = (f: string) => FORMAT_LABEL[f] ?? f;
 
-function Chip({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {
+function Chip({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
   return (
     <span
       dir="ltr"
-      className={`inline-flex min-h-8 items-center rounded-lg border px-2.5 font-mono text-xs uppercase ${
-        muted ? "border-dashed border-border text-muted" : "border-border bg-surface-2 text-fg"
+      className={`inline-flex min-h-9 items-center rounded-lg px-3 font-mono text-sm uppercase ${
+        strong ? "bg-primary-soft text-fg" : "border border-border bg-surface text-muted"
       }`}
     >
       {children}
@@ -22,8 +23,7 @@ function Chip({ children, muted = false }: { children: React.ReactNode; muted?: 
 }
 
 export function CategoryExplorer() {
-  const t = useTranslations("explorer");
-  const tc = useTranslations("common");
+  const t = useTranslations("formats");
   const locale = useLocale() as Locale;
   const [active, setActive] = useState(categories[0].id);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -42,7 +42,7 @@ export function CategoryExplorer() {
 
   return (
     <div>
-      <div role="tablist" aria-label={t("tablist")} className="flex flex-wrap gap-2">
+      <div role="tablist" aria-label={t("tablist")} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {categories.map((c, i) => (
           <button
             key={c.id}
@@ -55,7 +55,7 @@ export function CategoryExplorer() {
             tabIndex={active === c.id ? 0 : -1}
             onClick={() => setActive(c.id)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors duration-200 ${
+            className={`min-h-11 shrink-0 rounded-full border px-5 text-sm font-semibold transition-colors duration-200 ${
               active === c.id ? "border-primary bg-primary text-on-primary" : "border-border bg-surface text-muted hover:text-fg"
             }`}
           >
@@ -64,49 +64,42 @@ export function CategoryExplorer() {
         ))}
       </div>
 
-      <div id={`panel-${cat.id}`} role="tabpanel" aria-labelledby={`tab-${cat.id}`} tabIndex={0} className="mt-6 grid gap-6 rounded-3xl border border-border bg-surface p-6 sm:p-8 lg:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">{t("convertTo")}</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {cat.outputs.map((o) => {
-              const late = cat.lateOutputs?.[o];
-              return (
-                <Chip key={o} muted={Boolean(late)}>
-                  {fmt(o)}
-                  {late ? <span className="sr-only"> — {t("laterOutput", { format: o.toUpperCase(), n: late })}</span> : null}
-                </Chip>
-              );
-            })}
-          </div>
-          <h3 className="mt-6 text-sm font-semibold uppercase tracking-wide text-muted">{t("acceptsFrom")}</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
+      <div id={`panel-${cat.id}`} role="tabpanel" aria-labelledby={`tab-${cat.id}`} tabIndex={0} className="glass mt-5 rounded-4xl p-6 sm:p-10">
+        <div className="flex flex-col items-start gap-5 lg:flex-row lg:items-center">
+          <div className="flex flex-wrap gap-2 lg:max-w-[40%]">
             {cat.inputs.map((o) => (
               <Chip key={o}>{fmt(o)}</Chip>
             ))}
           </div>
-          <p className="mt-4 text-sm text-muted">
-            {tc("phase", { n: cat.phase })} · {cat.platforms.map((p) => tc(p)).join(" · ")}
-          </p>
+          <svg aria-hidden="true" width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 rotate-90 rtl:-rotate-90 lg:rotate-0 lg:rtl:rotate-180">
+            <path d="M3 12h32M26 4l9 8-9 8" />
+          </svg>
+          <div className="flex flex-wrap gap-2">
+            {cat.outputs.map((o) => (
+              <Chip key={o} strong>
+                {fmt(o)}
+              </Chip>
+            ))}
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">{t("tools")}</h3>
-          {catTools.length === 0 ? (
-            <p className="mt-3 text-muted">{t("noTools")}</p>
-          ) : (
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {catTools.map((tool) => (
-                <li key={tool.id} className="flex items-start justify-between gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                  <span>
-                    {name(tool, locale)}
-                    {tool.multi ? <span className="ms-1.5 text-xs text-muted">· {t("multi")}</span> : null}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted">{tc("phase", { n: tool.phase })}</span>
+        {catTools.length > 0 && (
+          <div className="mt-8 border-t border-border pt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted">{t("tools")}</h3>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {catTools.slice(0, MAX_TOOLS).map((tool) => (
+                <li key={tool.id} className="rounded-lg bg-surface-2 px-3 py-1.5 text-sm">
+                  {name(tool, locale)}
                 </li>
               ))}
+              {catTools.length > MAX_TOOLS && (
+                <li dir="ltr" className="rounded-lg bg-primary-soft px-3 py-1.5 font-mono text-sm font-semibold">
+                  +{catTools.length - MAX_TOOLS}
+                </li>
+              )}
             </ul>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

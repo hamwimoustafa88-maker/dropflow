@@ -4,8 +4,8 @@ An enhanced, open-source Windows 10/11 + web counterpart of Tangerine (tangerine
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
 License: GPL-3.0-or-later. Audience: Arabic + English users.
 
-**Status:** Planning + repo bootstrap done. Phase 1 landing page built in `web/` (ar/en, static, builds clean) but NOT deployed:
-CTAs are disabled "coming soon" because no release/repo URL exists yet. Phase 0 spike code is written and builds
+**Status:** Planning + repo bootstrap done. Landing page (`web/`, ar/en, static, noindex) is redesigned and minimal; CTAs are inert
+"Soon" badges until the first release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`). Phase 0 spike code is written and builds
 (`src/DropFlow.Hooks` + `src/DropFlow.Spike`, 16 passing unit tests) but the **manual checklist in `docs/phase0-checklist.md`
 has not been run** (needs a human dragging files; Windows 11 and multi-monitor/DPI untested). Do not start Phase 1 desktop
 work until it passes on Windows 10 and 11. .NET 10 SDK 10.0.402 is installed (new terminals may need a restart to see it on PATH).
@@ -81,6 +81,12 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Landing redesign (owner asked for fewer words, modern, simple tech): hero "Drag. Tap. Drop." + simulated wheel,
+  moving format marquee, 3 big numbers, 5-tile bento (PDF, video/audio, speech-to-text, 100% local, Arabic/English), format
+  explorer (tools capped at 8 + "+N"), closing CTA; removed roadmap/privacy/PDF/media text sections. Pure CSS + Tailwind, no new
+  libraries; scroll reveal via CSS `animation-timeline`; favicon (`icon.svg`) + static OG image; `robots: noindex` until launch
+  (Phase 8). Verified with headless Edge over DevTools (dark/light, ar/en, true 390px mobile: 0 horizontal overflow). Created
+  private GitHub repo hamwimoustafa88-maker/dropflow and pushed `main`.
 - 2026-10-20 — Phase 0 spike (code only): installed .NET 10 SDK 10.0.402 via winget (user approved); created DropFlow.sln,
   src/DropFlow.Hooks (DragDetector + LowLevelInputHook), src/DropFlow.Spike (WPF, PerMonitorV2, asInvoker manifest, non-activating
   topmost drop-target wheel using a #01000000 hit-testable background and SetWindowPos for per-monitor DPI placement),

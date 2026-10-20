@@ -20,6 +20,11 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+// Vercel injects VERCEL_PROJECT_PRODUCTION_URL at build time; used for absolute OG/canonical URLs.
+const siteUrl = new URL(
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000",
+);
+
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -34,8 +39,11 @@ export async function generateMetadata({ params }: Pick<Props, "params">): Promi
   if (!hasLocale(routing.locales, locale)) return {};
   const t = await getTranslations({ locale, namespace: "meta" });
   return {
+    metadataBase: siteUrl,
     title: t("title"),
     description: t("description"),
+    // Preliminary trial: keep out of search engines until the public launch (Phase 8).
+    robots: { index: false, follow: false },
     alternates: {
       languages: Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])),
     },

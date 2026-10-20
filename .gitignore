@@ -1,0 +1,30 @@
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.nupkg
+TestResults/
+Releases/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Engines, models and large samples (downloaded by tools/, never committed)
+tools/bin/
+models/
+*.onnx
+*.gguf
+tests/samples/large/
+
+# Local settings
+.claude/settings.local.json
+.env
+.env.*
+!.env.example

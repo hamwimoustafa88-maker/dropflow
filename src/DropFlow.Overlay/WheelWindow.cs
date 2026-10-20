@@ -47,11 +47,20 @@ public sealed class WheelWindow : Window
         _root.DragLeave += OnDragLeave;
         _root.Drop += OnDrop;
         Wheel.Cancelled += (_, _) => DropCancelled?.Invoke(this, EventArgs.Empty);
+        Wheel.ItemInvoked += (_, e) => ItemClicked?.Invoke(this, e.Index);
+        Deactivated += (_, _) =>
+        {
+            // clicking anywhere else closes a click-mode wheel
+            if (IsInteractive && IsWheelVisible) DropCancelled?.Invoke(this, EventArgs.Empty);
+        };
     }
 
     public WheelControl Wheel { get; }
 
     public bool IsWheelVisible { get; private set; }
+
+    /// <summary>True when opened by click/keyboard (not by a drag): the window takes focus and closes when it loses it.</summary>
+    public bool IsInteractive { get; private set; }
 
     /// <summary>Files Windows delivered when the drag entered the wheel (empty until then).</summary>
     public IReadOnlyList<string> Files => _files;
@@ -61,6 +70,9 @@ public sealed class WheelWindow : Window
 
     /// <summary>The user released the drag on a wedge.</summary>
     public event EventHandler<(IReadOnlyList<string> Files, int Index)>? ItemDropped;
+
+    /// <summary>A wedge was clicked or chosen with the keyboard (interactive mode).</summary>
+    public event EventHandler<int>? ItemClicked;
 
     /// <summary>The user released the drag off the wedges, left the wheel, or pressed Esc.</summary>
     public event EventHandler? DropCancelled;
@@ -76,18 +88,32 @@ public sealed class WheelWindow : Window
         _prepared = true;
     }
 
-    /// <summary>Shows the wheel centred under <paramref name="point"/> (physical screen pixels).</summary>
-    public string ShowAt(PixelPoint point)
+    /// <summary>
+    /// Shows the wheel centred under <paramref name="point"/> (physical screen pixels). In the default drag mode the window never takes
+    /// focus; with <paramref name="interactive"/> it does, so arrow keys, Enter and Esc work.
+    /// </summary>
+    public string ShowAt(PixelPoint point, bool interactive = false)
     {
         Prepare();
         _files = [];
         Wheel.ClearHover();
+        IsInteractive = interactive;
         WindowNative.SetClickThrough(_hwnd, false);
+        WindowNative.SetNoActivate(_hwnd, !interactive);
         var (x, y, size, dpi) = WindowNative.ShowTopmostCentered(_hwnd, point, SizeDips);
         IsWheelVisible = true;
         Wheel.PlayOpenAnimation();
+        if (interactive)
+        {
+            Activate();
+            Wheel.Focus();
+            System.Windows.Input.Keyboard.Focus(Wheel);
+        }
         return $"wheel at {x},{y} size {size}px dpi {dpi} rect {WindowNative.Describe(_hwnd)}";
     }
+
+    /// <summary>Files for an interactive wheel (opened for known files rather than by a drag).</summary>
+    public void SetFiles(IReadOnlyList<string> files) => _files = files.ToArray();
 
     /// <summary>Busy mode: the wheel only shows progress and lets clicks pass through to whatever is underneath.</summary>
     public void EnterBusyMode() => WindowNative.SetClickThrough(_hwnd, true);
@@ -97,6 +123,7 @@ public sealed class WheelWindow : Window
         if (!_prepared || !IsWheelVisible) return;
         WindowNative.HideNoActivate(_hwnd);
         IsWheelVisible = false;
+        IsInteractive = false;
         Wheel.SetProgress(null);
         Wheel.ClearHover();
     }

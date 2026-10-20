@@ -296,3 +296,80 @@ public class HotkeyParserTests
     [InlineData("Ctrl+Shift+Esc")]
     public void Format_round_trips(string text) => Assert.Equal(text, HotkeyParser.Format(HotkeyParser.Parse(text)!.Value));
 }
+
+public class SingleInstanceTests
+{
+    private static string UniqueName() => "DropFlowTest." + Guid.NewGuid().ToString("N");
+
+    [Fact]
+    public void The_first_acquirer_is_primary_and_the_second_is_not()
+    {
+        var name = UniqueName();
+        using var first = SingleInstance.Acquire(name);
+        using var second = SingleInstance.Acquire(name);
+
+        Assert.True(first.IsPrimary);
+        Assert.False(second.IsPrimary);
+    }
+
+    [Fact]
+    public void After_the_primary_exits_a_new_launch_becomes_primary()
+    {
+        var name = UniqueName();
+        var first = SingleInstance.Acquire(name);
+        first.Dispose();
+        using var next = SingleInstance.Acquire(name);
+        Assert.True(next.IsPrimary);
+    }
+
+    [Fact]
+    public async Task Arguments_with_spaces_and_arabic_are_forwarded_intact()
+    {
+        var name = UniqueName();
+        using var primary = SingleInstance.Acquire(name);
+        var received = new TaskCompletionSource<string[]>();
+        primary.ArgumentsReceived += a => received.TrySetResult(a);
+        primary.StartListening();
+
+        using var secondary = SingleInstance.Acquire(name);
+        var sent = new[] { "--open", @"C:\صور العائلة\a b.png", "x\"y" };
+        Assert.True(secondary.Forward(sent, TimeSpan.FromSeconds(5)));
+
+        Assert.Equal(sent, await received.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public async Task Several_launches_in_a_row_are_all_delivered_in_order()
+    {
+        var name = UniqueName();
+        using var primary = SingleInstance.Acquire(name);
+        var got = new List<string>();
+        var done = new TaskCompletionSource();
+        primary.ArgumentsReceived += a => { lock (got) { got.Add(a[0]); if (got.Count == 5) done.TrySetResult(); } };
+        primary.StartListening();
+
+        using var secondary = SingleInstance.Acquire(name);
+        for (var i = 0; i < 5; i++) Assert.True(secondary.Forward([$"f{i}"], TimeSpan.FromSeconds(5)));
+
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(["f0", "f1", "f2", "f3", "f4"], got);
+    }
+
+    [Fact]
+    public void Forwarding_with_nobody_listening_fails_fast_instead_of_hanging()
+    {
+        using var lonely = SingleInstance.Acquire(UniqueName());
+        var started = DateTime.UtcNow;
+        Assert.False(lonely.Forward(["x"], TimeSpan.FromMilliseconds(300)));
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public void Only_the_primary_may_listen()
+    {
+        var name = UniqueName();
+        using var first = SingleInstance.Acquire(name);
+        using var second = SingleInstance.Acquire(name);
+        Assert.Throws<InvalidOperationException>(() => second.StartListening());
+    }
+}

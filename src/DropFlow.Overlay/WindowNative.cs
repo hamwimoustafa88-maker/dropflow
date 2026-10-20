@@ -55,6 +55,14 @@ internal static class WindowNative
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, (nint)(style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
 
+    /// <summary>Drag mode must never take focus (it would cancel the drag); click mode needs focus so keys work.</summary>
+    public static void SetNoActivate(nint hwnd, bool noActivate)
+    {
+        var style = (long)GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        style = noActivate ? style | WS_EX_NOACTIVATE : style & ~WS_EX_NOACTIVATE;
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, (nint)style);
+    }
+
     /// <summary>While busy the wheel must not swallow clicks meant for the app underneath.</summary>
     public static void SetClickThrough(nint hwnd, bool on)
     {

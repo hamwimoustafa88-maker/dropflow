@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>DropFlow</AssemblyName>
+    <RootNamespace>DropFlow.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\dropflow.ico</ApplicationIcon>
+    <StartupObject>DropFlow.App.Program</StartupObject>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\dropflow.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Images\DropFlow.Engines.Images.csproj" />
+    <ProjectReference Include="..\DropFlow.Hooks\DropFlow.Hooks.csproj" />
+    <ProjectReference Include="..\DropFlow.Overlay\DropFlow.Overlay.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+  </ItemGroup>
+
+</Project>

@@ -173,5 +173,7 @@
   "opt.filter.sepia": "Sepia",
   "opt.filter.invert": "Invert",
   "opt.aspect.free": "Free",
-  "opt.aspect.original": "Original"
+  "opt.aspect.original": "Original",
+  "settings.language.invalid": "Pick a language from the list.",
+  "settings.concurrency.invalid": "Parallel jobs must be between 1 and 16."
 }

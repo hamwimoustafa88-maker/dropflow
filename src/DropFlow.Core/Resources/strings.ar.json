@@ -173,5 +173,7 @@
   "opt.filter.sepia": "سيبيا",
   "opt.filter.invert": "عكس",
   "opt.aspect.free": "حر",
-  "opt.aspect.original": "الأصلية"
+  "opt.aspect.original": "الأصلية",
+  "settings.language.invalid": "اختر لغة من القائمة.",
+  "settings.concurrency.invalid": "عدد المهام المتوازية بين 1 و16."
 }

@@ -133,3 +133,28 @@ public class HistoryStoreTests
         Assert.Equal("bad file", e.Error);
     }
 }
+
+public class SettingsValidatorTests
+{
+    [Fact]
+    public void Defaults_are_valid() => Assert.Empty(SettingsValidator.Validate(new AppSettings()));
+
+    [Fact]
+    public void Each_problem_is_reported_with_its_own_code()
+    {
+        var bad = new AppSettings
+        {
+            Keys = new WheelKeys { Convert = TriggerKey.Alt, Tools = TriggerKey.Alt, Actions = TriggerKey.Alt },
+            GlobalHotkey = "D",
+            Language = "xx",
+            MaxConcurrency = 0,
+        };
+        Assert.Equal(["keys.duplicate", "hotkey.invalid", "language.invalid", "concurrency.invalid"], SettingsValidator.Validate(bad));
+    }
+
+    [Theory]
+    [InlineData("Ctrl+Shift+F9")]
+    [InlineData("Win+Alt+Space")]
+    public void Other_good_hotkeys_pass(string hotkey) =>
+        Assert.Empty(SettingsValidator.Validate(new AppSettings { GlobalHotkey = hotkey }));
+}

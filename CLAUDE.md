@@ -4,19 +4,22 @@ An enhanced, open-source Windows 10/11 + web counterpart of Tangerine (tangerine
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
 License: GPL-3.0-or-later. Audience: Arabic + English users.
 
-**Status:** Planning + repo bootstrap done. Landing page (`web/`, ar/en, static, noindex) is redesigned and minimal; CTAs are inert
-"Soon" badges until the first release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`).
-Vercel: NOT linked yet — the Vercel connector gets 403 on the owner's personal scope (`moustafa-hamwis-projects`); needs the owner to
-grant the connector team access, or to import the repo in the Vercel dashboard with Root Directory `web`. No Vercel CLI login on this machine. Phase 0 spike code is written and builds
-(`src/DropFlow.Hooks` + `src/DropFlow.Spike`, 16 passing unit tests) but the **manual checklist in `docs/phase0-checklist.md`
-has not been run** (needs a human dragging files; Windows 11 and multi-monitor/DPI untested). Do not start Phase 1 desktop
-work until it passes on Windows 10 and 11. .NET 10 SDK 10.0.402 is installed (new terminals may need a restart to see it on PATH).
-**Read before any task:** `docs/plan.md` (roadmap, Arabic), `docs/feature-catalog.md` (generated tool list) and
-`docs/reference/tangerine-features.md` (parity baseline — DropFlow must never ship less than Tangerine in a category).
+**Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
+(`docs/phase0-checklist.md`) was our own rule and has **not been run** (needs a human dragging files; Windows 11 and
+multi-monitor/DPI untested) — the input-capture risk stays open and is tracked in `docs/status.md`, which is the honest
+verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
+are inert "Soon" badges until a release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch
+`main`). Vercel: NOT linked — the connector gets 403 on the owner's personal scope (`moustafa-hamwis-projects`); the owner must grant
+access or import the repo in the dashboard with Root Directory `web`. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
+installed (new terminals may need a restart to see it on PATH). No external engines (ffmpeg, qpdf, LibreOffice…) are installed on
+the dev machine and we do not download binaries without the owner's say-so; engine-dependent tests skip visibly via `[EngineFact]`.
+**Read before any task:** `docs/plan.md` (roadmap, Arabic), `docs/feature-catalog.md` (generated tool list),
+`docs/reference/tangerine-features.md` (parity baseline — DropFlow must never ship less than Tangerine in a category) and
+`docs/writing-a-converter.md` (the contract every converter follows).
 
 ## Stack
 - Desktop: C# / .NET 10, WPF + WPF-UI, CommunityToolkit.Mvvm, Microsoft.Extensions.Hosting
-- Engines: FFmpeg (GPL), Magick.NET, qpdf, Ghostscript, PDFiumCore, PDFsharp, PdfPig, LibreOffice headless,
+- Engines: FFmpeg (GPL), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig, LibreOffice headless (Ghostscript dropped: not in winget, AGPL),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
 - Web: Next.js + TypeScript + Tailwind + next-intl on Vercel; in-browser WASM (ffmpeg.wasm, pdf-lib, pdf.js,
@@ -29,10 +32,15 @@ work until it passes on Windows 10 and 11. .NET 10 SDK 10.0.402 is installed (ne
 | catalog/tools.json | Single source of truth for all tools/conversions (read by desktop, web, landing) |
 | catalog/build.mjs | Validates the catalog, checks Tangerine parity, regenerates docs/feature-catalog.md |
 | DropFlow.sln | Desktop solution |
+| src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder`, `OutputPathResolver`, settings, history (no UI, no engines) |
+| src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator`, winget-based `EngineInstaller` |
+| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation) |
+| src/DropFlow.AI | Whisper, OCR, background removal, model manager (net10.0-windows10.0.19041.0) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine) and `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread) |
-| src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel (`WheelWindow`, `WindowNative`) |
-| src/DropFlow.* (planned) | App, Overlay, Core, Engines, Encoder, AI, Shell, Cli — created as phases start |
-| tests/DropFlow.Hooks.Tests | xUnit tests for the state machine |
+| src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel |
+| src/DropFlow.* (planned) | App, Overlay, Encoder, Shell, Cli — created as their phases start |
+| tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
+| tests/*.Tests | xUnit tests, one project per src project |
 | web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
 | tests/ | Desktop tests; tests/samples holds one sample per format |
 | tools/ | Scripts that download engine binaries (never commit binaries) |
@@ -83,6 +91,12 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Desktop foundation (owner: "continue all sections, don't stop"): DropFlow.Core (embedded catalog, IConverter contract,
+  ToolRegistry, JobQueue with bounded concurrency/cancel/aggregation, WheelBuilder, OutputPathResolver, SettingsStore, HistoryStore),
+  DropFlow.Engines.Common (ProcessRunner with kill-tree timeout/cancel, EngineLocator, winget EngineInstaller — all winget ids
+  verified except Ghostscript, which winget lacks, so Ghostscript is dropped and PDF compression uses qpdf + image recompression),
+  tests/DropFlow.TestSupport (generated PNG/WAV/PDF/SRT, [EngineFact]), skeleton projects for Images/Media/Pdf/Archive/AI, and
+  docs/writing-a-converter.md + docs/status.md. 80 tests passing. Installed nothing else; no engine binaries downloaded.
 - 2026-10-21 — Landing redesign (owner asked for fewer words, modern, simple tech): hero "Drag. Tap. Drop." + simulated wheel,
   moving format marquee, 3 big numbers, 5-tile bento (PDF, video/audio, speech-to-text, 100% local, Arabic/English), format
   explorer (tools capped at 8 + "+N"), closing CTA; removed roadmap/privacy/PDF/media text sections. Pure CSS + Tailwind, no new

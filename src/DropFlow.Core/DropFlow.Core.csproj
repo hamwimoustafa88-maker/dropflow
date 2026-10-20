@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The catalog is the single source of truth (catalog/tools.json); embed it so the app needs no loose files. -->
+    <EmbeddedResource Include="..\..\catalog\tools.json" LogicalName="DropFlow.Core.tools.json" />
+  </ItemGroup>
+
+</Project>

@@ -5,7 +5,9 @@ and a radial wheel appears to convert, process, or act on files 100% locally —
 License: GPL-3.0-or-later. Audience: Arabic + English users.
 
 **Status:** Planning + repo bootstrap done. Landing page (`web/`, ar/en, static, noindex) is redesigned and minimal; CTAs are inert
-"Soon" badges until the first release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`). Phase 0 spike code is written and builds
+"Soon" badges until the first release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`).
+Vercel: NOT linked yet — the Vercel connector gets 403 on the owner's personal scope (`moustafa-hamwis-projects`); needs the owner to
+grant the connector team access, or to import the repo in the Vercel dashboard with Root Directory `web`. No Vercel CLI login on this machine. Phase 0 spike code is written and builds
 (`src/DropFlow.Hooks` + `src/DropFlow.Spike`, 16 passing unit tests) but the **manual checklist in `docs/phase0-checklist.md`
 has not been run** (needs a human dragging files; Windows 11 and multi-monitor/DPI untested). Do not start Phase 1 desktop
 work until it passes on Windows 10 and 11. .NET 10 SDK 10.0.402 is installed (new terminals may need a restart to see it on PATH).

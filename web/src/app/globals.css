@@ -133,6 +133,16 @@ a,
 .wedge[data-active="true"] + .wedge-label {
   fill: var(--on-primary);
 }
+/* Keyboard focus highlights the wedge itself instead of the default rectangular outline on the <g>. */
+.wedge-group:focus-visible {
+  outline: none;
+}
+.wedge-group:focus-visible .wedge {
+  fill: var(--primary);
+}
+.wedge-group:focus-visible .wedge-label {
+  fill: var(--on-primary);
+}
 .orbit {
   transform-box: fill-box;
   transform-origin: center;

@@ -131,6 +131,7 @@ export function WheelDemo() {
                   key={i}
                   ref={(el) => { wedgeRefs.current[i] = el; }}
                   role="button"
+                  className="wedge-group"
                   tabIndex={0}
                   aria-label={label}
                   onClick={() => run(i)}

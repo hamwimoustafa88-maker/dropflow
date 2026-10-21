@@ -1,7 +1,16 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DropFlow.Engines.Archive.Sharing;
 
@@ -10,12 +19,13 @@ public enum ShareBindMode
 {
     NotStarted,
 
-    /// <summary>Listening on every network interface: a phone on the same Wi-Fi can open the link.</summary>
+    /// <summary>Listening on every IPv4 network interface: a phone on the same Wi-Fi can open the link.</summary>
     Lan,
 
     /// <summary>
-    /// Listening on this computer only (127.0.0.1). Windows refuses non-loopback listeners to non-administrators unless a URL
-    /// reservation exists, so DropFlow falls back to this; see <see cref="PhoneShareServer.UrlAclCommand"/>.
+    /// Listening on this computer only (127.0.0.1). Used when the caller asked for it (<see cref="PhoneShareOptions.LoopbackOnly"/>),
+    /// when this computer has no network address a phone could reach, or when binding to the network failed for another reason
+    /// (see <see cref="PhoneShareServer.LanUnavailableReason"/>).
     /// </summary>
     LoopbackOnly,
 }
@@ -41,18 +51,26 @@ public sealed record PhoneShareOptions
     /// <summary>Stop listening when the lifetime ends or every file was downloaded (single-download mode). Default true.</summary>
     public bool StopWhenFinished { get; init; } = true;
 
-    /// <summary>0 picks a free port. A fixed port is what a URL reservation (<see cref="PhoneShareServer.UrlAclCommand"/>) is made for.</summary>
+    /// <summary>0 picks a free port. A fixed port is only needed when the user has created a firewall rule for it.</summary>
     public int Port { get; init; }
 
     public PhoneShareStrings Strings { get; init; } = PhoneShareStrings.English;
 
-    /// <summary>Do not even try to listen on the network (loopback only).</summary>
+    /// <summary>Do not listen on the network at all (127.0.0.1 only).</summary>
     public bool LoopbackOnly { get; init; }
 
     /// <summary>Overrides the address shown to the phone (normally detected).</summary>
     public IPAddress? LanAddress { get; init; }
 
     public TimeProvider? Time { get; init; }
+
+    // Tuning knobs for tests only: the defaults below are what ships.
+    internal Func<IPAddress?>? LanAddressFinder { get; init; }
+    internal TimeSpan HeaderTimeout { get; init; } = TimeSpan.FromSeconds(20);
+    internal TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(60);
+    internal int MaxConnections { get; init; } = 32;
+    internal double MinSendBytesPerSecond { get; init; } = 2048;
+    internal TimeSpan SlowClientGrace { get; init; } = TimeSpan.FromSeconds(20);
 }
 
 public sealed record SharedFile(int Index, string Name, string FullPath, long Length);
@@ -64,6 +82,12 @@ public sealed record ShareDownloadEventArgs(SharedFile File, string? RemoteAddre
 /// token: <c>http://ip:port/TOKEN/</c> is the listing page, <c>/TOKEN/f/N/name</c> the Nth file. Anything else, including a wrong
 /// token, answers 404. Only the files given to the constructor can ever be read; paths are never taken from the request.
 /// Downloads support HTTP Range (resume, seeking) and use RFC 6266/5987 headers so Arabic and other Unicode names survive.
+/// <para>
+/// The server is Kestrel, which listens on a plain socket: no administrator rights and no URL reservation are needed, so the share
+/// is reachable from a phone for an ordinary (non-elevated) user. Windows Defender Firewall may show its normal one-time prompt
+/// the first time DropFlow listens on the network; the user has to allow it for the phone to connect. Exactly one endpoint is ever
+/// opened: <c>0.0.0.0:port</c> in <see cref="ShareBindMode.Lan"/> mode, <c>127.0.0.1:port</c> otherwise. HTTPS is never used.
+/// </para>
 /// </summary>
 public sealed class PhoneShareServer : IDisposable
 {
@@ -73,13 +97,10 @@ public sealed class PhoneShareServer : IDisposable
     private readonly FileState[] _states;
     private readonly PhoneShareOptions _options;
     private readonly TimeProvider _time;
-    private readonly byte[] _tokenBytes;
     private readonly object _gate = new();
     private readonly CancellationTokenSource _stop = new();
-    private readonly List<Task> _handlers = [];
 
-    private HttpListener? _listener;
-    private Task? _loop;
+    private IHost? _host;
     private ITimer? _expiryTimer;
     private DateTimeOffset? _expiresAt;
     private bool _finished;
@@ -104,8 +125,7 @@ public sealed class PhoneShareServer : IDisposable
         _files = [.. list];
         _states = _files.Select(_ => new FileState()).ToArray();
 
-        _tokenBytes = RandomNumberGenerator.GetBytes(16); // 128 bits
-        Token = Base64Url(_tokenBytes);
+        Token = Base64Url(RandomNumberGenerator.GetBytes(16)); // 128 bits
     }
 
     // ------------------------------------------------------------------ public surface
@@ -119,7 +139,7 @@ public sealed class PhoneShareServer : IDisposable
 
     public ShareBindMode Mode { get; private set; } = ShareBindMode.NotStarted;
 
-    /// <summary>Why LAN listening was not possible (when <see cref="Mode"/> is <see cref="ShareBindMode.LoopbackOnly"/>), or null.</summary>
+    /// <summary>Why the share is not reachable from the network (when <see cref="Mode"/> is <see cref="ShareBindMode.LoopbackOnly"/>), or null.</summary>
     public string? LanUnavailableReason { get; private set; }
 
     public int Port { get; private set; }
@@ -155,133 +175,114 @@ public sealed class PhoneShareServer : IDisposable
     /// <summary>Raised when the lifetime ends or every file of a single-download share was fetched.</summary>
     public event EventHandler? Finished;
 
-    /// <summary>
-    /// The command that lets a non-administrator listen on the network for this port. Run it once, elevated; then start the share
-    /// with <see cref="PhoneShareOptions.Port"/> set to the same port.
-    /// </summary>
-    public static string UrlAclCommand(int port) => $"netsh http add urlacl url=http://+:{port}/ user=Everyone";
+    /// <summary>The addresses Kestrel reports it is listening on, e.g. <c>http://0.0.0.0:49321</c>. Always exactly one.</summary>
+    internal IReadOnlyList<string> BoundAddresses { get; private set; } = [];
 
-    /// <summary>Starts listening. Tries the whole network first, then falls back to this computer only (see <see cref="Mode"/>).</summary>
-    public void Start()
+    /// <summary>
+    /// Starts listening: on the whole network when this computer has a LAN address (and <see cref="PhoneShareOptions.LoopbackOnly"/>
+    /// is not set), otherwise on this computer only (see <see cref="Mode"/> and <see cref="LanUnavailableReason"/>).
+    /// A fixed <see cref="PhoneShareOptions.Port"/> that is already in use throws <see cref="IOException"/>.
+    /// </summary>
+    public void Start() => Task.Run(() => StartAsync()).GetAwaiter().GetResult();   // off the caller's context: safe on a UI thread
+
+    /// <inheritdoc cref="Start"/>
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (IsRunning) return;
         ObjectDisposedException.ThrowIf(_stop.IsCancellationRequested, this);
 
-        LanIpAddress = _options.LoopbackOnly ? null : _options.LanAddress ?? LanAddress.Find();
+        LanIpAddress = null;
+        LanUnavailableReason = null;
+        IPAddress? lan = null;
+        if (_options.LoopbackOnly)
+            LanUnavailableReason = "Network sharing is turned off.";
+        else if ((lan = _options.LanAddress ?? (_options.LanAddressFinder ?? LanAddress.Find)()) is null)
+            LanUnavailableReason = "This computer has no network address that a phone could reach.";
 
-        for (var attempt = 0; attempt < 25; attempt++)
+        if (lan is not null)
         {
-            var port = _options.Port != 0 ? _options.Port : FreePort();
-
-            if (LanIpAddress is not null && !_options.LoopbackOnly)
+            try
             {
-                var lan = TryListen($"http://+:{port}/", out var lanError);
-                if (lan is not null)
-                {
-                    Begin(lan, port, ShareBindMode.Lan);
-                    return;
-                }
-
-                // Access denied is permanent (needs a URL reservation); anything else may be a port clash worth retrying.
-                if (lanError?.ErrorCode == 5)
-                {
-                    LanUnavailableReason = $"Windows does not allow listening on the network without administrator rights. Run once as administrator: {UrlAclCommand(port)} (and share with Port = {port}).";
-                    LanIpAddress = null;
-                }
-                else if (lanError is not null && _options.Port == 0)
-                {
-                    continue;
-                }
-                else if (lanError is not null)
-                {
-                    LanUnavailableReason = $"Could not listen on the network: {lanError.Message}";
-                    LanIpAddress = null;
-                }
-            }
-            else
-            {
-                LanUnavailableReason ??= _options.LoopbackOnly ? "Network sharing is turned off." : "This computer has no network address that a phone could reach.";
-            }
-
-            var loopback = TryListen($"http://127.0.0.1:{port}/", out var loopbackError);
-            if (loopback is not null)
-            {
-                Begin(loopback, port, ShareBindMode.LoopbackOnly);
+                await StartListeningAsync(IPAddress.Any, ShareBindMode.Lan, lan, cancellationToken).ConfigureAwait(false);
                 return;
             }
-
-            if (_options.Port != 0) throw new IOException($"Could not listen on port {port}: {loopbackError?.Message}", loopbackError);
+            catch (IOException) when (_options.Port != 0)
+            {
+                throw; // a fixed port that is taken is the caller's problem, not a reason to quietly share on the wrong interface
+            }
+            catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException)
+            {
+                LanUnavailableReason = $"Could not listen on the network: {ex.Message}";
+            }
         }
 
-        throw new IOException("Could not find a free local port to share on.");
+        await StartListeningAsync(IPAddress.Loopback, ShareBindMode.LoopbackOnly, null, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Stops sharing immediately. In-flight downloads are cut off. Safe to call more than once.</summary>
+    /// <summary>Stops sharing immediately and frees the port. In-flight downloads are cut off. Safe to call more than once.</summary>
     public void Stop()
     {
-        HttpListener? listener;
+        IHost? host;
         lock (_gate)
         {
-            listener = _listener;
-            _listener = null;
+            host = _host;
+            _host = null;
             IsRunning = false;
             Mode = ShareBindMode.NotStarted;
         }
 
         _expiryTimer?.Dispose();
-        if (!_stop.IsCancellationRequested) _stop.Cancel();
+        if (!_stop.IsCancellationRequested) _stop.Cancel();   // running handlers see this and abort their connections
 
-        if (listener is not null)
+        if (host is not null)
         {
-            try { listener.Abort(); }
-            catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) { /* already closed */ }
+            try
+            {
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                Task.Run(() => host.StopAsync(deadline.Token)).GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or IOException) { /* connections that did not close in time are dropped with the host */ }
+            finally
+            {
+                host.Dispose();
+            }
         }
-
-        try { _loop?.Wait(TimeSpan.FromSeconds(2)); }
-        catch (AggregateException) { /* the loop ends with an exception when the listener is aborted; that is the point */ }
-
-        Task[] pending;
-        lock (_gate) pending = [.. _handlers];
-        try { Task.WaitAll(pending, TimeSpan.FromSeconds(2)); }
-        catch (AggregateException) { /* cut-off transfers fail; nobody is waiting for them */ }
     }
 
     public void Dispose() => Stop();
 
     // ------------------------------------------------------------------ startup helpers
 
-    private HttpListener? TryListen(string prefix, out HttpListenerException? error)
+    private async Task StartListeningAsync(IPAddress address, ShareBindMode mode, IPAddress? lan, CancellationToken cancellationToken)
     {
-        error = null;
-        var listener = new HttpListener();
-        listener.Prefixes.Add(prefix);
-
-        // A phone that connects and then says nothing must not hold a connection forever.
-        if (OperatingSystem.IsWindows())
-        {
-            listener.TimeoutManager.HeaderWait = TimeSpan.FromSeconds(30);
-            listener.TimeoutManager.IdleConnection = TimeSpan.FromMinutes(2);
-        }
+        var host = BuildHost(address, _options.Port);
         try
         {
-            listener.Start();
-            return listener;
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (HttpListenerException ex)
+        catch (Exception ex)
         {
-            error = ex;
-            listener.Close();
-            return null;
+            host.Dispose();
+            // "address already in use" is already an IOException (AddressInUseException); anything else is reported as one too.
+            if (ex is IOException) throw;
+            throw new IOException($"Could not start sharing on {address}: {ex.Message}", ex);
         }
-    }
 
-    private void Begin(HttpListener listener, int port, ShareBindMode mode)
-    {
+        var bound = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.ToList() ?? [];
+        if (bound.Count != 1 || !Uri.TryCreate(bound[0], UriKind.Absolute, out var uri))
+        {
+            // Exactly one endpoint, or nothing: if configuration somehow added more, refuse to run.
+            try { await host.StopAsync(CancellationToken.None).ConfigureAwait(false); } finally { host.Dispose(); }
+            throw new IOException($"Unexpected listening addresses: {string.Join(", ", bound)}");
+        }
+
         lock (_gate)
         {
-            _listener = listener;
-            Port = port;
+            _host = host;
+            BoundAddresses = bound;
+            Port = uri.Port;
             Mode = mode;
+            LanIpAddress = lan;
             IsRunning = true;
         }
 
@@ -290,16 +291,43 @@ public sealed class PhoneShareServer : IDisposable
             _expiresAt = _time.GetUtcNow() + lifetime;
             _expiryTimer = _time.CreateTimer(_ => Finish(), null, lifetime, Timeout.InfiniteTimeSpan);
         }
-
-        _loop = Task.Run(() => AcceptLoop(listener));
     }
 
-    private static int FreePort()
+    /// <summary>A bare generic host with only Kestrel and one terminal request handler: no MVC, no routing, no config files, no logging.</summary>
+    private IHost BuildHost(IPAddress address, int port) =>
+        new HostBuilder()
+            .UseContentRoot(AppContext.BaseDirectory)
+            .ConfigureLogging(logging => logging.ClearProviders())
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<IHostLifetime, NoopHostLifetime>();   // no Ctrl+C / ProcessExit hooks: the app decides when to stop
+                services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
+            })
+            .ConfigureWebHost(web => web
+                .UseKestrel(kestrel => ConfigureKestrel(kestrel, address, port))
+                .Configure(app => app.Run(HandleSafelyAsync)))
+            .Build();
+
+    private void ConfigureKestrel(KestrelServerOptions kestrel, IPAddress address, int port)
     {
-        var probe = new TcpListener(IPAddress.Loopback, 0);
-        probe.Start();
-        try { return ((IPEndPoint)probe.LocalEndpoint).Port; }
-        finally { probe.Stop(); }
+        kestrel.AddServerHeader = false;
+        kestrel.AllowSynchronousIO = false;
+
+        var limits = kestrel.Limits;
+        limits.MaxRequestLineSize = 4 * 1024;                     // "GET /TOKEN/f/3/<escaped name> HTTP/1.1" is well under 2 KB
+        limits.MaxRequestHeadersTotalSize = 8 * 1024;
+        limits.MaxRequestHeaderCount = 40;
+        limits.MaxRequestBodySize = 1024;                         // this server only ever answers GET and HEAD
+        limits.MaxRequestBufferSize = 64 * 1024;
+        limits.MaxConcurrentConnections = _options.MaxConnections;
+        limits.MaxConcurrentUpgradedConnections = 0;              // no WebSockets
+        limits.RequestHeadersTimeout = _options.HeaderTimeout;    // a phone that connects and says nothing is dropped
+        limits.KeepAliveTimeout = _options.KeepAliveTimeout;
+        limits.MinRequestBodyDataRate = new MinDataRate(240, TimeSpan.FromSeconds(10));
+        limits.MinResponseDataRate = new MinDataRate(_options.MinSendBytesPerSecond, _options.SlowClientGrace);   // a stalled download is cut off
+
+        // The one and only endpoint. Plain HTTP/1.1.
+        kestrel.Listen(address, port, listen => listen.Protocols = HttpProtocols.Http1);
     }
 
     private void Finish()
@@ -311,48 +339,28 @@ public sealed class PhoneShareServer : IDisposable
 
     private bool IsExpired => _expiresAt is { } at && _time.GetUtcNow() >= at;
 
-    // ------------------------------------------------------------------ request loop
-
-    private async Task AcceptLoop(HttpListener listener)
+    private sealed class NoopHostLifetime : IHostLifetime
     {
-        while (!_stop.IsCancellationRequested)
-        {
-            HttpListenerContext context;
-            try
-            {
-                context = await listener.GetContextAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException or InvalidOperationException)
-            {
-                return; // stopped
-            }
-
-            var task = Task.Run(() => HandleSafely(context));
-            lock (_gate)
-            {
-                _handlers.RemoveAll(t => t.IsCompleted);
-                _handlers.Add(task);
-            }
-        }
+        public Task WaitForStartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
-    private async Task HandleSafely(HttpListenerContext context)
+    // ------------------------------------------------------------------ request handling
+
+    private async Task HandleSafelyAsync(HttpContext context)
     {
         try
         {
             await HandleAsync(context).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or OperationCanceledException or InvalidOperationException)
-        {
-            TryAbort(context);
-        }
         catch (Exception)
         {
-            TryAbort(context); // never let one bad request take the server down
+            // Cancelled, client gone, or a bug: never let one request take the server down, and never leave a half-sent body looking complete.
+            context.Abort();
         }
     }
 
-    private async Task HandleAsync(HttpListenerContext context)
+    private async Task HandleAsync(HttpContext context)
     {
         var request = context.Request;
         var response = context.Response;
@@ -360,57 +368,67 @@ public sealed class PhoneShareServer : IDisposable
         response.Headers["Cache-Control"] = "no-store";
         response.Headers["Referrer-Policy"] = "no-referrer";
 
-        var isGet = request.HttpMethod == "GET";
-        var isHead = request.HttpMethod == "HEAD";
-        if (!isGet && !isHead)
+        var head = HttpMethods.IsHead(request.Method);
+        if (!head && !HttpMethods.IsGet(request.Method))
         {
-            Reply(response, 405, "Method Not Allowed", allow: "GET, HEAD");
+            await ReplyAsync(response, 405, "Method Not Allowed", allow: "GET, HEAD").ConfigureAwait(false);
             return;
         }
 
-        var segments = ParseSegments(request.Url);
+        var rawTarget = context.Features.Get<IHttpRequestFeature>()?.RawTarget ?? "";
+        var segments = ParseSegments(rawTarget, out var endsWithSlash);
         if (segments is null || segments.Count == 0 || !TokenMatches(segments[0]))
         {
-            Reply(response, 404, "Not Found");
+            await ReplyAsync(response, 404, "Not Found").ConfigureAwait(false);
             return;
         }
 
         // From here on the caller proved they hold the link.
         if (IsExpired || IsFinished)
         {
-            Reply(response, 410, _options.Strings.Expired, html: true);
+            await ReplyAsync(response, 410, _options.Strings.Expired, html: true).ConfigureAwait(false);
             return;
         }
 
         if (segments.Count == 1)
         {
             // "/TOKEN" without the trailing slash: relative links need the slash
-            if (!request.Url!.AbsolutePath.EndsWith('/'))
+            if (!endsWithSlash)
             {
                 response.StatusCode = 301;
-                response.RedirectLocation = $"/{Token}/";
-                response.Close();
+                response.Headers.Location = $"/{Token}/";
+                response.ContentLength = 0;
                 return;
             }
-            await ServeListing(response, isHead).ConfigureAwait(false);
+            await ServeListingAsync(response, head).ConfigureAwait(false);
             return;
         }
 
         if (segments.Count is 3 or 4 && segments[1] == "f" && int.TryParse(segments[2], out var index) && index >= 0 && index < _files.Length && segments[2] == index.ToString())
         {
-            await ServeFile(context, _files[index], _states[index], isHead).ConfigureAwait(false);
+            await ServeFileAsync(context, _files[index], _states[index], head).ConfigureAwait(false);
             return;
         }
 
-        Reply(response, 404, "Not Found");
+        await ReplyAsync(response, 404, "Not Found").ConfigureAwait(false);
     }
 
-    /// <summary>Splits the URL path into decoded segments. Returns null for anything that could hide a traversal.</summary>
-    private static List<string>? ParseSegments(Uri? url)
+    /// <summary>
+    /// Splits the request path into decoded segments, working from the raw request target (before any server-side normalisation).
+    /// Returns null for anything that could hide a traversal: ".." or "." segments, encoded or raw slashes and backslashes inside a
+    /// segment, NUL characters, malformed escapes, or a target that is not a plain path.
+    /// </summary>
+    internal static List<string>? ParseSegments(string rawTarget, out bool endsWithSlash)
     {
-        if (url is null) return null;
+        endsWithSlash = false;
+        var path = rawTarget;
+        var cut = path.IndexOfAny(['?', '#']);
+        if (cut >= 0) path = path[..cut];
+        if (path.Length == 0 || path[0] != '/') return null;
+        endsWithSlash = path.EndsWith('/');
+
         var segments = new List<string>();
-        foreach (var raw in url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var raw in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {
             string decoded;
             try { decoded = Uri.UnescapeDataString(raw); }
@@ -431,7 +449,7 @@ public sealed class PhoneShareServer : IDisposable
 
     // ------------------------------------------------------------------ listing
 
-    private async Task ServeListing(HttpListenerResponse response, bool head)
+    private async Task ServeListingAsync(HttpResponse response, bool head)
     {
         var strings = _options.Strings;
         var sb = new StringBuilder();
@@ -461,14 +479,13 @@ public sealed class PhoneShareServer : IDisposable
         response.StatusCode = 200;
         response.ContentType = "text/html; charset=utf-8";
         response.Headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'";
-        response.ContentLength64 = body.Length;
-        if (!head) await response.OutputStream.WriteAsync(body, _stop.Token).ConfigureAwait(false);
-        response.Close();
+        response.ContentLength = body.Length;
+        if (!head) await response.Body.WriteAsync(body, _stop.Token).ConfigureAwait(false);
     }
 
     // ------------------------------------------------------------------ file download
 
-    private async Task ServeFile(HttpListenerContext context, SharedFile file, FileState state, bool head)
+    private async Task ServeFileAsync(HttpContext context, SharedFile file, FileState state, bool head)
     {
         var request = context.Request;
         var response = context.Response;
@@ -480,54 +497,60 @@ public sealed class PhoneShareServer : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Reply(response, 404, "Not Found");
+            await ReplyAsync(response, 404, "Not Found").ConfigureAwait(false);
             return;
         }
 
         await using (stream.ConfigureAwait(false))
         {
             var length = stream.Length;
-            if (!TryParseRange(request.Headers["Range"], length, out var start, out var end, out var partial))
+            if (!TryParseRange(request.Headers.Range.ToString(), length, out var start, out var end, out var partial))
             {
                 response.Headers["Content-Range"] = $"bytes */{length}";
-                Reply(response, 416, "Range Not Satisfiable");
+                await ReplyAsync(response, 416, "Range Not Satisfiable").ConfigureAwait(false);
                 return;
             }
 
             if (head)
             {
                 WriteFileHeaders(response, file, start, end, length, partial);
-                response.Close();
                 return;
             }
 
             // A single-download share hands each file out once; the claim is released if the transfer does not finish.
             if (_options.SingleDownload && !state.TryClaim())
             {
-                Reply(response, 410, _options.Strings.Gone, html: true);
+                await ReplyAsync(response, 410, _options.Strings.Gone, html: true).ConfigureAwait(false);
                 return;
             }
 
-            var remote = request.RemoteEndPoint?.Address.ToString();
+            var remote = context.Connection.RemoteIpAddress?.ToString();
             var delivered = false;
             try
             {
                 DownloadStarted?.Invoke(this, new ShareDownloadEventArgs(file, remote, false));
                 WriteFileHeaders(response, file, start, end, length, partial);
 
+                // The transfer ends when the client goes away or the share is stopped, whichever comes first.
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, _stop.Token);
+                var token = linked.Token;
+
                 stream.Seek(start, SeekOrigin.Begin);
                 var remaining = end - start + 1;
                 var buffer = new byte[(int)Math.Min(BufferSize, Math.Max(1, remaining))];
                 while (remaining > 0)
                 {
-                    var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), _stop.Token).ConfigureAwait(false);
+                    var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), token).ConfigureAwait(false);
                     if (read == 0) break; // the file shrank while sending: the client sees a short body and retries
-                    await response.OutputStream.WriteAsync(buffer.AsMemory(0, read), _stop.Token).ConfigureAwait(false);
+                    await response.Body.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
                     remaining -= read;
                 }
 
-                delivered = remaining == 0;
-                response.Close();
+                if (remaining == 0)
+                {
+                    await response.CompleteAsync().ConfigureAwait(false);   // the last byte has been handed to the network
+                    delivered = true;
+                }
             }
             finally
             {
@@ -548,11 +571,11 @@ public sealed class PhoneShareServer : IDisposable
         }
     }
 
-    private static void WriteFileHeaders(HttpListenerResponse response, SharedFile file, long start, long end, long length, bool partial)
+    private static void WriteFileHeaders(HttpResponse response, SharedFile file, long start, long end, long length, bool partial)
     {
         response.StatusCode = partial ? 206 : 200;
         response.ContentType = MimeTypes.For(file.Name);
-        response.ContentLength64 = end - start + 1;
+        response.ContentLength = end - start + 1;
         response.Headers["Accept-Ranges"] = "bytes";
         response.Headers["Content-Disposition"] = ContentDispositionHeader.Attachment(file.Name);
         if (partial) response.Headers["Content-Range"] = $"bytes {start}-{end}/{length}";
@@ -605,30 +628,16 @@ public sealed class PhoneShareServer : IDisposable
 
     // ------------------------------------------------------------------ small helpers
 
-    private static void Reply(HttpListenerResponse response, int status, string message, bool html = false, string? allow = null)
+    private async Task ReplyAsync(HttpResponse response, int status, string message, bool html = false, string? allow = null)
     {
-        try
-        {
-            response.StatusCode = status;
-            if (allow is not null) response.Headers["Allow"] = allow;
-            var body = html
-                ? Encoding.UTF8.GetBytes($"<!doctype html><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>{WebUtility.HtmlEncode(message)}</title><p dir=\"auto\">{WebUtility.HtmlEncode(message)}</p>")
-                : Encoding.UTF8.GetBytes(message);
-            response.ContentType = html ? "text/html; charset=utf-8" : "text/plain; charset=utf-8";
-            response.ContentLength64 = body.Length;
-            response.OutputStream.Write(body, 0, body.Length);
-            response.Close();
-        }
-        catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException or IOException or InvalidOperationException)
-        {
-            // client already gone
-        }
-    }
-
-    private static void TryAbort(HttpListenerContext context)
-    {
-        try { context.Response.Abort(); }
-        catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) { /* nothing left to abort */ }
+        response.StatusCode = status;
+        if (allow is not null) response.Headers["Allow"] = allow;
+        var body = html
+            ? Encoding.UTF8.GetBytes($"<!doctype html><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>{WebUtility.HtmlEncode(message)}</title><p dir=\"auto\">{WebUtility.HtmlEncode(message)}</p>")
+            : Encoding.UTF8.GetBytes(message);
+        response.ContentType = html ? "text/html; charset=utf-8" : "text/plain; charset=utf-8";
+        response.ContentLength = body.Length;
+        await response.Body.WriteAsync(body, _stop.Token).ConfigureAwait(false);
     }
 
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');

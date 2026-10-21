@@ -713,32 +713,32 @@ public class SharingTests : IDisposable
     }
 
     [Fact]
-    public void The_bind_mode_is_surfaced_and_falls_back_to_this_computer_when_windows_refuses()
+    public void Listening_on_the_network_needs_no_administrator_rights_so_the_bind_mode_is_lan()
     {
+        // A documentation address (TEST-NET-1) stands in for "the address the phone would use"; the socket itself is bound to every interface.
         var server = Start([File_("a.txt", Kit.Bytes("A"))], new PhoneShareOptions { LanAddress = IPAddress.Parse("192.0.2.77") });
 
         Assert.True(server.IsRunning);
-        Assert.NotEqual(ShareBindMode.NotStarted, server.Mode);
+        Assert.Equal(ShareBindMode.Lan, server.Mode);
+        Assert.Null(server.LanUnavailableReason);
         Assert.InRange(server.Port, 1024, 65535);
-        Assert.Equal("127.0.0.1", server.LoopbackListingUrl.Host);
-
-        if (server.Mode == ShareBindMode.Lan)
-        {
-            // an administrator (or a URL reservation) was available: the phone-facing link uses the LAN address
-            Assert.Equal("192.0.2.77", server.ListingUrl.Host);
-            Assert.Null(server.LanUnavailableReason);
-        }
-        else
-        {
-            // the normal case for a standard user: loopback only, with the reason and the fix spelled out
-            Assert.Equal(ShareBindMode.LoopbackOnly, server.Mode);
-            Assert.Equal("127.0.0.1", server.ListingUrl.Host);
-            Assert.Null(server.LanIpAddress);
-            Assert.Contains("administrator", server.LanUnavailableReason);
-            Assert.Contains($"netsh http add urlacl url=http://+:{server.Port}/", server.LanUnavailableReason);
-        }
+        Assert.Equal("192.0.2.77", server.ListingUrl.Host);                 // the phone-facing link uses the LAN address
+        Assert.Equal("127.0.0.1", server.LoopbackListingUrl.Host);          // and this PC can still use loopback
+        Assert.Equal(IPAddress.Parse("192.0.2.77"), server.LanIpAddress);
     }
 
+    [Fact]
+    public async Task Without_a_usable_network_address_the_share_falls_back_to_this_computer_and_says_why()
+    {
+        var server = Start([File_("a.txt", Kit.Bytes("A"))], new PhoneShareOptions { LanAddressFinder = () => null });
+
+        Assert.Equal(ShareBindMode.LoopbackOnly, server.Mode);
+        Assert.Equal("127.0.0.1", server.ListingUrl.Host);
+        Assert.Null(server.LanIpAddress);
+        Assert.Contains("no network address", server.LanUnavailableReason);
+        Assert.Equal(["http://127.0.0.1:" + server.Port], server.BoundAddresses);
+        Assert.Equal("A", await _http.GetStringAsync(server.FileUrl(0)));
+    }
     [Fact]
     public void Loopback_only_option_never_tries_the_network()
     {
@@ -761,12 +761,6 @@ public class SharingTests : IDisposable
         var taken = one.Port;
         var clash = new PhoneShareServer([file], new PhoneShareOptions { LoopbackOnly = true, Port = taken });
         Assert.Throws<IOException>(() => clash.Start());
-    }
-
-    [Fact]
-    public void The_url_reservation_command_is_spelled_out_for_the_installer_or_a_help_dialog()
-    {
-        Assert.Equal("netsh http add urlacl url=http://+:49500/ user=Everyone", PhoneShareServer.UrlAclCommand(49500));
     }
 
     [Fact]

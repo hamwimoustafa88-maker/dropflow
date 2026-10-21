@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Kestrel for the phone-share server. Part of the .NET shared framework (MIT), not a NuGet package. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="15.0.0" />
     <PackageReference Include="SharpCompress" Version="0.50.7" />
     <PackageReference Include="ZXing.Net" Version="0.16.11" />

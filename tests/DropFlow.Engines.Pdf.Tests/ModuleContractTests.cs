@@ -89,12 +89,14 @@ public class ModuleContractTests
     [InlineData("pdf.merge", "PDF", true)]
     [InlineData("pdf.merge", "png", false)]
     [InlineData("img.to-pdf", "png", true)]
-    [InlineData("img.to-pdf", "heic", false)]
+    [InlineData("img.to-pdf", "heic", true)]
     [InlineData("convert:pdf", "jpg", true)]
     [InlineData("convert:pdf", "pdf", false)]
     [InlineData("convert:png", "pdf", true)]
     [InlineData("convert:png", "png", false)]
-    [InlineData("pdf.pdfa", "pdf", false)]
+    [InlineData("convert:pdfa", "pdf", true)]
+    [InlineData("convert:pdfa", "png", false)]
+    [InlineData("convert:pdf", "heic", true)]
     public void Supports_is_truthful_about_known_pairs(string operation, string ext, bool expected)
     {
         Assert.Equal(expected, Kit.Converters.Any(c => c.Supports(operation, ext)));

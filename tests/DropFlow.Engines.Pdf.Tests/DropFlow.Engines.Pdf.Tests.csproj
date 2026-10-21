@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Binary fixtures (see tests/samples/README.md for sources and licences) -->
+    <None Include="..\samples\heic\*.heic" Link="samples\heic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
     <ProjectReference Include="..\DropFlow.TestSupport\DropFlow.TestSupport.csproj" />
   </ItemGroup>

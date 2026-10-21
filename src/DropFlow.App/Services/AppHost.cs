@@ -72,13 +72,38 @@ internal sealed class WheelPresenter(WheelWindow window, ILocalizer loc) : IWhee
 
     public void SetItems(WheelKind kind, IReadOnlyList<Wedge> wedges, int fileCount)
     {
-        var items = wedges.Select(w => new WheelItem(w.Id, w.Label, w.State == WedgeState.NeedsEngine ? WheelItemState.NeedsEngine : WheelItemState.Ready, w.NeedsOptions)).ToList();
+        window.HideAddList(); // back from "+ Add" (no-op otherwise)
+        var items = wedges.Select(ToItem).ToList();
         window.Wheel.SetItems(items, loc.IsRightToLeft);
         var hint = fileCount == 0 ? loc["wheel.drop"] : fileCount == 1 ? loc["wheel.file"] : loc.Format("wheel.files", fileCount);
-        window.Wheel.SetCenter(items.Count == 0 && fileCount > 0 ? loc["wheel.nothing"] : loc["wheel." + kind.ToString().ToLowerInvariant()], items.Count == 0 && fileCount > 0 ? "" : hint);
+        window.Wheel.SetCenter(items.Count == 0 && fileCount > 0 ? loc["wheel.nothing"] : loc["wheel." + Key(kind)], items.Count == 0 && fileCount > 0 ? "" : hint);
+    }
+
+    public void ShowAddList(WheelKind kind, IReadOnlyList<Wedge> addable)
+    {
+        var groups = Enum.GetValues<WheelKind>()
+            .Select(k => new WheelItemGroup(loc["wheel.add.group." + Key(k)], addable.Where(w => w.Wheel == k).Select(ToItem).ToList()))
+            .ToList();
+        window.ShowAddList(loc["wheel.add.title." + Key(kind)], loc["wheel.add.hint"], loc["wheel.add.back"], groups, loc.IsRightToLeft);
     }
 
     public void Hide() => window.HideWheel();
+
+    /// <summary>Right-click (or the Menu key) on a wedge: a pinned item offers "Remove from wheel"; other wedges have no menu.</summary>
+    public void OnItemContext(int index)
+    {
+        if (Session is not { } session || !session.CanUnpin(index)) return;
+        window.ShowItemMenu(loc["wheel.unpin"], loc.IsRightToLeft, () => session.Unpin(index));
+    }
+
+    private WheelItem ToItem(Wedge w) => new(
+        w.Id,
+        w.IsAdd ? loc["wheel.add"] : w.Label,
+        w.State == WedgeState.NeedsEngine ? WheelItemState.NeedsEngine : WheelItemState.Ready,
+        w.NeedsOptions,
+        w.IsAdd ? WheelItemRole.Add : w.Pinned ? WheelItemRole.Pinned : WheelItemRole.Normal);
+
+    private static string Key(WheelKind kind) => kind.ToString().ToLowerInvariant();
 }
 
 /// <summary>
@@ -159,6 +184,8 @@ internal sealed class AppHost : IDisposable
     public IFileDisposer Disposer { get; }
     public WheelSession Session { get; private set; } = null!;
     public WheelPresenter Presenter { get; private set; } = null!;
+    private WheelBuilder Builder => _builder ??= new WheelBuilder(Catalog, Registry, Engines);
+    private WheelBuilder? _builder;
 
     public static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
     private static string ExePath => Environment.ProcessPath ?? "DropFlow.exe";
@@ -171,14 +198,17 @@ internal sealed class AppHost : IDisposable
         _wheel.Prepare();
         Presenter = new WheelPresenter(_wheel, Loc);
 
-        var builder = new WheelBuilder(Catalog, Registry, Engines);
-        Session = new WheelSession(builder, Presenter, _scheduler, () => Settings, () => Loc.Language, () => ActionService.SupportedIds, OnSelectedAsync);
+        Session = new WheelSession(Builder, Presenter, _scheduler, () => Settings, () => Loc.Language, () => ActionService.SupportedIds, OnSelectedAsync,
+            savePins: pins => Update(Settings with { PinnedItems = pins }));
         Presenter.Session = Session;
 
         _wheel.FilesEntered += (_, files) => Session.OnFilesEntered(files);
         _wheel.ItemDropped += (_, e) => _ = Session.OnItemDroppedAsync(e.Files, e.Index);
-        _wheel.ItemClicked += (_, index) => _ = Session.OnItemDroppedAsync(_wheel.Files, index);
+        _wheel.ItemClicked += (_, index) => _ = Session.OnItemDroppedAsync(_wheel.Files.Count > 0 ? _wheel.Files : Session.Files, index);
         _wheel.DropCancelled += (_, _) => Session.Dismiss();
+        _wheel.ItemContextRequested += (_, index) => Presenter.OnItemContext(index);
+        _wheel.AddItemPicked += (_, id) => _ = Session.OnAddPickedAsync(id);
+        _wheel.AddListBack += (_, _) => Session.CloseAddList();
 
         Queue.Changed += batch => _ui.BeginInvoke(() => OnBatchChanged(batch));
         Queue.BatchCompleted += (batch, result) => _ui.BeginInvoke(() => OnBatchCompleted(batch, result));
@@ -275,7 +305,7 @@ internal sealed class AppHost : IDisposable
         {
             try
             {
-                if (selection.Kind == WheelKind.Actions)
+                if (selection.Wedge.Wheel == WheelKind.Actions) // an action pinned to another wheel is still an action
                 {
                     await CreateActions().ExecuteAsync(selection.Wedge.Id, selection.Files);
                     return;
@@ -477,7 +507,8 @@ internal sealed class AppHost : IDisposable
             Version, _watchStore.Load(), AllRecipes().Select(r => r.Name).ToList(), SaveWatchRules,
             [.. Models.Catalog.Select(m => new ModelItem(
                 m.Id, m.DisplayName, m.SizeBytes, () => Models.IsInstalled(m.Id),
-                () => _modelDownloads.EnsureAsync(m.Id, m.DisplayName), () => Models.Delete(m.Id)))]));
+                () => _modelDownloads.EnsureAsync(m.Id, m.DisplayName), () => Models.Delete(m.Id)))],
+            PinnedRows()));
         _settingsWindow.Show();
         _settingsWindow.Activate();
     }
@@ -545,9 +576,20 @@ internal sealed class AppHost : IDisposable
             FileLog.Error("system integration", ex);
         }
 
-        Update(s);
+        // Pins change outside this form (the wheel, the list in the same window): keep the current ones, not the form's snapshot.
+        Update(s with { PinnedItems = Settings.PinnedItems });
         return RegisterHotkey() ? [] : ["hotkey.invalid"];
     }
+
+    /// <summary>The Settings rows for items added to the wheels (Convert, Tools, Actions; oldest first within a wheel).</summary>
+    private IReadOnlyList<PinnedRow> PinnedRows() =>
+        [.. Settings.PinnedItems.All.Select(p => new PinnedRow(
+            Builder.LabelOf(p.Id, Loc.Language),
+            $"{Loc["wheel." + p.Wheel.ToString().ToLowerInvariant()]} · {CategoryName(p.Category)}",
+            () => Update(Settings with { PinnedItems = Settings.PinnedItems.Without(p.Wheel, p.Category, p.Id) })))];
+
+    private string CategoryName(string id) =>
+        Catalog.Category(id) is { } c ? (Loc.Language == "ar" ? c.Ar : c.En) : Loc["settings.pins.other"];
 
     private void Update(AppSettings s)
     {

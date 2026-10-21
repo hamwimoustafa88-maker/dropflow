@@ -3,6 +3,7 @@ using DropFlow.AI.Models;
 using DropFlow.App.Services;
 using DropFlow.Core.Catalog;
 using DropFlow.Core.Registry;
+using DropFlow.Core.Settings;
 using DropFlow.Core.Wheel;
 using DropFlow.TestSupport;
 
@@ -113,6 +114,36 @@ public sealed class WheelIntegrationTests : IDisposable
     public void Subtitles_convert_between_formats()
     {
         AssertHas(Build(@"C:\s\movie.srt").Convert.Select(w => w.Label), "VTT", "ASS", "TXT");
+    }
+
+    [Fact]
+    public void Add_on_the_convert_wheel_of_a_photo_offers_ocr_and_pinning_it_puts_it_on_that_wheel()
+    {
+        string[] actions = ["act.share", "act.copy", "act.send-phone"];
+        var set = _builder.Build([@"C:\p\photo.png"], "en", actions, WheelPins.None);
+
+        Assert.True(set.Convert[^1].IsAdd);
+        var addable = set.AddableFor(WheelKind.Convert);
+        AssertHas(addable.Select(w => w.Id), "img.ocr", "img.remove-bg", "img.compress", "act.send-phone");
+        Assert.DoesNotContain(addable, w => w.Id.StartsWith("convert:", StringComparison.Ordinal));   // all already on this wheel
+        Assert.Equal("Extract text (OCR)", addable.Single(w => w.Id == "img.ocr").Label);
+
+        var pinned = _builder.Build([@"C:\p\photo.png"], "en", actions, WheelPins.None.With(WheelKind.Convert, "image", "img.ocr"));
+        Assert.Equal("img.ocr", pinned.Convert[^2].Id);
+        Assert.True(pinned.Convert[^2].Pinned);
+        Assert.DoesNotContain(_builder.Build([@"C:\d\report.pdf"], "en", actions, WheelPins.None.With(WheelKind.Convert, "image", "img.ocr")).Convert,
+            w => w.Id == "img.ocr");
+    }
+
+    [Fact]
+    public void Every_wheel_ends_with_add_for_real_selections()
+    {
+        foreach (var files in new[] { new[] { @"C:\p\photo.png" }, [@"C:\d\report.pdf"], [@"C:\v\clip.mp4"], [@"C:\p\a.png", @"C:\d\b.pdf"] })
+        {
+            var set = _builder.Build(files, "en", ["act.copy"], WheelPins.None);
+            foreach (var kind in Enum.GetValues<WheelKind>())
+                Assert.True(set.Of(kind) is [.., { IsAdd: true }], $"{kind} for {string.Join(",", files)}");
+        }
     }
 
     [Fact]

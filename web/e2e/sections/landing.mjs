@@ -1,16 +1,16 @@
 import { check, section } from "../helpers.mjs";
 
 export async function landing({ b, base }) {
-  await section("landing: Web buttons link to /app, Windows stays inert, SW only on /app", async () => {
-    for (const [loc, web, soon] of [
-      ["en", "Web", "Soon"],
-      ["ar", "ويب", "قريباً"],
+  await section("landing: Web buttons link to /app, Windows buttons link to the GitHub release, SW only on /app", async () => {
+    for (const [loc, web] of [
+      ["en", "Web"],
+      ["ar", "ويب"],
     ]) {
       await b.goto(`${base}/${loc}`, 1500);
       const hrefs = await b.ev(`[...document.querySelectorAll('a[href$="/app"]')].map(a => a.getAttribute('href'))`);
       check(`/${loc}: both Web buttons are real links to /${loc}/app`, hrefs.length === 2 && hrefs.every((h) => h === `/${loc}/app`), JSON.stringify(hrefs));
-      const windows = await b.ev(`[...document.querySelectorAll('span')].filter(s => s.textContent.includes(${JSON.stringify(soon)}) && s.className.includes('cursor-default')).length`);
-      check(`/${loc}: Windows buttons are still inert "Soon" badges (not links)`, windows === 2, String(windows));
+      const win = await b.ev(`[...document.querySelectorAll('a[href^="https://github.com/hamwimoustafa88-maker/dropflow/releases"]')].map(a => a.getAttribute('href'))`);
+      check(`/${loc}: both Windows buttons are real links to the GitHub release`, win.length === 2 && win.every((h) => h.endsWith("/releases/latest")), JSON.stringify(win));
       const webText = await b.ev(`document.querySelector('a[href="/${loc}/app"]').textContent.trim()`);
       check(`/${loc}: Web button label`, webText === web, webText);
     }

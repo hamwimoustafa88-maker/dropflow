@@ -37,3 +37,7 @@ tests/samples/large/
 
 # Claude Code agent worktrees
 /.claude/worktrees/
+
+# Installer build output (installer/build.ps1)
+/publish/
+/Releases/

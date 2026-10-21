@@ -8,7 +8,7 @@ import { WheelDemo } from "@/components/WheelDemo";
 import { CategoryExplorer } from "@/components/CategoryExplorer";
 import { Features } from "@/components/Features";
 import { Marquee } from "@/components/Marquee";
-import { SoonButton, WebButton } from "@/components/SoonButton";
+import { WindowsButton, WebButton } from "@/components/DownloadButtons";
 import { Link } from "@/i18n/navigation";
 import { stats } from "@/lib/catalog";
 
@@ -37,7 +37,7 @@ function Hero() {
           </h1>
           <p className="mt-6 text-xl text-muted sm:text-2xl">{t("subtitle")}</p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <SoonButton kind="windows" primary />
+            <WindowsButton primary />
             <WebButton />
           </div>
         </div>
@@ -88,7 +88,7 @@ function Cta() {
       <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 lg:py-32">
         <h2 className="reveal text-gradient text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
-          <SoonButton kind="windows" primary />
+          <WindowsButton primary />
           <WebButton />
         </div>
       </div>

@@ -35,7 +35,8 @@ internal sealed class InstallWindow : Window
 
     public void Log(string line)
     {
-        if (!string.IsNullOrWhiteSpace(line)) _line.Text = line.Trim();
+        // Installer output arrives on thread-pool threads (a Progress<T> made off the UI thread has no context to post back to).
+        if (!string.IsNullOrWhiteSpace(line)) Dispatcher.BeginInvoke(() => _line.Text = line.Trim());
     }
 }
 

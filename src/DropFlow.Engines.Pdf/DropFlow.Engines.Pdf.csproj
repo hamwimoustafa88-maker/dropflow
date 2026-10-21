@@ -7,8 +7,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.Engines.Pdf.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="15.0.0" />
+    <PackageReference Include="Markdig" Version="1.4.2" />
+    <PackageReference Include="PDFiumCore" Version="4688.0.0" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
+    <PackageReference Include="ReverseMarkdown" Version="6.2.1" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 
 </Project>

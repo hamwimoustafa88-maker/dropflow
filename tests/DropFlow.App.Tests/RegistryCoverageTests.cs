@@ -54,6 +54,28 @@ public sealed class RegistryCoverageTests : IDisposable
         AssertNone(problems);
     }
 
+    /// <summary>
+    /// A ratchet: the catalog items that have no converter yet are listed here, so a gap can only appear or disappear on purpose
+    /// (and docs/status.md has to be updated with it). Conversions are checked after the category priority is applied (a gif is an image).
+    /// </summary>
+    [Fact]
+    public void The_known_gaps_in_the_catalog_are_exactly_these()
+    {
+        var registry = Registry();
+        var windowsTools = Catalog.Tools.Where(t => t.Platforms.Contains("windows")).ToList();
+        var missingTools = windowsTools.Where(t => !registry.ImplementedOperations.Contains(t.Id)).Select(t => t.Id).OrderBy(x => x).ToList();
+
+        var missingConversions = new List<string>();
+        foreach (var category in Catalog.Categories)
+            foreach (var input in category.Inputs.Where(i => Catalog.CategoryForExtension(i) == category.Id))
+                foreach (var output in category.Outputs.Where(o => o != input))
+                    if (!registry.Supports(Operation.Convert(output), input)) missingConversions.Add($"{input}->{output}");
+
+        // heic -> pdf: no way to build a HEIC test file here, so it is not claimed; pdf -> pdfa: no trustworthy engine chosen yet.
+        Assert.Equal(["pdf.compare", "pdf.crop", "pdf.redact", "pdf.sign"], missingTools);
+        Assert.Equal(["heic->pdf", "pdf->pdfa"], missingConversions.OrderBy(x => x).ToList());
+    }
+
     [Fact]
     public void No_operation_and_file_type_is_claimed_by_two_converters_except_the_html_override()
     {

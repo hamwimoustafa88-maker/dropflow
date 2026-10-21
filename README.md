@@ -10,7 +10,20 @@ a full iLovePDF-style PDF suite, a pro media encoder, local speech-to-text (Arab
 DropFlow نسخة مطوّرة من تطبيق Tangerine للماك لويندوز والويب: عجلة دائرية تظهر أثناء سحب الملف للتحويل (Shift) والأدوات (Ctrl)
 والإجراءات (Alt)، بلا رفع ملفات. وتضيف مجموعة PDF شاملة ومُرمّز وسائط وتحويل الكلام إلى نص (العربية) وOCR ورفاً عائماً وأتمتة.
 
-**Status:** planning and bootstrap complete; landing page in progress. See [docs/plan.md](docs/plan.md) and
-[docs/feature-catalog.md](docs/feature-catalog.md). Contributor/agent rules: [CLAUDE.md](CLAUDE.md).
+**Status (2026-10-21):** the Windows app, the engines (images, media, PDF/Office, archives, local AI), the Encoder, automation,
+the CLI and the landing page are built and tested (about 2,400 automated tests). What is **not** verified yet — drag detection in
+other apps, Windows 11, the real qpdf/LibreOffice/modern-FFmpeg runs, AI models, a first release — is listed honestly in
+[docs/status.md](docs/status.md). Plan: [docs/plan.md](docs/plan.md) · tools: [docs/feature-catalog.md](docs/feature-catalog.md) ·
+contributor and agent rules: [CLAUDE.md](CLAUDE.md).
+
+## Build
+
+```powershell
+dotnet build DropFlow.sln
+dotnet test DropFlow.sln            # engine-dependent tests skip visibly when FFmpeg, qpdf, LibreOffice or models are absent
+dotnet run --project src/DropFlow.App
+node catalog/build.mjs              # after editing catalog/tools.json
+cd web; npm install; npm run dev    # landing page
+```
 
 License: [GPL-3.0-or-later](LICENSE) · Third-party components: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)

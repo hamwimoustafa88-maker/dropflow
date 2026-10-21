@@ -20,6 +20,7 @@ using DropFlow.Core.Runner;
 using DropFlow.Core.Session;
 using DropFlow.Core.Settings;
 using DropFlow.Core.Wheel;
+using DropFlow.Engines.Archive.Sharing;
 using DropFlow.Engines.Common;
 using DropFlow.Hooks;
 using DropFlow.Overlay;
@@ -281,7 +282,37 @@ internal sealed class AppHost : IDisposable
             {
                 var ok = await ShareService.ShareAsync(new System.Windows.Interop.WindowInteropHelper(_wheel!).Handle, files);
                 if (!ok) ShowToast(Loc["action.shareUnavailable"], null, null, [], TimeSpan.FromSeconds(5));
+            }, SendToPhone);
+
+    /// <summary>Starts a time-limited local share of the files and shows its QR code.</summary>
+    private void SendToPhone(IReadOnlyList<string> files)
+    {
+        if (files.Any(Directory.Exists))
+        {
+            ShowToast(Loc["phone.folder"], null, null, [], TimeSpan.FromSeconds(6));
+            return;
+        }
+
+        PhoneShareServer? server = null;
+        try
+        {
+            server = new PhoneShareServer(files, new PhoneShareOptions
+            {
+                Lifetime = TimeSpan.FromMinutes(15),
+                Strings = Loc.Language == "ar" ? PhoneShareStrings.Arabic : PhoneShareStrings.English,
             });
+            server.Start();
+            var window = new PhoneShareWindow(Kit, server);
+            window.Show();
+            window.Activate();
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
+        {
+            server?.Dispose();
+            FileLog.Error("phone share", ex);
+            ShowToast(Loc.Format("phone.failed", ex.Message), null, null, [], TimeSpan.FromSeconds(8));
+        }
+    }
 
     /// <summary>Builds the runner on demand so it always sees the current prompts/toast.</summary>
     private sealed class OperationRunnerFactory(AppHost host)

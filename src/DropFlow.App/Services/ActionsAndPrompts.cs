@@ -14,9 +14,11 @@ using WinRT;
 namespace DropFlow.App.Services;
 
 /// <summary>The file actions (Control wheel on Tangerine, Alt here): copy, move, copy path, terminal, share, float.</summary>
-internal sealed class ActionService(ILocalizer loc, Func<string, Task> toast, Overlay.ShelfModel shelf, Action showShelf, Func<IReadOnlyList<string>, Task> share)
+internal sealed class ActionService(
+    ILocalizer loc, Func<string, Task> toast, Overlay.ShelfModel shelf, Action showShelf, Func<IReadOnlyList<string>, Task> share,
+    Action<IReadOnlyList<string>> sendToPhone)
 {
-    public static readonly string[] SupportedIds = ["act.share", "act.float", "act.copy", "act.move", "act.copy-path", "act.terminal"];
+    public static readonly string[] SupportedIds = ["act.share", "act.float", "act.copy", "act.move", "act.copy-path", "act.terminal", "act.send-phone"];
 
     public async Task ExecuteAsync(string actionId, IReadOnlyList<string> files)
     {
@@ -50,6 +52,10 @@ internal sealed class ActionService(ILocalizer loc, Func<string, Task> toast, Ov
 
                 case "act.share":
                     await share(files);
+                    break;
+
+                case "act.send-phone":
+                    sendToPhone(files);
                     break;
             }
         }

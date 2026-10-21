@@ -10,7 +10,7 @@ namespace DropFlow.App.Services;
 /// <summary>Where DropFlow keeps its files. Settings always live in the default folder; engines, models and history follow <c>DataDirectory</c>.</summary>
 internal sealed class AppPaths(string dataDir)
 {
-    public static string DefaultDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DropFlow");
+    public static string DefaultDir => DropFlow.Core.App.DataFolder.Default;
 
     public string DataDir { get; } = dataDir;
     public string SettingsFile => Path.Combine(DefaultDir, "settings.json");

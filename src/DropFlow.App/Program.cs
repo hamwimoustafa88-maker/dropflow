@@ -14,6 +14,10 @@ public static class Program
         // Velopack installer/updater hooks (--veloapp-install etc.) run here and exit; a normal launch continues.
         Velopack.VelopackApp.Build().Run();
 
+        // DropFlow never runs elevated (CLAUDE.md). An installer or console started "as administrator" would start us elevated, and an
+        // elevated instance cannot be reached by normal launches (the next double-click then silently did nothing). Restart unelevated.
+        if (args.Length == 0 && Elevation.IsElevated() && Elevation.RelaunchUnelevated(Environment.ProcessPath)) return 0;
+
         var command = AppCommandLine.Parse(args);
         using var instance = SingleInstance.Acquire(InstanceName);
 
@@ -21,11 +25,22 @@ public static class Program
         {
             // Already running: hand the request over. A bare second launch opens the settings.
             var forwarded = args.Length == 0 ? ["--settings"] : args;
-            return instance.Forward(forwarded, TimeSpan.FromSeconds(3)) ? 0 : 1;
+            if (instance.Forward(forwarded, TimeSpan.FromSeconds(3))) return 0;
+            ExplainUnreachableInstance();
+            return 1;
         }
 
         var app = new DropFlowApp(command, instance);
         return app.Run();
+    }
+
+    /// <summary>The running DropFlow could not be reached (elevated or hung): say so instead of exiting silently.</summary>
+    private static void ExplainUnreachableInstance()
+    {
+        var settings = new DropFlow.Core.Settings.SettingsStore(new AppPaths(AppPaths.DefaultDir).SettingsFile).Load();
+        var loc = DropFlow.Core.Localization.JsonLocalizer.Load(
+            LanguageResolver.Resolve(settings.Language, System.Globalization.CultureInfo.CurrentUICulture.Name));
+        MessageBox.Show(loc["instance.unreachable"], "DropFlow", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
 

@@ -71,9 +71,9 @@ public class ModelCatalogTests
     }
 
     [Fact]
-    public void The_default_folder_is_under_local_app_data()
+    public void The_default_folder_is_the_data_folder_not_the_install_folder()
     {
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DropFlow", "models");
+        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DropFlow Data", "models");
         Assert.Equal(expected, ModelManager.DefaultDirectory);
         using var m = new ModelManager();
         Assert.Equal(expected, m.Directory);

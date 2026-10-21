@@ -82,7 +82,7 @@ public sealed class ModelManager : IDisposable
     }
 
     public static string DefaultDirectory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DropFlow", "models");
+        Path.Combine(DropFlow.Core.App.DataFolder.Default, "models");
 
     public string Directory { get; }
 

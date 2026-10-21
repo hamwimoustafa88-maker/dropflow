@@ -118,10 +118,13 @@ internal sealed class AppHost : IDisposable
         _ui = ui;
         _scheduler = new DispatcherScheduler(ui);
 
+        // v0.1.0 kept user data in the installer's folder, which the installer replaces and uninstall deletes: move it out first.
+        var migrated = DropFlow.Core.App.DataFolder.MigrateOnce(DropFlow.Core.App.DataFolder.Legacy, AppPaths.DefaultDir);
         SettingsStore = new SettingsStore(new AppPaths(AppPaths.DefaultDir).SettingsFile);
         Settings = SettingsStore.Load();
         Paths = new AppPaths(Settings.DataDirectory ?? AppPaths.DefaultDir);
         FileLog.Init(Paths.LogDir);
+        if (migrated.Count > 0) FileLog.Info("moved user data out of the install folder: " + string.Join(", ", migrated));
         FileLog.Info($"DropFlow {Version} starting");
 
         Loc = JsonLocalizer.Load(LanguageResolver.Resolve(Settings.Language, CultureInfo.CurrentUICulture.Name));

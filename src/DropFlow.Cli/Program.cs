@@ -14,7 +14,8 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DropFlow");
+        var dataDir = DropFlow.Core.App.DataFolder.Default;
+        DropFlow.Core.App.DataFolder.MigrateOnce(DropFlow.Core.App.DataFolder.Legacy, dataDir);
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -8,8 +8,8 @@ Publisher: DropFlow
 PublisherUrl: "{{REPO_URL}}"
 PackageName: DropFlow
 PackageUrl: "{{REPO_URL}}"
-License: Proprietary
-Copyright: Copyright (c) 2026 Moustafa Hamwi. All rights reserved.
+License: GPL-3.0-or-later
+Copyright: Copyright (c) 2026 Moustafa Hamwi
 ShortDescription: Drag, tap, convert. An offline file converter for Windows.
 Description: >-
   DropFlow shows a radial wheel while you drag a file. Convert images, audio, video, PDF and documents,

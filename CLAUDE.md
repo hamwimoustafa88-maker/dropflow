@@ -2,8 +2,8 @@
 
 An enhanced Windows 10/11 + web counterpart of Tangerine (tangerineformac.com): drag a file, tap a key,
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
-License: **proprietary, all rights reserved — NOT open source** (owner's decision 2026-10-21, ADR-0010). The repository is PUBLIC since
-2026-10-21 (owner decision, so releases and the updater can download) but remains all-rights-reserved. Never write "open source" or "GPL" in product copy. Audience: Arabic + English users.
+License: **GPL-3.0-or-later — free and open source** (owner's decision 2026-10-21, ADR-0013, supersedes the proprietary ADR-0010).
+The repository is public and open to contributors; the DropFlow name/logo are reserved (TRADEMARK.md). Audience includes Arab developers. Audience: Arabic + English users.
 
 **Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
@@ -72,13 +72,15 @@ when a program is missing.
 - Use DropFlow's own name, logo, colors, and copy — never Tangerine's branding, text, or assets.
 - Accounts, registration, and payments are deferred to Phase 9 (ADR-0005). Do not add auth or payment code before then.
 
-## Licensing policy (proprietary product, ADR-0010; supersedes ADR-0001)
-- In-process (linked/bundled) only: MIT, BSD, Apache-2.0, MPL-2.0, ISC, Zlib, LGPL (dynamic, replaceable). **No GPL/AGPL code inside our binaries.**
-- GPL/AGPL programs (FFmpeg, Ghostscript) only as separate programs the user runs, started as child processes; never linked.
-- Forbidden: non-commercial/research-only models (e.g. RMBG-1.4), non-redistributable SDKs, code copied from GPL projects.
-- Open issue: `@ffmpeg/core` (GPL-2.0+) is served by the web app — see ADR-0010 and `docs/deferred.md`.
+## Licensing policy (GPL-3.0-or-later, ADR-0013; supersedes ADR-0010)
+- DropFlow is free/open source under **GPL-3.0-or-later** (owner decision 2026-10-21). The name "DropFlow" and the logo are NOT covered by the
+  GPL: see `TRADEMARK.md` (forks must rename). Commercial use is allowed by the GPL, but anyone who distributes a modified version must publish its source under the GPL.
+- Allowed dependencies: MIT, BSD, Apache-2.0, LGPL, MPL-2.0, ISC, Zlib, GPL-2.0-or-later, GPL-3.0; AGPL-3.0 only after asking the owner (it would extend network obligations).
+- Forbidden: GPL-2.0-only code in-process, non-commercial/research-only models (e.g. RMBG-1.4), non-redistributable SDKs, proprietary components
+  (they would also break SignPath Foundation eligibility). PDFsharp stays pinned to 6.2.4 (MIT) unless the owner accepts AGPL 6.5+.
+- FFmpeg (GPL) ships as a separate program in the installer with its LICENSE and a source offer; under GPL-3.0 this is fully compatible.
 - The app must not offer to download/install helper programs unless the user enabled it (Settings) or pressed Install.
-- Ask the user before adding any dependency; record it in THIRD-PARTY-NOTICES.md.
+- Ask the user before adding any dependency; record it in THIRD-PARTY-NOTICES.md. New source files may carry `SPDX-License-Identifier: GPL-3.0-or-later`.
 
 ## Conventions
 - C#: nullable, file-scoped namespaces, async + CancellationToken end-to-end, MVVM source generators, minimal code-behind.

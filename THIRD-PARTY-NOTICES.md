@@ -1,7 +1,7 @@
 # Third-party notices
 
 Every dependency is recorded here when it is added (see CLAUDE.md, licensing policy). This file lists what is **actually used** in
-the repository; planned components are in `docs/plan.md` §3. DropFlow itself is proprietary (all rights reserved, see `LICENSE`); the licences below apply to each third-party component only.
+the repository; planned components are in `docs/plan.md` §3. DropFlow itself is free software under the GNU GPL v3 or later (see `LICENSE`); the licences below apply to each third-party component only, and all of them are compatible with GPL-3.0.
 
 ## Libraries in the Windows app and engines (NuGet)
 

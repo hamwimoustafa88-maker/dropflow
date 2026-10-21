@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { WheelDemo } from "@/components/WheelDemo";
 import { CategoryExplorer } from "@/components/CategoryExplorer";
 import { Features } from "@/components/Features";
+import { About } from "@/components/About";
 import { Developers } from "@/components/Developers";
 import { Faq, faqItems, type FaqItem } from "@/components/Faq";
 import { Marquee } from "@/components/Marquee";
@@ -172,6 +173,7 @@ export default async function Home({ params }: Props) {
         <Numbers />
         <Features />
         <Formats />
+        <About />
         <Developers />
         <Faq />
         <Cta />

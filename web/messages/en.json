@@ -628,5 +628,11 @@
         ]
       }
     ]
+  },
+  "about": {
+    "title": "About DropFlow",
+    "text": "DropFlow turns any file into what you need with one drag and one key, on your own device. It is free, open source (GPL-3.0) and built for Arabic and English speakers.",
+    "team": "Developed by the ScoutHub teams · Lead developer: Moustafa Al-Hamwi, Lebanon ·",
+    "whatsapp": "WhatsApp +961 70 863 903"
   }
 }

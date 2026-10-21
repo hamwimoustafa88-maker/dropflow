@@ -42,6 +42,32 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 | C9 | Catalog `platforms` for web | Several tools list `web` but are not implemented in the browser, so the flag overstates support (the wheel itself is registry-driven and never shows them). | Make the catalog flag match the web registry, or generate it from it. |
 | C10 | Compare PDFs on files whose owner flags forbid copying text | Refused today (as the other text tools do), although the pixel diff alone would work. | Skip the word summary instead of refusing. |
 
+## Links and exact steps (keyed to the items above)
+
+Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/deferred.md
+
+- **A1 drag test:** checklist https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/phase0-checklist.md · run `dotnet run --project src/DropFlow.Spike`
+  (spike) or the real app `dotnet run --project src/DropFlow.App`. Keep the app running, drag a file out of Explorer, tap Shift/Ctrl/Alt.
+- **A2 engines:** in the app Settings > Engines > Install, or by hand: `winget install --id Gyan.FFmpeg -e` · `winget install --id QPDF.QPDF -e` ·
+  `winget install --id TheDocumentFoundation.LibreOffice -e` (≈ 100 / 25 / 350 MB). Sites: https://www.gyan.dev/ffmpeg/builds/ ·
+  https://github.com/qpdf/qpdf/releases · https://www.libreoffice.org/download/download-libreoffice/ . Then `dotnet test DropFlow.sln`.
+- **A3 models and Arabic OCR:** Settings > AI models > Download (shows size, source and licence first). Sources:
+  Whisper https://huggingface.co/ggerganov/whisper.cpp · U²-Net https://huggingface.co/BritishWerewolf/U-2-Netp ·
+  BiRefNet-lite https://huggingface.co/onnx-community/BiRefNet_lite-ONNX · UltraFace https://huggingface.co/Arm/ultraface-rfb-320-onnx-raspberry .
+  Tesseract: `winget install --id UB-Mannheim.TesseractOCR -e` (https://github.com/UB-Mannheim/tesseract/wiki); Arabic data
+  `ara.traineddata` from https://github.com/tesseract-ocr/tessdata into Tesseract's `tessdata` folder.
+- **A4 CI:** billing https://github.com/settings/billing · repo visibility https://github.com/hamwimoustafa88-maker/dropflow/settings (Danger Zone) ·
+  runs https://github.com/hamwimoustafa88-maker/dropflow/actions · after fixing: `gh run rerun 39525285904` (or push a commit).
+- **A5 release:** `dotnet tool install -g vpk` (https://docs.velopack.io/) then `pwsh installer/build.ps1 -Version 0.1.0`; winget submission via
+  https://github.com/microsoft/winget-create and https://github.com/microsoft/winget-pkgs (templates in `installer/winget`). Runtime prerequisites:
+  WebView2 https://developer.microsoft.com/microsoft-edge/webview2/ (preinstalled on current Windows).
+- **A6 Vercel:** https://vercel.com/new > Import `hamwimoustafa88-maker/dropflow` > Root Directory `web` > Deploy (Framework Next.js, defaults).
+  Or give the Claude Vercel connector access at https://claude.ai/settings/connectors (scope `moustafa-hamwis-projects`).
+- **B1 Windows 11:** Windows 11 ISO https://www.microsoft.com/software-download/windows11 (for a VM), then the checklist.
+- **B4 web checks:** `cd web; npm run build; npx next start --port 3200; node e2e/run.mjs http://localhost:3200` · Lighthouse
+  https://developer.chrome.com/docs/lighthouse/overview .
+- **C1 PDF/A:** Ghostscript https://ghostscript.com/ (AGPL, external process) · validator veraPDF https://verapdf.org/ .
+
 ## D. Known limits worth remembering
 - Redaction by words uses the text layer only (scans need regions); rasterized pages lose selectable text, links and form fields.
 - PDF crop keeps cropped-away content in the file; redact is the privacy tool.

@@ -1,0 +1,42 @@
+name: Feature request · اقتراح ميزة
+description: Suggest a new tool, format or improvement. · اقترح أداة أو صيغة أو تحسيناً جديداً.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Arabic or English is fine. For open-ended ideas, Discussions may fit better.
+        يمكنك الكتابة بالعربية أو بالإنجليزية. للأفكار العامة قد يكون قسم Discussions أنسب.
+        DropFlow processes files **only on the user's device**: ideas that need uploading files to a server cannot be accepted.
+        يعمل DropFlow **على جهاز المستخدم فقط**، فلا نقبل ميزات تتطلب رفع الملفات إلى خادم.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do? · ماذا تريد أن تفعل؟
+      description: The task or problem, not the solution yet. · المهمة أو المشكلة، لا الحل بعد.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution · الحل المقترح
+      description: Which wheel (Shift convert / Ctrl tools / Alt actions), input and output formats, options. · أي عجلة، وأي صيغ، وأي خيارات.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform · المنصة
+      multiple: true
+      options:
+        - Windows app · تطبيق ويندوز
+        - Web app · تطبيق الويب
+        - CLI · سطر الأوامر
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or tools you use today · بدائل تستخدمها حالياً
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution · المساهمة
+      options:
+        - label: I would like to implement this myself. · أرغب في تنفيذها بنفسي.

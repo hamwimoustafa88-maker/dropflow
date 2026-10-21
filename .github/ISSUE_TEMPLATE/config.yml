@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas · أسئلة وأفكار
+    url: https://github.com/hamwimoustafa88-maker/dropflow/discussions
+    about: Ask a question or discuss an idea (Arabic or English). · اطرح سؤالاً أو ناقش فكرة بالعربية أو بالإنجليزية.
+  - name: Report a security vulnerability · الإبلاغ عن ثغرة أمنية
+    url: https://github.com/hamwimoustafa88-maker/dropflow/security/advisories/new
+    about: Report privately, never in a public issue. · أبلغ بشكل خاص، لا في Issue عام.

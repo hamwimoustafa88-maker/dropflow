@@ -1,0 +1,42 @@
+# Weekly dependency update pull requests. Every bump must still respect THIRD-PARTY-NOTICES.md and the licence policy
+# (ADR-0013): update the version listed there when merging, and never accept a bump that changes a licence to AGPL or proprietary.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      nuget-minor-and-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # PDFsharp 6.5.0 and later are AGPL-3.0-only; DropFlow stays on 6.2.4 (MIT). See THIRD-PARTY-NOTICES.md.
+      - dependency-name: "PDFsharp*"
+        versions: [">= 6.5.0"]
+      # FluentAssertions 8+ is commercially licensed and must not be added or upgraded.
+      - dependency-name: "FluentAssertions"
+        versions: [">= 8.0.0"]
+
+  - package-ecosystem: npm
+    directory: "/web"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      web-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns: ["*"]

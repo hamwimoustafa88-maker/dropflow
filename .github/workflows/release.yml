@@ -7,6 +7,14 @@ on:
 
 permissions:
   contents: write
+  actions: read # lets the optional SignPath step read this run's artifacts
+
+# Optional code signing through SignPath Foundation (docs/code-signing-policy.md, docs/signpath-application.md).
+# It is OFF until the repository variable SIGNPATH_ORGANIZATION_ID is set (plus the secret SIGNPATH_API_TOKEN). While it is off,
+# every "SignPath:" step is skipped and the release is built exactly as before (unsigned, or signed by vpk with SIGN_PARAMS).
+# Optional variables (defaults in brackets): SIGNPATH_PROJECT_SLUG [dropflow], SIGNPATH_SIGNING_POLICY_SLUG [release-signing],
+# SIGNPATH_BINARIES_CONFIGURATION_SLUG [binaries], SIGNPATH_INSTALLER_CONFIGURATION_SLUG [installer].
+# Each signed release needs two manual approvals in SignPath: DropFlow's own binaries, then the installer.
 
 jobs:
   windows:
@@ -42,6 +50,61 @@ jobs:
           dotnet publish src/DropFlow.Cli -c Release -r win-x64 --self-contained
           -p:Version=${{ steps.v.outputs.version }} -o publish/cli
 
+      - name: "SignPath: check the configuration"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          if (-not $env:SIGNPATH_API_TOKEN) { throw "SIGNPATH_ORGANIZATION_ID is set but the SIGNPATH_API_TOKEN secret is missing." }
+
+      - name: "SignPath: collect DropFlow's own binaries (never FFmpeg, qpdf, Tesseract or third-party DLLs)"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force signing/unsigned/app, signing/unsigned/cli | Out-Null
+          $own = { $_.Name -like 'DropFlow*.exe' -or $_.Name -like 'DropFlow*.dll' }   # -like ignores case: also dropflow.exe
+          Get-ChildItem publish/app -File | Where-Object $own | Copy-Item -Destination signing/unsigned/app
+          Get-ChildItem publish/cli -File | Where-Object $own | Copy-Item -Destination signing/unsigned/cli
+          Get-ChildItem signing/unsigned -Recurse -File | ForEach-Object { $_.FullName }
+
+      - name: "SignPath: upload the unsigned binaries"
+        id: unsigned-binaries
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-binaries
+          path: signing/unsigned
+          if-no-files-found: error
+
+      - name: "SignPath: sign the binaries (approve the request in SignPath)"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'dropflow' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_BINARIES_CONFIGURATION_SLUG || 'binaries' }}
+          github-artifact-id: ${{ steps.unsigned-binaries.outputs.artifact-id }}
+          parameters: |
+            version: "${{ steps.v.outputs.version }}"
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: signing/signed
+
+      - name: "SignPath: put the signed binaries back and verify them"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          Copy-Item signing/signed/app/* publish/app -Force
+          Copy-Item signing/signed/cli/* publish/cli -Force
+          Get-ChildItem signing/signed -Recurse -File | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            if ($s.Status -ne 'Valid') { throw "$($_.Name) is not validly signed: $($s.Status)" }
+            "$($_.Name): $($s.SignerCertificate.Subject)"
+          }
+
       - name: Install Velopack's packer
         run: dotnet tool install -g vpk
 
@@ -55,11 +118,47 @@ jobs:
           $sign = @()
           # Code signing: set the SIGN_PARAMS secret (for example "/a /f cert.pfx /p ... /fd sha256 /tr http://timestamp.digicert.com /td sha256").
           # Without it the installer is unsigned and Windows SmartScreen will warn on first run.
-          if ($env:SIGN_PARAMS) { $sign = @("--signParams", $env:SIGN_PARAMS) }
+          # With SignPath on, vpk must not sign: it would also sign the bundled third-party programs.
+          if ($env:SIGN_PARAMS -and -not $env:SIGNPATH_ON) { $sign = @("--signParams", $env:SIGN_PARAMS) }
           vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }} `
             --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico @sign
         env:
           SIGN_PARAMS: ${{ secrets.SIGN_PARAMS }}
+          SIGNPATH_ON: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+
+      - name: "SignPath: upload the unsigned installer"
+        id: unsigned-installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: Releases/DropFlow-win-Setup.exe
+          if-no-files-found: error
+
+      - name: "SignPath: sign the installer (approve the second request in SignPath)"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'dropflow' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_CONFIGURATION_SLUG || 'installer' }}
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          parameters: |
+            version: "${{ steps.v.outputs.version }}"
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: signing/signed-installer
+
+      - name: "SignPath: put the signed installer back and verify it"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          Copy-Item signing/signed-installer/DropFlow-win-Setup.exe Releases/DropFlow-win-Setup.exe -Force
+          $s = Get-AuthenticodeSignature Releases/DropFlow-win-Setup.exe
+          if ($s.Status -ne 'Valid') { throw "DropFlow-win-Setup.exe is not validly signed: $($s.Status)" }
+          "DropFlow-win-Setup.exe: $($s.SignerCertificate.Subject)"
 
       - name: Zip the CLI and write checksums
         shell: pwsh
@@ -76,5 +175,18 @@ jobs:
 
       - name: Attach the CLI zip and checksums
         run: gh release upload ${{ github.ref_name }} Releases/dropflow-cli-win-x64.zip Releases/SHA256SUMS.txt --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "SignPath: link the code signing policy from the release page (SignPath Foundation requires it)"
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          $notes = gh release view ${{ github.ref_name }} --json body --jq .body
+          $policy = "${{ github.server_url }}/${{ github.repository }}/blob/main/docs/code-signing-policy.md"
+          $line = "Code signing policy: $policy" + [Environment]::NewLine + [Environment]::NewLine +
+            "Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)"
+          (($notes, $line) -join ([Environment]::NewLine * 2)).Trim() | Set-Content release-notes.md -Encoding utf8
+          gh release edit ${{ github.ref_name }} --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

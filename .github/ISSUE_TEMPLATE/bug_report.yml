@@ -1,0 +1,73 @@
+name: Bug report · بلاغ عن خطأ
+description: Something does not work as expected. · شيء لا يعمل كما يجب.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Arabic or English is fine. **Security problems: do not file them here** — see SECURITY.md.
+        شكراً على البلاغ. يمكنك الكتابة بالعربية أو بالإنجليزية. **الثغرات الأمنية لا تُبلَّغ هنا** — راجع SECURITY.md.
+        Please do not attach private files; a small sample that reproduces the problem is best.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where · أين؟
+      options:
+        - Windows app · تطبيق ويندوز
+        - Web app (browser) · تطبيق الويب
+        - dropflow CLI · سطر الأوامر
+        - Installer / updates · المثبّت أو التحديث
+        - Website · الموقع
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: DropFlow version · الإصدار
+      description: Shown in Settings, or the release you downloaded. · يظهر في الإعدادات، أو رقم الإصدار الذي نزّلته.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows version / browser · نسخة ويندوز أو المتصفح
+      description: e.g. Windows 11 24H2, 150 % scaling, two monitors · Edge 140 · مثال
+      placeholder: "Windows 10 22H2, 100 %, one monitor"
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or conversion · الأداة أو التحويل
+      description: e.g. "PDF → Merge", "MKV → MP4", "Ctrl wheel did not appear" · مثال
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce · خطوات إعادة المشكلة
+      placeholder: |
+        1. Drag a .docx file from Explorer
+        2. Tap Shift
+        3. Drop on "PDF"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs. actual · المتوقع مقابل ما حدث
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error message · السجل أو رسالة الخطأ
+      description: The job log from History, or the CLI output. Remove anything private. · احذف أي معلومات خاصة.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks · تحقق
+      options:
+        - label: I searched existing issues. · بحثت في البلاغات الموجودة.
+          required: true
+        - label: I use the latest release. · أستخدم آخر إصدار.

@@ -10,6 +10,10 @@ Releases), plus a zipped `dropflow` CLI. Nothing here has been run against a rea
    buy an OV/EV code-signing certificate or use Azure Trusted Signing, then add the repository secret `SIGN_PARAMS`
    (the `signtool` arguments, e.g. `/a /f cert.pfx /p <password> /fd sha256 /tr http://timestamp.digicert.com /td sha256`).
    The release workflow passes it to `vpk pack --signParams`.
+   **Free alternative for this GPL project:** SignPath Foundation. The workflow already has a disabled SignPath path that signs only
+   DropFlow's own binaries and the installer; it turns on when the repository variable `SIGNPATH_ORGANIZATION_ID` and the secret
+   `SIGNPATH_API_TOKEN` are set. How to apply and connect it: [signpath-application.md](signpath-application.md); the public policy:
+   [code-signing-policy.md](code-signing-policy.md).
 3. Landing page: replace the inert "Soon" buttons in `web/` with the release URLs, flip `robots` to indexable in
    `web/src/app/[locale]/layout.tsx`, and deploy (Vercel project, root directory `web`).
 
@@ -49,4 +53,4 @@ SmartScreen reputation; an unsigned installer is often rejected, so sign first.
 ## Before announcing
 - Run the manual matrix in `docs/phase0-checklist.md` on Windows 10 **and** 11 (drag capture, DPI, elevated apps, antivirus).
 - Check `docs/status.md`: anything still marked "unverified" must be either tested or described honestly in the release notes.
-- Every dependency must be listed in `THIRD-PARTY-NOTICES.md`; the installer must ship the proprietary `LICENSE`, `THIRD-PARTY-NOTICES.md` and the licence texts/source offers that third-party components require (for example FFmpeg if it is ever bundled).
+- Every dependency must be listed in `THIRD-PARTY-NOTICES.md`; the installer must ship the GPL `LICENSE`, `THIRD-PARTY-NOTICES.md` and the licence texts/source offers that third-party components require (for example FFmpeg if it is ever bundled).

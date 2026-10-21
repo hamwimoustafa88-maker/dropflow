@@ -185,6 +185,67 @@ public class WheelControlRenderTests
         Assert.Equal(("c", 2), (invoked!.Item.Id, invoked.Index));
     }
 
+    // ----- "+ Add" slot ---------------------------------------------------------------------------------------------------------
+
+    private static WheelItem[] WithAdd(int count, string addLabel) =>
+        [.. Enumerable.Range(0, count - 1).Select(i => new WheelItem($"w{i}", $"Item {i}")), new WheelItem("wheel.add", addLabel, Role: WheelItemRole.Add)];
+
+    [Theory]
+    [InlineData("+ Add", false, 6)]
+    [InlineData("+ إضافة", true, 6)]
+    [InlineData("+ Add", false, 12)]
+    [InlineData("+ إضافة", true, 12)]
+    [InlineData("+ Add", false, 26)]
+    [InlineData("+ إضافة", true, 26)]
+    public void The_add_label_is_never_trimmed_and_stays_inside_its_wedge(string label, bool mirrored, int count)
+    {
+        var (shown, fits, inside) = Sta.Run(() =>
+        {
+            var w = new WheelControl();
+            w.SetItems(WithAdd(count, label), mirrored);
+            var (text, origin, size) = w.LayoutLabel(count - 1, 1.0);
+            var ok = WheelControl.Fits(text.Text, size, text.MaxTextWidth, text.MaxTextHeight, mirrored ? FlowDirection.RightToLeft : FlowDirection.LeftToRight, 1.0);
+            var corners = new[] { origin, new Point(origin.X + text.Width, origin.Y), new Point(origin.X, origin.Y + text.Height), new Point(origin.X + text.Width, origin.Y + text.Height) };
+            var within = corners.All(p => Math.Sqrt(p.X * p.X + p.Y * p.Y) <= WheelControl.Outer);
+            return (text.Text, ok, within);
+        });
+
+        Assert.Equal(label, shown.Replace('\n', ' '));   // even a very full wheel shows the words (on two lines when narrow)
+        Assert.True(fits, $"'{shown}' is trimmed or wrapped with {count} wedges");
+        Assert.True(inside, $"'{shown}' spills outside the wheel with {count} wedges");
+    }
+
+    [Theory]
+    [InlineData("+ Add", false, "wheel-add-en.png")]
+    [InlineData("+ إضافة", true, "wheel-add-ar.png")]
+    public void The_add_wedge_renders_in_both_directions_and_highlights_like_any_wedge(string label, bool mirrored, string png)
+    {
+        var items = WithAdd(7, label);
+        var plain = Render(w => w.SetItems(items, mirrored), WheelTheme.Light, Path.Combine(VisualDir, png));
+        var hovered = Render(w => w.SetItems(items, mirrored, selected: 6), WheelTheme.Light);
+
+        var (x, y) = InWedge(plain.Size, 7, 6, mirrored);
+        Assert.True(mirrored ? x > plain.Size / 2.0 : x < plain.Size / 2.0, "the last wedge sits just before the first one in reading order");
+        Assert.True(Near(Pixel(hovered, x, y), "#4338CA"), $"hovered + Add was {Pixel(hovered, x, y)}");
+        Assert.True(Near(Pixel(plain, x, y), "#ECEFFA"), $"+ Add was {Pixel(plain, x, y)}");
+    }
+
+    [Fact]
+    public void Right_click_keys_ask_for_the_wedge_menu()
+    {
+        var got = Sta.Run(() =>
+        {
+            var w = new WheelControl();
+            w.SetItems([new("a", "PNG"), new("p", "OCR", Role: WheelItemRole.Pinned)], false, selected: 1);
+            var asked = new List<string>();
+            w.ItemContextRequested += (_, e) => asked.Add(e.Item.Id);
+            w.RequestContext(1);
+            w.RequestContext(9);    // ignored
+            return asked;
+        });
+        Assert.Equal(["p"], got);
+    }
+
     [Fact]
     public void Engine_and_option_marks_appear_in_labels_without_breaking_the_render()
     {

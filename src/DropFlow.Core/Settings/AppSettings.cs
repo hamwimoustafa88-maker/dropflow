@@ -50,6 +50,9 @@ public sealed record AppSettings
 
     /// <summary>Look for a new version on GitHub Releases shortly after start (the only automatic network request). On by default.</summary>
     public bool CheckForUpdates { get; init; } = true;
+
+    /// <summary>Items added to a wheel with "+ Add", per wheel and kind of input. Removed from the wheel or in Settings.</summary>
+    public WheelPins PinnedItems { get; init; } = WheelPins.None;
 }
 
 /// <summary>Reads and writes settings as JSON. A corrupt file falls back to defaults and is kept as ".bad" for inspection.</summary>
@@ -70,6 +73,7 @@ public sealed class SettingsStore(string path)
         try
         {
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path), Options) ?? new AppSettings();
+            if (settings.PinnedItems is null) settings = settings with { PinnedItems = WheelPins.None }; // "PinnedItems": null
             return settings.Keys.IsValid ? settings : settings with { Keys = new WheelKeys() };
         }
         catch (JsonException)

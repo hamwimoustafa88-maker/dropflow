@@ -1,6 +1,7 @@
 using DropFlow.Core.History;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Settings;
+using DropFlow.Core.Wheel;
 
 namespace DropFlow.Core.Tests;
 
@@ -61,6 +62,51 @@ public class SettingsStoreTests
         var store = new SettingsStore(Path.Combine(dir.Path, "settings.json"));
         store.Save(new AppSettings());
         Assert.False(File.Exists(store.Path + ".tmp"));
+    }
+
+    [Fact]
+    public void Pinned_items_default_to_none_and_survive_a_save_and_load()
+    {
+        using var dir = new TempDir();
+        var store = new SettingsStore(Path.Combine(dir.Path, "settings.json"));
+        Assert.True(store.Load().PinnedItems.IsEmpty);
+
+        var pins = WheelPins.None
+            .With(WheelKind.Convert, "image", "img.ocr")
+            .With(WheelKind.Convert, "image", "act.copy-path")
+            .With(WheelKind.Tools, "pdf", "convert:docx");
+        store.Save(new AppSettings { PinnedItems = pins });
+
+        var loaded = store.Load().PinnedItems;
+        Assert.Equal(["img.ocr", "act.copy-path"], loaded.For(WheelKind.Convert, "image"));   // order kept
+        Assert.Equal(["convert:docx"], loaded.For(WheelKind.Tools, "pdf"));
+        Assert.Empty(loaded.For(WheelKind.Convert, "pdf"));
+        Assert.Empty(loaded.For(WheelKind.Actions, "image"));
+        Assert.Contains("\"PinnedItems\"", File.ReadAllText(store.Path));
+        Assert.Contains("\"Convert\"", File.ReadAllText(store.Path));
+    }
+
+    [Fact]
+    public void Older_files_without_pins_and_hand_edited_pins_load_safely()
+    {
+        using var dir = new TempDir();
+        Assert.True(new SettingsStore(dir.File("old.json", """{ "Language": "ar" }""")).Load().PinnedItems.IsEmpty);
+        Assert.True(new SettingsStore(dir.File("null.json", """{ "PinnedItems": null }""")).Load().PinnedItems.IsEmpty);
+
+        var odd = new SettingsStore(dir.File("odd.json",
+            """{ "PinnedItems": { "convert": { "image": ["img.ocr", "img.ocr", "", null] }, "Nope": { "image": ["x"] }, "Tools": { "pdf": null } } }""")).Load();
+        Assert.Equal(["img.ocr"], odd.PinnedItems.For(WheelKind.Convert, "image"));
+        Assert.Equal([new WheelPin(WheelKind.Convert, "image", "img.ocr")], odd.PinnedItems.All);
+    }
+
+    [Fact]
+    public void Pins_add_once_and_remove_cleanly()
+    {
+        var pins = WheelPins.None.With(WheelKind.Actions, "video", "vid.trim");
+        Assert.Same(pins, pins.With(WheelKind.Actions, "video", "vid.trim"));          // no duplicates
+        Assert.Same(pins, pins.Without(WheelKind.Actions, "audio", "vid.trim"));       // nothing to remove
+        Assert.True(pins.Without(WheelKind.Actions, "video", "vid.trim").IsEmpty);
+        Assert.True(WheelPins.None.IsEmpty);                                           // the shared empty value is untouched
     }
 }
 

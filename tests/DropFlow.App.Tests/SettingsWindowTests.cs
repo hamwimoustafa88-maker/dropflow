@@ -67,6 +67,40 @@ public class SettingsWindowTests
         Assert.True(new FileInfo(png).Length > 5_000);
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("ar")]
+    public void Items_added_to_the_wheels_are_listed_and_remove_takes_them_off(string language)
+    {
+        var (removed, before, after, empty) = Sta.Run(() =>
+        {
+            var loc = JsonLocalizer.Load(language);
+            var gone = new List<string>();
+            var window = new SettingsWindow(
+                new UiKit(WheelTheme.FromSystem(), loc),
+                new SettingsContext(
+                    new AppSettings(), false, false, (_, _, _) => [], [], _ => false, _ => Task.FromResult(true), "0.1.0", [], [], _ => { }, [],
+                    [new PinnedRow("Extract text (OCR)", "Convert · Images", () => gone.Add("img.ocr")), new PinnedRow("PDF", "Tools · Images", () => gone.Add("convert:pdf"))]));
+            window.Show();
+            Pump(window.Dispatcher);
+
+            int Removes() => Descendants<Button>(window).Count(b => Equals(b.Content, loc["settings.pins.remove"]));
+            var count = Removes();
+            foreach (var b in Descendants<Button>(window).Where(b => Equals(b.Content, loc["settings.pins.remove"])).ToList())
+                b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Pump(window.Dispatcher);
+            var left = Removes();
+            var emptyShown = Descendants<TextBlock>(window).Any(t => t.Text == loc["settings.pins.empty"]);
+            window.Close();
+            return (gone, count, left, emptyShown);
+        });
+
+        Assert.Equal(["img.ocr", "convert:pdf"], removed);
+        Assert.Equal(2, before);
+        Assert.Equal(0, after);
+        Assert.True(empty);
+    }
+
     [Fact]
     public void Pressing_download_runs_the_download_and_the_row_then_offers_delete()
     {

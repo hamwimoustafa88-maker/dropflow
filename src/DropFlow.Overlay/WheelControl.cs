@@ -53,6 +53,10 @@ public sealed class WheelControl : FrameworkElement
     }
 
     public event EventHandler<WheelItemEventArgs>? ItemInvoked;
+
+    /// <summary>Right-click, the Menu key, Shift+F10 or Delete on a wedge.</summary>
+    public event EventHandler<WheelItemEventArgs>? ItemContextRequested;
+
     public event EventHandler? Cancelled;
 
     public void SetItems(IReadOnlyList<WheelItem> items, bool mirrored, int selected = -1)
@@ -125,10 +129,36 @@ public sealed class WheelControl : FrameworkElement
         Invoke(WedgeAt(e.GetPosition(this)));
     }
 
+    protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseRightButtonUp(e);
+        var index = WedgeAt(e.GetPosition(this));
+        if (index < 0) return;
+        Select(index);
+        RequestContext(index);
+        e.Handled = true;
+    }
+
+    /// <summary>Asks the host for the wedge's menu ("Remove from wheel" on a pinned item).</summary>
+    public void RequestContext(int index)
+    {
+        if (index < 0 || index >= Items.Count) return;
+        ItemContextRequested?.Invoke(this, new WheelItemEventArgs(index, Items[index]));
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
         if (_geometry is null && e.Key != Key.Escape) return;
+
+        // The Menu key, Shift+F10 and Delete open the wedge's menu, the same as a right-click.
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.Apps or Key.Delete || (key == Key.F10 && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)))
+        {
+            RequestContext(HoverIndex);
+            e.Handled = true;
+            return;
+        }
 
         switch (e.Key)
         {
@@ -217,22 +247,57 @@ public sealed class WheelControl : FrameworkElement
         }
         geometry.Freeze();
         dc.DrawGeometry(selected ? t.Accent : t.Wedge, null, geometry);
+        if (item.Role == WheelItemRole.Add && !selected)
+            dc.DrawGeometry(null, new Pen(t.Highlight, 1.5) { DashStyle = DashStyles.Dash }, geometry);
 
-        // label
+        var (text, origin, _) = LayoutLabel(i, dpi);
+        dc.DrawText(text, new Point(c.X + origin.X, c.Y + origin.Y));
+    }
+
+    /// <summary>
+    /// The label of wedge <paramref name="i"/> and its top-left corner relative to the wheel centre. The "+ Add" slot must always be
+    /// readable: when its words do not fit a narrow wedge (a full wheel) they go on two lines ("+" over "Add"), and only when even that
+    /// does not fit does it show a large "+" — never an ellipsis.
+    /// </summary>
+    internal (FormattedText Text, Point Origin, double Size) LayoutLabel(int i, double dpi)
+    {
+        var t = _theme;
+        var g = _geometry ?? throw new InvalidOperationException("No items.");
+        var item = Items[i];
+        var selected = i == HoverIndex;
+        var brush = selected ? t.TextOnAccent : item.Role == WheelItemRole.Add ? t.Highlight : t.Text;
+        var flow = IsMirrored ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+        var chord = 2 * ((Inner + Outer) / 2) * Math.Sin(Math.Min(Math.PI / 2, Math.PI / Items.Count)) - 14;
+        var maxWidth = Math.Max(48, chord);
+
         var label = item.Label + (item.NeedsOptions ? " …" : "");
         if (item.State == WheelItemState.NeedsEngine) label = "⭳ " + label;
-        var (lx, ly) = g.LabelCenter(i);
-        var chord = 2 * ((Inner + Outer) / 2) * Math.Sin(Math.Min(Math.PI / 2, Math.PI / Items.Count)) - 14;
-        var text = new FormattedText(label, CultureInfo.CurrentUICulture,
-            IsMirrored ? FlowDirection.RightToLeft : FlowDirection.LeftToRight, LabelFace, 14,
-            selected ? t.TextOnAccent : t.Text, dpi)
+        if (item.Role == WheelItemRole.Add && !Fits(label, 14, maxWidth, LabelMaxHeight, flow, dpi))
         {
-            MaxTextWidth = Math.Max(48, chord),
-            MaxTextHeight = 38,
+            var space = label.IndexOf(' ');
+            var stacked = space > 0 ? label[..space] + "\n" + label[(space + 1)..] : label;
+            label = Fits(stacked, 14, maxWidth, LabelMaxHeight, flow, dpi) ? stacked : "+";
+        }
+
+        var size = item.Role == WheelItemRole.Add && label == "+" ? 26 : 14;
+        var text = new FormattedText(label, CultureInfo.CurrentUICulture, flow, LabelFace, size, brush, dpi)
+        {
+            MaxTextWidth = maxWidth,
+            MaxTextHeight = LabelMaxHeight,
             TextAlignment = TextAlignment.Center,
             Trimming = TextTrimming.CharacterEllipsis,
         };
-        dc.DrawText(text, new Point(c.X + lx - text.Width / 2, c.Y + ly - text.Height / 2));
+        var (lx, ly) = g.LabelCenter(i);
+        return (text, new Point(lx - text.Width / 2, ly - text.Height / 2), size);
+    }
+
+    internal const double LabelMaxHeight = 38;
+
+    /// <summary>True when the text, laid out without wrapping, fits the box (so nothing is wrapped away or trimmed).</summary>
+    internal static bool Fits(string label, double size, double maxWidth, double maxHeight, FlowDirection flow, double dpi)
+    {
+        var plain = new FormattedText(label, CultureInfo.CurrentUICulture, flow, LabelFace, size, Brushes.Black, dpi);
+        return plain.WidthIncludingTrailingWhitespace <= maxWidth && plain.Height <= maxHeight;
     }
 
     private void DrawHub(DrawingContext dc, Point c, double dpi)

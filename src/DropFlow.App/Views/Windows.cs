@@ -126,7 +126,11 @@ internal sealed record SettingsContext(
     IReadOnlyList<WatchRule> Rules,
     IReadOnlyList<string> RecipeNames,
     Action<IReadOnlyList<WatchRule>> SaveRules,
-    IReadOnlyList<ModelItem> Models);
+    IReadOnlyList<ModelItem> Models,
+    IReadOnlyList<PinnedRow>? Pins = null);
+
+/// <summary>One item the user added to a wheel with "+ Add", as Settings lists it. <paramref name="Remove"/> takes it off at once.</summary>
+internal sealed record PinnedRow(string Label, string Detail, Action Remove);
 
 /// <summary>One downloadable AI model as the settings window sees it.</summary>
 internal sealed record ModelItem(string Id, string Name, long SizeBytes, Func<bool> IsInstalled, Func<Task<bool>> Download, Func<bool> Delete);
@@ -148,6 +152,8 @@ internal sealed class SettingsWindow : Window
     private readonly StackPanel _watchList = new();
     private readonly ComboBox _recipe = new() { MinHeight = 30 };
     private readonly List<WatchRule> _rules;
+    private readonly StackPanel _pinList = new();
+    private readonly List<PinnedRow> _pins;
 
     public SettingsWindow(UiKit ui, SettingsContext ctx)
     {
@@ -187,6 +193,12 @@ internal sealed class SettingsWindow : Window
             keysPanel.Children.Add(row);
         }
         root.Children.Add(ui.Card(keysPanel));
+
+        // items added to the wheels with "+ Add"
+        root.Children.Add(ui.SectionTitle(ui.Loc["settings.pins"]));
+        _pins = [.. ctx.Pins ?? []];
+        root.Children.Add(ui.Card(new StackPanel { Children = { ui.Text(ui.Loc["settings.pins.hint"], 12, muted: true), _pinList } }));
+        RebuildPinList();
 
         // system
         _startup = new CheckBox { Content = ui.Loc["settings.startup"], IsChecked = ctx.StartupOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 2, 0, 8) };
@@ -296,6 +308,27 @@ internal sealed class SettingsWindow : Window
             row.Children.Add(enabled);
             row.Children.Add(text);
             _watchList.Children.Add(row);
+        }
+    }
+
+    private void RebuildPinList()
+    {
+        _pinList.Children.Clear();
+        if (_pins.Count == 0)
+        {
+            _pinList.Children.Add(_ui.Text(_ui.Loc["settings.pins.empty"], 12, muted: true));
+            return;
+        }
+        foreach (var pin in _pins.ToList())
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var remove = _ui.Secondary(_ui.Loc["settings.pins.remove"]);
+            remove.MinWidth = 70;
+            remove.Click += (_, _) => { pin.Remove(); _pins.Remove(pin); RebuildPinList(); };
+            DockPanel.SetDock(remove, Dock.Right);
+            row.Children.Add(remove);
+            row.Children.Add(new StackPanel { Children = { _ui.Text(pin.Label, 13, wrap: false), _ui.Text(pin.Detail, 11, muted: true, wrap: false) } });
+            _pinList.Children.Add(row);
         }
     }
 

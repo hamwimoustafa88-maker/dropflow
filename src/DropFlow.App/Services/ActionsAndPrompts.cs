@@ -147,12 +147,26 @@ internal static class ShareService
 }
 
 /// <summary>Dialogs the runner needs, marshalled to the UI thread.</summary>
-internal sealed class UserPrompts(System.Windows.Threading.Dispatcher ui, ILocalizer loc, Func<string, Task> toast) : IUserPrompts
+internal sealed class UserPrompts(System.Windows.Threading.Dispatcher ui, ILocalizer loc, Func<string, Task> toast, Func<bool> offerInstalls) : IUserPrompts
 {
     public Task<IReadOnlyDictionary<string, object?>?> AskOptionsAsync(string operation, string title, IReadOnlyList<ToolOption> options) =>
         ui.InvokeAsync(() => ToolOptionsDialog.Ask(title, operation, options, loc)).Task;
 
-    public Task<bool> ConfirmEngineInstallAsync(EngineId engine, int approxSizeMb) =>
+    /// <summary>
+    /// By default nothing is offered for download: the user is told what the tool needs and where to install it if they want to
+    /// (Settings > Engines). Only when "offer installs" is on does a dialog ask.
+    /// </summary>
+    public Task<bool> ConfirmEngineInstallAsync(EngineId engine, int approxSizeMb)
+    {
+        if (!offerInstalls())
+        {
+            _ = toast(loc.Format("engine.notOffered", loc["engine.name." + engine]));
+            return Task.FromResult(false);
+        }
+        return ConfirmInstallDialogAsync(engine, approxSizeMb);
+    }
+
+    private Task<bool> ConfirmInstallDialogAsync(EngineId engine, int approxSizeMb) =>
         ui.InvokeAsync(() =>
         {
             var name = loc["engine.name." + engine];

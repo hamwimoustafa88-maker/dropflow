@@ -77,7 +77,7 @@ public sealed class RegistryCoverageTests : IDisposable
     }
 
     [Fact]
-    public void No_operation_and_file_type_is_claimed_by_two_converters_except_the_html_override()
+    public void No_operation_and_file_type_is_claimed_by_two_converters()
     {
         var converters = Registry().Converters;
         var extensions = Catalog.Categories.SelectMany(c => c.Inputs).Concat(["htm", "xhtml", "tgz", ""]).Distinct().ToList();
@@ -89,11 +89,28 @@ public sealed class RegistryCoverageTests : IDisposable
                 var owners = converters.Where(c => c.Supports(op, ext)).ToList();
                 if (owners.Count < 2) continue;
 
-                // the built-in browser deliberately takes HTML → PDF before LibreOffice, and it comes first in the registry
-                var isHtmlOverride = op is "convert:pdf" && ext is "html" or "htm" or "xhtml" && owners[0] is Engines.Web.HtmlToPdfTool;
-                if (!isHtmlOverride) problems.Add($"{op} on .{ext}: {string.Join(" and ", owners.Select(o => o.GetType().Name))}");
+                problems.Add($"{op} on .{ext}: {string.Join(" and ", owners.Select(o => o.GetType().Name))}");
             }
 
+        AssertNone(problems);
+    }
+
+    /// <summary>
+    /// The promise "nothing to download" for everyday documents: HTML, text, Markdown, Word, spreadsheets, CSV/JSON and EPUB become
+    /// PDF, PNG and JPG with no helper program (the owner does not want install prompts for these).
+    /// </summary>
+    [Fact]
+    public void Everyday_documents_convert_to_pdf_and_pictures_without_any_helper_program()
+    {
+        var registry = Registry();
+        var problems = new List<string>();
+        foreach (var input in new[] { "html", "txt", "md", "docx", "csv", "tsv", "xlsx", "json", "epub" })
+            foreach (var target in new[] { "pdf", "png", "jpg" })
+            {
+                var converter = registry.Find($"convert:{target}", input);
+                if (converter is null) problems.Add($"{input} -> {target}: no converter");
+                else if (converter.EngineFor($"convert:{target}") != EngineId.None) problems.Add($"{input} -> {target}: needs {converter.EngineFor($"convert:{target}")}");
+            }
         AssertNone(problems);
     }
 

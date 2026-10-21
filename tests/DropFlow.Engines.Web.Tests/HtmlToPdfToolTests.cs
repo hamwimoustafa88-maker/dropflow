@@ -59,7 +59,16 @@ public sealed class WebHostFixture : IDisposable
 
     public string Profile { get; } = Path.Combine(Path.GetTempPath(), "dropflow-webview-tests");
 
-    public void Dispose() => Ui.Dispose();
+    /// <summary>One renderer for every test, like the app: a second browser created right after the first closed can stall for 20-30 s.</summary>
+    public WebPageRenderer Renderer { get; }
+
+    public WebHostFixture() => Renderer = new WebPageRenderer(Ui.Dispatcher, Profile);
+
+    public void Dispose()
+    {
+        Renderer.Dispose();
+        Ui.Dispose();
+    }
 }
 
 public class HtmlToPdfToolTests(WebHostFixture host) : IClassFixture<WebHostFixture>, IDisposable
@@ -74,7 +83,7 @@ public class HtmlToPdfToolTests(WebHostFixture host) : IClassFixture<WebHostFixt
 
     public void Dispose() => _dir.Dispose();
 
-    private HtmlToPdfTool Tool() => new(host.Ui.Dispatcher, host.Profile);
+    private HtmlToPdfTool Tool() => new(host.Renderer);
 
     private static ConversionJob Job(string input, Dictionary<string, object?>? options = null) =>
         new([input], HtmlToPdfTool.ToolId, options);
@@ -87,23 +96,15 @@ public class HtmlToPdfToolTests(WebHostFixture host) : IClassFixture<WebHostFixt
     }
 
     [Fact]
-    public void Supports_only_html_inputs_for_its_own_operations()
+    public void The_tool_takes_html_only_and_leaves_plain_conversions_to_the_pdf_engine()
     {
         var tool = Tool();
+        Assert.Equal([HtmlToPdfTool.ToolId], tool.Operations);
         Assert.True(tool.Supports(HtmlToPdfTool.ToolId, "html"));
         Assert.True(tool.Supports(HtmlToPdfTool.ToolId, "htm"));
-        Assert.True(tool.Supports(HtmlToPdfTool.ConvertPdf, "html"));
         Assert.False(tool.Supports(HtmlToPdfTool.ToolId, "pdf"));
-        Assert.False(tool.Supports(HtmlToPdfTool.ConvertPdf, "docx"));
-        Assert.False(tool.Supports("convert:png", "html"));
-    }
-
-    [Fact]
-    public void Only_the_tool_asks_for_options_not_the_plain_conversion()
-    {
-        var tool = Tool();
+        Assert.False(tool.Supports("convert:pdf", "html"));   // that is the PDF engine's job (see DocumentRenderingTests)
         Assert.NotEmpty(tool.OptionsFor(HtmlToPdfTool.ToolId));
-        Assert.Empty(tool.OptionsFor(HtmlToPdfTool.ConvertPdf));
     }
 
     [WebViewFact]

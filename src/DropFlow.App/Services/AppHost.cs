@@ -32,18 +32,25 @@ namespace DropFlow.App.Services;
 /// <summary>Which converter modules the app loads. One line per engine project.</summary>
 internal static class Modules
 {
-    /// <summary>Web comes first so HTML → PDF uses the built-in browser engine instead of LibreOffice.</summary>
+    /// <summary>
+    /// One hidden browser (WebView2) serves two things: the "HTML to PDF" tool, and the PDF engine, which uses it to print HTML, text,
+    /// Markdown, Word, spreadsheet and EPUB files to PDF and pictures — so those conversions need no LibreOffice and no download.
+    /// </summary>
     public static IReadOnlyList<IConverter> Create(
-        IEngineProvider engines, Dispatcher ui, string webProfileFolder, Func<IReadOnlyList<string>, Task> openEncoder, ModelManager models) =>
-    [
-        .. Engines.Web.WebModule.Create(ui, webProfileFolder),
-        .. Engines.Images.ImagesModule.Create(engines),
-        .. Engines.Media.MediaModule.Create(engines),
-        new EncoderTool(openEncoder),
-        .. Engines.Pdf.PdfModule.Create(engines),
-        .. Engines.Archive.ArchiveModule.Create(engines),
-        .. AI.AiModule.Create(engines, models),
-    ];
+        IEngineProvider engines, Dispatcher ui, string webProfileFolder, Func<IReadOnlyList<string>, Task> openEncoder, ModelManager models)
+    {
+        var renderer = Engines.Web.WebModule.CreateRenderer(ui, webProfileFolder);
+        return
+        [
+            .. Engines.Web.WebModule.Create(renderer),
+            .. Engines.Images.ImagesModule.Create(engines),
+            .. Engines.Media.MediaModule.Create(engines),
+            new EncoderTool(openEncoder),
+            .. Engines.Pdf.PdfModule.Create(engines, renderer),
+            .. Engines.Archive.ArchiveModule.Create(engines),
+            .. AI.AiModule.Create(engines, models),
+        ];
+    }
 }
 
 /// <summary>Maps the wheel session onto the WPF wheel window.</summary>
@@ -320,7 +327,8 @@ internal sealed class AppHost : IDisposable
         public OperationRunner Create() => new(
             host.Registry, host.Queue, host.Engines,
             new EngineInstallService(host._ui, host.Kit, host.Installer, host.Engines),
-            new UserPrompts(host._ui, host.Loc, msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; }),
+            new UserPrompts(host._ui, host.Loc, msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; },
+                () => host.Settings.OfferEngineInstalls),
             EngineInfo.ApproxSizeMb,
             op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op);
     }

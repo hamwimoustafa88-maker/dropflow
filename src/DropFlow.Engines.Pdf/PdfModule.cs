@@ -1,6 +1,7 @@
 using DropFlow.Core.Operations;
 using DropFlow.Engines.Pdf.Infrastructure;
 using DropFlow.Engines.Pdf.Office;
+using DropFlow.Engines.Pdf.Rendering;
 using DropFlow.Engines.Pdf.Tools;
 
 namespace DropFlow.Engines.Pdf;
@@ -12,10 +13,16 @@ namespace DropFlow.Engines.Pdf;
 /// </summary>
 public static class PdfModule
 {
-    public static IReadOnlyList<IConverter> Create(IEngineProvider engines) => Create(engines, new ProcessEngineRunner());
+    /// <param name="engines">Locates qpdf and LibreOffice.</param>
+    /// <param name="htmlRenderer">
+    /// A browser engine that prints HTML to PDF. When given, HTML, text, Markdown, Word, spreadsheet, CSV/JSON and EPUB files become PDF
+    /// and pictures in-process (no LibreOffice, nothing to download); LibreOffice is then used only for the formats a browser cannot read.
+    /// </param>
+    public static IReadOnlyList<IConverter> Create(IEngineProvider engines, IHtmlPdfRenderer? htmlRenderer = null) =>
+        Create(engines, new ProcessEngineRunner(), htmlRenderer);
 
     /// <summary>Test seam: lets tests replace the external-process layer without installing qpdf or LibreOffice.</summary>
-    internal static IReadOnlyList<IConverter> Create(IEngineProvider engines, IEngineRunner runner) =>
+    internal static IReadOnlyList<IConverter> Create(IEngineProvider engines, IEngineRunner runner, IHtmlPdfRenderer? htmlRenderer = null) =>
     [
         new SpecConverter(EngineId.None,
         [
@@ -34,6 +41,7 @@ public static class PdfModule
             .. EpubTools.Specs(),
         ]),
         new SpecConverter(EngineId.Qpdf, new QpdfTools(engines, runner).Specs()),
-        new SpecConverter(EngineId.LibreOffice, new LibreOfficeTools(engines, runner).Specs()),
+        .. htmlRenderer is null ? [] : new IConverter[] { new SpecConverter(EngineId.None, new BrowserDocumentTools(htmlRenderer).Specs()) },
+        new SpecConverter(EngineId.LibreOffice, new LibreOfficeTools(engines, runner, browserRenders: htmlRenderer is not null).Specs()),
     ];
 }

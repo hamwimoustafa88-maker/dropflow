@@ -49,15 +49,22 @@ public static class LibreOfficePlanner
     public static readonly string[] AllInputs = [.. WriterInputs, "md", "epub", .. ImpressInputs, .. CalcInputs, .. TabularInputs];
     public static readonly string[] AllTargets = ["docx", "pdf", "txt", "md", "html", "epub", "odt", "rtf", "png", "jpg", "odp", "pptx", "xlsx", "ods", "csv", "tsv", "json"];
 
-    /// <summary>Every (input, target) pair LibreOffice is used for.</summary>
-    public static IReadOnlyList<(string Input, string Target)> Pairs { get; } =
-        AllInputs.SelectMany(i => AllTargets.Select(t => (Input: i, Target: t))).Where(p => Plan(p.Input, p.Target) is not null).ToList();
+    /// <summary>Every (input, target) pair LibreOffice is used for when no browser engine is available (the CLI).</summary>
+    public static IReadOnlyList<(string Input, string Target)> Pairs { get; } = PairsFor(browserRenders: false);
 
-    public static LibreOfficePlan? Plan(string inputExtension, string targetExtension)
+    /// <summary>
+    /// The pairs LibreOffice is used for. With <paramref name="browserRenders"/> the app's browser engine prints HTML/text/Markdown/Word/
+    /// spreadsheet/EPUB files to PDF and pictures itself, so those pairs no longer need LibreOffice (and nothing has to be installed).
+    /// </summary>
+    public static IReadOnlyList<(string Input, string Target)> PairsFor(bool browserRenders) =>
+        AllInputs.SelectMany(i => AllTargets.Select(t => (Input: i, Target: t))).Where(p => Plan(p.Input, p.Target, browserRenders) is not null).ToList();
+
+    public static LibreOfficePlan? Plan(string inputExtension, string targetExtension, bool browserRenders = false)
     {
         var input = inputExtension.TrimStart('.').ToLowerInvariant();
         var target = targetExtension.TrimStart('.').ToLowerInvariant();
         if (input == target || ManagedPairs.Handles(input, target)) return null;
+        if (browserRenders && BrowserDocumentTools.Handles(input, target)) return null;
 
         if (WriterInputs.Contains(input) || input is "md" or "epub") return WriterPlan(input, target);
         if (ImpressInputs.Contains(input)) return ImpressPlan(target);

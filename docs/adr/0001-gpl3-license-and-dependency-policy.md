@@ -1,6 +1,6 @@
 # ADR-0001: GPL-3.0-or-later and dependency policy
 
-Date: 2026-10-20 · Status: Accepted
+Date: 2026-10-20 · Status: **Superseded by [ADR-0010](0010-proprietary-license-and-dependency-policy.md)** (the owner decided on 2026-10-21 that DropFlow is not open source)
 
 ## Context
 The project owner chose a fully open-source model. This lets us bundle the full FFmpeg GPL build (x264/x265) and

@@ -42,7 +42,7 @@ public static class PdfModule
 4. **External programs** go through `DropFlow.Engines.Common.ProcessRunner` (argument list, no shell strings, timeout, cancellation).
    Locate them with the injected `IEngineProvider.Locate(EngineId)`; never hard-code paths.
 5. **No network access** and **no downloading of binaries or models** in converters or tests.
-6. Only dependencies whose licence is MIT, BSD, Apache-2.0, LGPL, MPL-2.0 or GPL-compatible (see `CLAUDE.md`). Add them with
+6. Only dependencies whose licence is MIT, BSD, Apache-2.0, MPL-2.0, ISC, Zlib or dynamically-linked LGPL (never GPL/AGPL in-process; see `CLAUDE.md` and ADR-0010). Add them with
    `dotnet add <project> package <name>`; list every added package (name, version, licence, why) in your final report.
 7. Unicode paths and paths with spaces must work (Arabic file names are a core use case). Test with one.
 8. All user-visible strings are resource keys, not literals; converters return messages for logs only (English is fine there).

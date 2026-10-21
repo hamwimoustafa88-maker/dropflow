@@ -1,8 +1,9 @@
 # DropFlow
 
-An enhanced, open-source Windows 10/11 + web counterpart of Tangerine (tangerineformac.com): drag a file, tap a key,
+An enhanced Windows 10/11 + web counterpart of Tangerine (tangerineformac.com): drag a file, tap a key,
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
-License: GPL-3.0-or-later. Audience: Arabic + English users.
+License: **proprietary, all rights reserved — NOT open source** (owner's decision 2026-10-21, ADR-0010; the repo is private and may be
+public only briefly for tooling). Never write "open source" or "GPL" in product copy. Audience: Arabic + English users.
 
 **Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
 (`docs/phase0-checklist.md`) was our own rule and has **not been run** (needs a human dragging files; Windows 11 and
@@ -72,10 +73,12 @@ binaries or models without the owner's say-so; engine-dependent tests skip visib
 - Use DropFlow's own name, logo, colors, and copy — never Tangerine's branding, text, or assets.
 - Accounts, registration, and payments are deferred to Phase 9 (ADR-0005). Do not add auth or payment code before then.
 
-## Licensing policy (GPL-3.0-or-later, ADR-0001)
-- Allowed: MIT, BSD, Apache-2.0, LGPL, MPL-2.0, GPL-2.0-or-later, GPL-3.0; AGPL-3.0 as an external process/WASM module.
-- Forbidden: GPL-2.0-only code in-process, non-commercial/research-only models (e.g. RMBG-1.4), non-redistributable SDKs.
-- Code adapted from GPL projects (File Converter, ShareX) keeps its copyright header.
+## Licensing policy (proprietary product, ADR-0010; supersedes ADR-0001)
+- In-process (linked/bundled) only: MIT, BSD, Apache-2.0, MPL-2.0, ISC, Zlib, LGPL (dynamic, replaceable). **No GPL/AGPL code inside our binaries.**
+- GPL/AGPL programs (FFmpeg, Ghostscript) only as separate programs the user runs, started as child processes; never linked.
+- Forbidden: non-commercial/research-only models (e.g. RMBG-1.4), non-redistributable SDKs, code copied from GPL projects.
+- Open issue: `@ffmpeg/core` (GPL-2.0+) is served by the web app — see ADR-0010 and `docs/deferred.md`.
+- The app must not offer to download/install helper programs unless the user enabled it (Settings) or pressed Install.
 - Ask the user before adding any dependency; record it in THIRD-PARTY-NOTICES.md.
 
 ## Conventions
@@ -97,6 +100,14 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Owner feedback after running the app (Shift works; converting a document to an image offered a 350 MB LibreOffice
+  download — "I don't want anything external downloaded"; "the project is NOT open source"; "you may download what you need";
+  "make the repo public only temporarily to get past the GitHub billing block, I want it private"; Vercel is linked): (1) licence is now
+  proprietary — LICENSE, README, ADR-0010 (supersedes ADR-0001), landing/Settings/winget copy no longer say open source/GPL;
+  (2) helper-program install prompts are off by default (`AppSettings.OfferEngineInstalls`, Settings checkbox); (3) HTML, text, Markdown,
+  Word, spreadsheets, CSV/JSON and EPUB → PDF/PNG/JPG now use the built-in WebView2 browser (`IHtmlPdfRenderer`, `DocumentHtml`,
+  `BrowserDocumentTools`, `WebPageRenderer`; ADR-0011) with no LibreOffice; tested for real with no engine installed.
+  — LICENSE, docs/adr/0010-0011, src/DropFlow.Engines.{Pdf,Web}, src/DropFlow.App, web/messages, tests
 - 2026-10-21 — Closing round (owner: "complete everything remaining and defer what cannot be done now"): engine requirement can depend
   on the chosen option (`IConverter.EngineFor(op, options)`; runner asks options first; PDF "extreme" compression no longer demands qpdf);
   catalog `maxFiles` (Compare PDFs = exactly two); real-CLI acceptance run on real files (25/26, the failure is the fix above; redaction

@@ -15,6 +15,7 @@ unaffected; the ffmpeg core and pdf.js worker are copied from `node_modules` int
 served from our own origin, never from a CDN; the service worker is registered on `/app` only and caches versioned shell and engine files.
 
 ## Consequences
-`@ffmpeg/core` is GPL-2.0-or-later and is served with its notice (compatible with GPL-3.0-or-later; recorded in THIRD-PARTY-NOTICES).
+`@ffmpeg/core` is GPL-2.0-or-later and is served with its notice (recorded in THIRD-PARTY-NOTICES). Because DropFlow is proprietary
+(ADR-0010) this is a licence risk whose resolution is pending the owner's decision.
 Tools that cannot run in a browser (Office, OCR, Whisper, protect/unlock, 7z/RAR) are never offered; a hint tile points to the Windows app.
 The service worker's own requests are not covered by the network audit (only its source was scanned).

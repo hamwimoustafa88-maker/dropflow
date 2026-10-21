@@ -139,6 +139,7 @@ internal sealed class SettingsWindow : Window
     private readonly ComboBox[] _keys = [new(), new(), new()];
     private readonly CheckBox _startup;
     private readonly CheckBox _menu;
+    private readonly CheckBox _offerInstalls;
     private readonly TextBox _hotkey = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5) };
     private readonly TextBox _clipboardHotkey = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5), Margin = new Thickness(0, 0, 0, 0) };
     private readonly TextBlock _message;
@@ -188,13 +189,14 @@ internal sealed class SettingsWindow : Window
         // system
         _startup = new CheckBox { Content = ui.Loc["settings.startup"], IsChecked = ctx.StartupOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 2, 0, 8) };
         _menu = new CheckBox { Content = ui.Loc["settings.contextMenu"], IsChecked = ctx.MenuOn, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) };
+        _offerInstalls = new CheckBox { Content = ui.Loc["settings.offerInstalls"], IsChecked = current.OfferEngineInstalls, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) };
         _hotkey.Text = current.GlobalHotkey;
         _clipboardHotkey.Text = current.ClipboardHotkey;
         var sys = new StackPanel
         {
             Children =
             {
-                _startup, _menu,
+                _startup, _menu, _offerInstalls,
                 ui.Text(ui.Loc["settings.hotkey"], 12, muted: true), _hotkey,
                 ui.Text(ui.Loc["settings.clipboardHotkey"], 12, muted: true), _clipboardHotkey,
             },
@@ -376,6 +378,7 @@ internal sealed class SettingsWindow : Window
             },
             GlobalHotkey = _hotkey.Text.Trim(),
             ClipboardHotkey = _clipboardHotkey.Text.Trim(),
+            OfferEngineInstalls = _offerInstalls.IsChecked == true,
         };
         var errors = _ctx.Apply(updated, _startup.IsChecked == true, _menu.IsChecked == true);
         _message.Foreground = errors.Count == 0 ? _ui.Theme.Highlight : System.Windows.Media.Brushes.IndianRed;

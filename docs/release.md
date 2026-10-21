@@ -49,4 +49,4 @@ SmartScreen reputation; an unsigned installer is often rejected, so sign first.
 ## Before announcing
 - Run the manual matrix in `docs/phase0-checklist.md` on Windows 10 **and** 11 (drag capture, DPI, elevated apps, antivirus).
 - Check `docs/status.md`: anything still marked "unverified" must be either tested or described honestly in the release notes.
-- Every dependency must be listed in `THIRD-PARTY-NOTICES.md`; the installer must ship `LICENSE` (GPL-3.0) and the source offer.
+- Every dependency must be listed in `THIRD-PARTY-NOTICES.md`; the installer must ship the proprietary `LICENSE`, `THIRD-PARTY-NOTICES.md` and the licence texts/source offers that third-party components require (for example FFmpeg if it is ever bundled).

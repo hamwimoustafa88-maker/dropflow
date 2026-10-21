@@ -1,7 +1,7 @@
 # DropFlow
 
-**Drag a file, tap a key, drop — convert anything locally. Windows + web. Open source (GPL-3.0).**
-**اسحب ملفاً، اضغط مفتاحاً، أفلته — حوّل أي ملف محلياً. ويندوز + ويب. مفتوح المصدر.**
+**Drag a file, tap a key, drop — convert anything locally. Windows + web. Proprietary software (not open source).**
+**اسحب ملفاً، اضغط مفتاحاً، أفلته — حوّل أي ملف محلياً. ويندوز + ويب. برنامج مملوك (غير مفتوح المصدر).**
 
 DropFlow is an enhanced Windows/web counterpart of the Mac app Tangerine: a radial wheel appears while you drag a file, with
 conversions (Shift), tools (Ctrl) and file actions (Alt). Files never leave your device. On top of Tangerine's feature set it adds
@@ -26,4 +26,4 @@ node catalog/build.mjs              # after editing catalog/tools.json
 cd web; npm install; npm run dev    # landing page
 ```
 
-License: [GPL-3.0-or-later](LICENSE) · Third-party components: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
+License: proprietary, all rights reserved ([LICENSE](LICENSE), [ADR-0010](docs/adr/0010-proprietary-license-and-dependency-policy.md)) · Third-party components: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)

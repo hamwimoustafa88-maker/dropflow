@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "DropFlow — Drag. Tap. Drop.",
-    "description": "Convert any file. Offline. Open source, for Windows and the web."
+    "description": "Convert any file. Offline. For Windows and the web."
   },
   "common": {
     "soon": "Soon",
@@ -16,7 +16,7 @@
     "formats": "Formats"
   },
   "hero": {
-    "badge": "Open source",
+    "badge": "100% local",
     "titleA": "Drag.",
     "titleB": "Tap.",
     "titleC": "Drop.",
@@ -105,7 +105,7 @@
     "title": "Drop it. Done."
   },
   "footer": {
-    "license": "Open source · GPL-3.0"
+    "license": "© 2026 DropFlow · All rights reserved"
   },
   "app": {
     "meta": {

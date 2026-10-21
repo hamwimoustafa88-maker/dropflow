@@ -33,13 +33,13 @@ public static class LibreOfficeArguments
 }
 
 /// <summary>Runs the LibreOffice conversions listed by <see cref="LibreOfficePlanner"/>, with DropFlow's pre- and post-steps around the engine.</summary>
-internal sealed class LibreOfficeTools(IEngineProvider engines, IEngineRunner runner)
+internal sealed class LibreOfficeTools(IEngineProvider engines, IEngineRunner runner, bool browserRenders = false)
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromMinutes(15);
 
     public IEnumerable<OperationSpec> Specs()
     {
-        foreach (var group in LibreOfficePlanner.Pairs.GroupBy(p => p.Target))
+        foreach (var group in LibreOfficePlanner.PairsFor(browserRenders).GroupBy(p => p.Target))
         {
             var target = group.Key;
             yield return new OperationSpec($"convert:{target}", group.Select(p => p.Input).ToArray(), ctx => RunAsync(ctx, target));
@@ -49,7 +49,7 @@ internal sealed class LibreOfficeTools(IEngineProvider engines, IEngineRunner ru
     private async Task<ConversionResult> RunAsync(JobContext ctx, string target)
     {
         var inputExt = Path.GetExtension(ctx.Input).TrimStart('.').ToLowerInvariant();
-        var plan = LibreOfficePlanner.Plan(inputExt, target)
+        var plan = LibreOfficePlanner.Plan(inputExt, target, browserRenders)
                    ?? throw new ConversionFailure($"'.{inputExt}' cannot be converted to .{target}.");
 
         var soffice = engines.Locate(EngineId.LibreOffice)

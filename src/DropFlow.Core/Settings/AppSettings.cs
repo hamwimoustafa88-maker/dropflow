@@ -41,6 +41,12 @@ public sealed record AppSettings
     public string? DataDirectory { get; init; }
 
     public bool ShowFirstRunTips { get; init; } = true;
+
+    /// <summary>
+    /// When true, a tool that needs a helper program that is not installed offers to install it (winget). Off by default: the app never
+    /// asks to download anything on its own; the Install buttons in Settings always work.
+    /// </summary>
+    public bool OfferEngineInstalls { get; init; }
 }
 
 /// <summary>Reads and writes settings as JSON. A corrupt file falls back to defaults and is kept as ".bad" for inspection.</summary>

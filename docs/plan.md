@@ -8,7 +8,7 @@ DropFlow **نسخة مطوّرة من Tangerine** (tangerineformac.com) لوين
 
 | القرار | الاختيار |
 |---|---|
-| الترخيص | **GPL-3.0-or-later**، مفتوح المصدر بالكامل ([ADR-0001](adr/0001-gpl3-license-and-dependency-policy.md)) |
+| الترخيص | **مملوك، جميع الحقوق محفوظة — غير مفتوح المصدر** (قرار المالك 2026-10-21، [ADR-0010](adr/0010-proprietary-license-and-dependency-policy.md)؛ كان GPL في [ADR-0001](adr/0001-gpl3-license-and-dependency-policy.md)) |
 | المنصات | تطبيق ويندوز 10/11 (C# .NET 10 + WPF + WPF-UI) **+** نسخة ويب تعالج داخل المتصفح (Next.js على Vercel) |
 | مفاتيح السحب | Shift تحويل · Ctrl أدوات · Alt إجراءات — قابلة للتغيير ([ADR-0003](adr/0003-drag-keys-shift-ctrl-alt.md)) |
 | الأولوية بعد النواة | PDF أولاً ثم الوسائط |
@@ -19,7 +19,7 @@ DropFlow **نسخة مطوّرة من Tangerine** (tangerineformac.com) لوين
 
 ## 2. ما يميّز DropFlow عن Tangerine
 
-ويندوز + ويب · واجهة عربية كاملة RTL · مجموعة PDF أشمل (تكافؤ iLovePDF) · DropFlow Encoder (H.264/H.265/AV1، GPU، حجم مستهدف، مسبقات منصات) · تحويل الكلام إلى نص بـ Whisper (عربي) · OCR عربي · إزالة الخلفية · رف عائم · وصفات ومجلدات مراقبة · CLI · مفتوح المصدر. الهدف الأدنى: لا فئة في DropFlow أقل من Tangerine (يتحقق منه `node catalog/build.mjs` آلياً).
+ويندوز + ويب · واجهة عربية كاملة RTL · مجموعة PDF أشمل (تكافؤ iLovePDF) · DropFlow Encoder (H.264/H.265/AV1، GPU، حجم مستهدف، مسبقات منصات) · تحويل الكلام إلى نص بـ Whisper (عربي) · OCR عربي · إزالة الخلفية · رف عائم · وصفات ومجلدات مراقبة · CLI. الهدف الأدنى: لا فئة في DropFlow أقل من Tangerine (يتحقق منه `node catalog/build.mjs` آلياً).
 
 **تكييفات ويندوز:** Pages/Keynote/Numbers مدخلات فقط · AirDrop ← لوحة المشاركة + إرسال للهاتف بـ QR · Terminal ← Windows Terminal/PowerShell · قصاصات Finder ← الحافظة · اللمس: ضغطة مطوّلة قبل السحب (يُختبر في Spike).
 
@@ -111,7 +111,7 @@ DropFlow **نسخة مطوّرة من Tangerine** (tangerineformac.com) لوين
 | 8 | الإطلاق | 1–2 أسبوع | توقيع، GitHub Releases + winget، Landing v2 + فيديو | تثبيت نظيف بلا تحذيرات حرجة |
 | 9 | **مؤجّل** — الحسابات والدفع | — | تسجيل (Supabase Auth)، خطة مدفوعة عبر Merchant of Record، مزامنة الإعدادات والوصفات | يُخطَّط عند الوصول إليه |
 
-لا تنتقل للمرحلة 1 إن فشل الـ Spike على أحد النظامين. ملاحظة للمرحلة 9: GPL يسمح بالبيع لكن يتيح إعادة التوزيع، فالاشتراك يكون مقابل خدمات (مزامنة، بناءات موقّعة، دعم، ميزات سحابية اختيارية) لا لحجب الكود.
+لا تنتقل للمرحلة 1 إن فشل الـ Spike على أحد النظامين. ملاحظة للمرحلة 9: المشروع مملوك وغير مفتوح المصدر، فيمكن بيع التطبيق نفسه أو اشتراكاته دون قيد GPL.
 
 ## 9. المخاطر
 

@@ -1,7 +1,7 @@
 # Third-party notices
 
 Every dependency is recorded here when it is added (see CLAUDE.md, licensing policy). This file lists what is **actually used** in
-the repository; planned components are in `docs/plan.md` §3. DropFlow itself is GPL-3.0-or-later.
+the repository; planned components are in `docs/plan.md` §3. DropFlow itself is proprietary (all rights reserved, see `LICENSE`); the licences below apply to each third-party component only.
 
 ## Libraries in the Windows app and engines (NuGet)
 
@@ -64,7 +64,7 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsof
 | next-intl | 4.14.9 | MIT | Arabic/English routing and messages |
 | TypeScript, ESLint, eslint-config-next, @types/* | 5.x / 9.x | Apache-2.0 / MIT | Dev tooling |
 | IBM Plex Sans Arabic, IBM Plex Mono (fonts) | — | SIL OFL 1.1 | Typography, self-hosted at build via `next/font/google` |
-| @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. GPL-2.0-or-later is compatible with GPL-3.0-or-later |
+| @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. **Licence risk for a proprietary site, decision pending (ADR-0010)** |
 | @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
 | pdf-lib | 1.17.1 | MIT (dependencies MIT, one MIT AND Zlib, one 0BSD) | In-browser PDF merge/split/rotate/watermark/metadata |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 | In-browser PDF rendering and text extraction |

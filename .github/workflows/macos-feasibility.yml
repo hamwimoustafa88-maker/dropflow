@@ -1,0 +1,32 @@
+name: macOS feasibility
+
+# Runs the platform-neutral half of DropFlow (Core + all engines, net10.0) on Apple Silicon, with real FFmpeg and qpdf from Homebrew.
+# It measures how much of the code already works on a Mac; the UI, hooks, OCR and HTML->PDF are Windows-only today (docs/macos.md).
+on:
+  workflow_dispatch:
+
+jobs:
+  shared-libraries:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Helper programs (Homebrew)
+        run: brew install ffmpeg qpdf
+      - name: Machine
+        run: sw_vers; uname -m; ffmpeg -version | head -1; qpdf --version | head -1
+      - name: Test the shared libraries
+        run: |
+          for p in Core Engines.Common Engines.Images Engines.Media Engines.Pdf Engines.Archive; do
+            echo "::group::$p"
+            dotnet test tests/DropFlow.$p.Tests -c Release --logger "trx;LogFileName=$p.trx" || echo "FAILED: $p" >> failures.txt
+            echo "::endgroup::"
+          done
+          if [ -f failures.txt ]; then cat failures.txt; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-test-results
+          path: "**/TestResults/*.trx"

@@ -2,15 +2,14 @@
 
 An enhanced Windows 10/11 + web counterpart of Tangerine (tangerineformac.com): drag a file, tap a key,
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
-License: **proprietary, all rights reserved — NOT open source** (owner's decision 2026-10-21, ADR-0010; the repo is private and may be
-public only briefly for tooling). Never write "open source" or "GPL" in product copy. Audience: Arabic + English users.
+License: **proprietary, all rights reserved — NOT open source** (owner's decision 2026-10-21, ADR-0010). The repository is PUBLIC since
+2026-10-21 (owner decision, so releases and the updater can download) but remains all-rights-reserved. Never write "open source" or "GPL" in product copy. Audience: Arabic + English users.
 
 **Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
 multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
-are inert "Soon" badges until a release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch
-`main`). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
+are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.1.0 is live (installer 263 MB, unsigned). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
 installed (new terminals may need a restart to see it on PATH). The dev machine now has FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and
 four AI models, and the installer ships FFmpeg, qpdf and Tesseract (+ Arabic data) inside (ADR-0012): users never download a program.
 `tools/fetch-engines.ps1` fetches them at build time (never commit binaries); engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`
@@ -100,6 +99,11 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Published: history rewritten (owner-approved) to remove copied Tangerine screenshots/site text, repo made public, CI green on all jobs,
+  tag v0.1.0 built by `release.yml` WITH bundled engines (Setup 263 MB, CLI zip, checksums), landing Windows button + Web button live, privacy/terms live.
+  `windows-smoke.yml` passed on windows-2022 and windows-2025 (build 26100, Win11 24H2 code base): app starts, hooks install. Found by CI: HTML to PDF
+  aborted the second page in a row (ConnectionAborted) — fixed (blank page first, one retry). Vercel MCP still 403 (the connector grant lacks the team).
+  Backup of the pre-rewrite history is a local bundle only (scratchpad). — .github/workflows, src/DropFlow.Engines.Web, web/**, docs/*
 - 2026-10-21 — Owner round 3 ("no program may be downloaded by the user", "publish for release", "privacy and terms", "link import"):
   (1) FFmpeg 9.0.2 essentials, qpdf 12.4.2 and Tesseract 5.4 + English/Arabic data now ship inside the installer under `engines\`
   (`EngineLocator` checks it first, `tools/fetch-engines.ps1` pins versions + SHA-256, ADR-0012; FFmpeg is GPL as a separate program, lawyer review advised);

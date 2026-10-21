@@ -30,6 +30,13 @@ jobs:
           dotnet publish src/DropFlow.App -c Release -r win-x64 --self-contained
           -p:Version=${{ steps.v.outputs.version }} -o publish/app
 
+      - name: Bundle the helper programs (FFmpeg, qpdf, Tesseract + Arabic data) so users download nothing
+        shell: pwsh
+        run: |
+          ./tools/fetch-engines.ps1
+          Copy-Item tools/engines publish/app/engines -Recurse
+          Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/app
+
       - name: Publish the CLI
         run: >
           dotnet publish src/DropFlow.Cli -c Release -r win-x64 --self-contained

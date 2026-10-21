@@ -60,6 +60,13 @@ const SECURITY_HEADERS = [
   { key: "Access-Control-Allow-Origin", value: ORIGIN },
 ];
 
+// Static pages whose CSP gets the SHA-256 hashes of their own inline scripts after the build (scripts/csp-hashes.mjs replaces
+// the 'csp-hashes:<route>' placeholder). With hashes present, browsers ignore 'unsafe-inline' for scripts.
+const LOCALES = ["ar", "en"];
+const HASHED_PAGES = ["", "/privacy", "/terms"];
+const withHashes = (policy: string, route: string) =>
+  policy.replace("script-src 'self' 'unsafe-inline'", `script-src 'self' 'unsafe-inline' 'csp-hashes:${route}'`);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   turbopack: {
@@ -93,6 +100,16 @@ const nextConfig: NextConfig = {
               headers: [csp, { key: "X-Content-Type-Options", value: "nosniff" }, { key: "Referrer-Policy", value: "no-referrer" }],
             },
             { source: "/_next/static/:path*", headers: [csp] },
+            ...LOCALES.flatMap((locale) => [
+              ...HASHED_PAGES.map((page) => ({
+                source: `/${locale}${page}`,
+                headers: [{ key: "Content-Security-Policy", value: withHashes(SITE_CSP, `/${locale}${page}`) }],
+              })),
+              {
+                source: `/${locale}/app`,
+                headers: [{ key: "Content-Security-Policy", value: withHashes(APP_CSP, `/${locale}/app`) }],
+              },
+            ]),
             { source: "/vendor/:path*", headers: [csp] },
           ]
         : []),

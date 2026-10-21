@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/build-sw.mjs",
+    "build": "next build && node scripts/build-sw.mjs && node scripts/csp-hashes.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

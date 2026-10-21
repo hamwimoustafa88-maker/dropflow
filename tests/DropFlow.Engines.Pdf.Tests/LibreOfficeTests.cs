@@ -94,8 +94,8 @@ public class LibreOfficePlannerTests
             }
         }
 
-        // pdfa is out of scope (no PDF/A engine); heic cannot be verified without a fixture. Anything else appearing here is a regression.
-        Assert.Equal(["heic->pdf", "pdf->pdfa"], unsupported.OrderBy(u => u, StringComparer.Ordinal));
+        // No named gaps are left (pdf -> pdfa is built in-process, heic -> pdf has a real HEIC fixture). Anything appearing here is a regression.
+        Assert.Empty(unsupported);
     }
 
     [Fact]

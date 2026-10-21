@@ -52,6 +52,79 @@ public class ImageToPdfTests
         Assert.True(diffs.Average() <= 2, $"mean channel difference was {diffs.Average():0.0}, worst {diffs.Max()}");
     }
 
+    /// <summary>A real HEVC-coded HEIC file (Magick.NET can read HEIC but not write it); source and licence in tests/samples/README.md.</summary>
+    private static string HeicSample(TempDir dir, string name = "photo.heic")
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "samples", "heic", "RGB_8__128x128.heic");
+        var target = dir.Combine(name);
+        File.Copy(source, target);
+        return target;
+    }
+
+    [Fact]
+    public async Task A_heic_photo_becomes_a_one_page_pdf_with_one_picture()
+    {
+        using var dir = new TempDir();
+        var heic = HeicSample(dir);
+
+        var result = await Kit.Ok(Kit.RunAsync("convert:pdf", [heic]));
+
+        Assert.Equal(dir.Combine("photo (converted).pdf"), result.Outputs[0]);
+        Assert.Equal("pdf", PixelKit.Signature(result.Outputs[0]));
+        Assert.Equal([(128.0, 128.0)], PageSizes(result.Outputs[0]));
+        using var doc = PdfDocument.Open(result.Outputs[0]);
+        var image = Assert.Single(doc.GetPage(1).GetImages());
+        Assert.Equal((128, 128), (image.WidthInSamples, image.HeightInSamples));
+        Assert.True(File.Exists(heic)); // the original stays
+    }
+
+    [Fact]
+    public async Task The_heic_pdf_page_shows_the_pixels_of_the_photo()
+    {
+        using var dir = new TempDir();
+        var heic = HeicSample(dir);
+
+        var result = await Kit.Ok(Kit.RunAsync("convert:pdf", [heic]));
+
+        var rendered = PixelKit.RenderRgb(result.Outputs[0], 1, dpi: 72);
+        var source = PixelKit.DecodeRgb(heic); // decoded by Magick.NET, a different path than the PDF page (JPEG inside, rendered by PDFium)
+        Assert.Equal((source.Width, source.Height), (rendered.Width, rendered.Height));
+        var diffs = source.Rgb.Select((p, i) => Math.Abs(p - rendered.Rgb[i])).ToList();
+        Assert.True(diffs.Average() <= 6, $"mean channel difference was {diffs.Average():0.0}, worst {diffs.Max()}");
+        Assert.True(diffs.Max() > 0 || source.Rgb.Distinct().Count() > 1, "the sample photo should not be a flat colour");
+    }
+
+    [Fact]
+    public async Task Heic_and_png_files_go_into_one_pdf_in_the_given_order()
+    {
+        using var dir = new TempDir();
+        var files = new List<string> { Samples.Png(dir.Combine("a.png"), 10, 20), HeicSample(dir, "b.heic") };
+
+        var result = await Kit.Ok(Kit.RunAsync("img.to-pdf", files));
+
+        Assert.Equal([(10.0, 20.0), (128.0, 128.0)], PageSizes(result.Outputs[0]));
+    }
+
+    [Fact]
+    public async Task A_damaged_heic_file_is_refused_with_a_message()
+    {
+        using var dir = new TempDir();
+        var broken = dir.WriteText("broken.heic", "this is not a heic file");
+
+        var result = await Kit.RunAsync("convert:pdf", [broken]);
+
+        Assert.False(result.Success);
+        Assert.Contains("broken.heic", result.Error);
+        Assert.Equal(["broken.heic"], Kit.FilesIn(dir.Path));
+    }
+
+    [Fact]
+    public void Heic_is_claimed_for_pdf_output()
+    {
+        Assert.True(Kit.Converters.Any(c => c.Supports("convert:pdf", "heic")));
+        Assert.True(Kit.Converters.Any(c => c.Supports("img.to-pdf", "heic")));
+    }
+
     [Fact]
     public async Task Mixed_formats_become_one_page_each_in_the_given_order()
     {

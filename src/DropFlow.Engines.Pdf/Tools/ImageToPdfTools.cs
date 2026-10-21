@@ -13,8 +13,11 @@ namespace DropFlow.Engines.Pdf.Tools;
 /// </summary>
 internal static class ImageToPdfTools
 {
-    /// <summary>Extensions this module can turn into PDF pages. HEIC is not claimed: it cannot be verified without a fixture.</summary>
-    public static readonly string[] Inputs = ["jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "svg"];
+    /// <summary>
+    /// Extensions this module can turn into PDF pages. HEIC (phone photos) is decoded by Magick.NET's bundled libheif - nothing to
+    /// install; it is verified against a real HEVC HEIC file (tests/samples/heic).
+    /// </summary>
+    public static readonly string[] Inputs = ["jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "svg", "heic"];
 
     public static readonly IReadOnlyList<ToolOption> Options =
     [
@@ -155,7 +158,7 @@ internal static class ImageToPdfTools
                 frame.Depth = 8;
 
                 var (w, h) = PointSize(frame.Width, frame.Height, frame.Density);
-                var lossySource = info.Format is MagickFormat.Jpeg or MagickFormat.WebP or MagickFormat.Avif or MagickFormat.Heic;
+                var lossySource = info.Format is MagickFormat.Jpeg or MagickFormat.WebP or MagickFormat.Avif or MagickFormat.Heic or MagickFormat.Heif;
                 var asJpeg = lossySource && !frame.HasAlpha;
 
                 // PDFsharp only imports plain 8-bit RGB / RGBA PNGs, so force that layout (Magick would otherwise pick gray or palette).

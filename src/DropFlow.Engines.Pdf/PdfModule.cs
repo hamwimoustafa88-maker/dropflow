@@ -33,6 +33,7 @@ public static class PdfModule
             .. PdfRedactTools.Specs(),
             .. PdfCompareTools.Specs(),
             .. PdfImageTools.Specs(),
+            .. PdfATools.Specs(),
             .. ImageToPdfTools.Specs(),
             .. PdfTextTools.Specs(),
             .. PdfExportTools.Specs(),

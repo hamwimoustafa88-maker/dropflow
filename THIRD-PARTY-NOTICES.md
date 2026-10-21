@@ -29,6 +29,10 @@ the repository; planned components are in `docs/plan.md` §3. DropFlow itself is
 Transitive packages that ride along are MIT or Apache-2.0 (for example Microsoft.Extensions.AI.Abstractions 10.2.0,
 System.Numerics.Tensors 9.0.0, Magick.NET.Core 15.0.0).
 
+The PDF/A output (PDF to PDF/A-2b) embeds the standard "sRGB IEC61966-2.1" ICC profile (3,144 bytes, Copyright (c) 1998
+Hewlett-Packard Company, freely redistributable under HP's permissive terms; the same file is shipped by ImageMagick and
+Debian's colord). DropFlow takes it from Magick.NET at run time (`ColorProfiles.SRGB`); it is not stored in the repository.
+
 ## External programs (never bundled; installed by the user, with consent, through winget)
 
 | Program | License | How DropFlow uses it |
@@ -81,6 +85,8 @@ The in-browser app (`/app`) loads these only on that page (lazy chunks), never o
 | xunit, xunit.runner.visualstudio (2.x) | Apache-2.0 |
 | Microsoft.NET.Test.Sdk (17.x) | MIT |
 | System.Drawing.Common 10.0.13 (renders OCR test images) | MIT |
+| `tests/samples/heic/RGB_8__128x128.heic` (HEIC fixture from bigcat88/pillow_heif, not shipped) | BSD-3-Clause, see `tests/samples/README.md` |
+| veraPDF (optional PDF/A validator, run only when `DROPFLOW_VERAPDF` is set; never bundled or committed) | GPL-3.0 / MPL-2.0 |
 
 ## Notes
 - Fonts are not code; OFL 1.1 permits redistribution with the software.

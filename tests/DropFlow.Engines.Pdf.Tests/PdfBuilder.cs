@@ -38,6 +38,14 @@ internal sealed class PdfBuilder
         return this;
     }
 
+    public PdfBuilder Meta(string author, string subject, string keywords)
+    {
+        _document.Info.Author = author;
+        _document.Info.Subject = subject;
+        _document.Info.Keywords = keywords;
+        return this;
+    }
+
     public PdfBuilder Encrypt(string userPassword, string ownerPassword = "owner-secret", bool allowAssemble = true, bool allowExtract = true)
     {
         _document.SecuritySettings.PermitAssembleDocument = allowAssemble;
@@ -91,6 +99,13 @@ internal sealed class PdfBuilder
             var image = XImage.FromFile(path);
             _images.Add(image);
             _gfx.DrawImage(image, x, y, width, height);
+            return this;
+        }
+
+        /// <summary>A solid rectangle (x, y from the top-left corner of the unrotated page, in points).</summary>
+        public PageBuilder FillRect(double x, double y, double width, double height, int red, int green, int blue)
+        {
+            _gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(red, green, blue)), x, y, width, height);
             return this;
         }
 

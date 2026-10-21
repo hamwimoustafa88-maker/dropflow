@@ -37,7 +37,7 @@ internal static class Kit
         IReadOnlyDictionary<string, object?>? options = null,
         string? outputDirectory = null,
         CancellationToken ct = default,
-        RecordingProgress? progress = null,
+        IProgress<JobProgress>? progress = null,
         IReadOnlyList<IConverter>? converters = null)
     {
         var list = inputs.ToList();

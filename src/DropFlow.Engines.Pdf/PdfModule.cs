@@ -21,6 +21,10 @@ public static class PdfModule
         [
             .. PdfPageTools.Specs(),
             .. PdfStampTools.Specs(),
+            .. PdfCropTools.Specs(),
+            .. PdfSignTools.Specs(),
+            .. PdfRedactTools.Specs(),
+            .. PdfCompareTools.Specs(),
             .. PdfImageTools.Specs(),
             .. ImageToPdfTools.Specs(),
             .. PdfTextTools.Specs(),

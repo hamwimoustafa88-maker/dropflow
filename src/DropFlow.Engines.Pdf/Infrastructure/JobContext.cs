@@ -31,9 +31,41 @@ internal sealed class JobContext(ConversionJob job, IProgress<JobProgress> progr
 
     public ConversionResult Ok(params string[] outputs) => ConversionResult.Ok(outputs.Length > 0 ? outputs : Outputs);
 
+    /// <summary>Success that carries a message the user should read (what was rasterized, what is not a real signature...).</summary>
+    public ConversionResult OkWithNote(string note, params string[] outputs) =>
+        ConversionResult.Ok(outputs.Length > 0 ? outputs : Outputs, default, note);
+
     /// <summary>Reserves "name (suffix).ext" beside the input (or in the output directory). The file exists (empty) on return.</summary>
     public string ReserveFile(string input, string extension, string suffix) =>
         Reserve(() => Paths.ForFile(input, extension, suffix, Job.OutputDirectory));
+
+    /// <summary>
+    /// Reserves several files that belong together ("a vs b (compare).pdf" and "a vs b (compare).txt"). They always share the same
+    /// "(suffix N)" label: a name counts as taken when any of the files already exists. Never overwrites.
+    /// </summary>
+    public IReadOnlyList<string> ReserveSet(string nameSource, string suffix, params string[] extensions)
+    {
+        var resolver = new OutputPathResolver(p =>
+            File.Exists(p) || Directory.Exists(p) || extensions.Any(e => File.Exists(Path.ChangeExtension(p, e))));
+        while (true)
+        {
+            var paths = extensions.Select(e => resolver.ForFile(nameSource, e, suffix, Job.OutputDirectory)).ToArray();
+            var created = new List<string>();
+            var complete = true;
+            foreach (var path in paths)
+            {
+                if (TryCreate(path)) created.Add(path);
+                else { complete = false; break; }
+            }
+
+            if (complete) return paths;
+            foreach (var path in created)
+            {
+                TryDelete(path);
+                _files.Remove(path);
+            }
+        }
+    }
 
     /// <summary>Reserves a file named after the first input of a multi-input job.</summary>
     public string ReserveGroupFile(string extension, string suffix) =>

@@ -382,7 +382,8 @@
       "ar": "تحرير الصور",
       "engine": "magick",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4,
       "tg": "image:EDIT"
@@ -408,7 +409,8 @@
       "ar": "إضافة خلفية",
       "engine": "magick",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4,
       "tg": "image:ADD BG"
@@ -421,7 +423,8 @@
       "ar": "إخفاء مناطق في الصور",
       "engine": "magick",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4,
       "tg": "image:REDACT"
@@ -434,7 +437,8 @@
       "ar": "إنشاء كولاج",
       "engine": "magick",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4,
       "multi": true,
@@ -448,7 +452,8 @@
       "ar": "توليد أيقونات ICO وFavicon",
       "engine": "magick",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4
     },
@@ -460,7 +465,8 @@
       "ar": "قراءة وإنشاء رموز QR",
       "engine": "zxing",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4
     },
@@ -484,7 +490,8 @@
       "ar": "إزالة الخلفية",
       "engine": "onnx",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 5
     },
@@ -496,7 +503,8 @@
       "ar": "استخراج النص (OCR)",
       "engine": "ocr",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 5
     },
@@ -1087,7 +1095,8 @@
       "ar": "إعادة تسمية جماعية",
       "engine": "dotnet",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 4,
       "multi": true

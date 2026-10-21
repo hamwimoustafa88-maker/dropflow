@@ -1,16 +1,20 @@
 // Images converter: LIGHT manifest. Everything heavy (canvas work, pdf-lib) lives in ./images.impl, loaded on first run.
 // Only operations that really work in this browser are claimed (webp/avif encode and avif decode are detected at runtime).
+// BMP, GIF, TIFF and ICO are written in JavaScript; HEIC and TIFF are read in wasm/JavaScript (lib/heic.ts, lib/tiff.ts).
 
 import { getImageCaps, setImageCaps, type ImageCaps } from "../caps";
 import { canDecode, canEncode } from "../lib/image-formats";
 import { normalizeExt } from "../names";
 import type { Converter, Job, ProgressFn, Runtime, ToolOption } from "../types";
 
-export const CONVERT_TARGETS = ["png", "jpg", "webp", "avif", "bmp", "ico", "pdf"] as const;
+export const CONVERT_TARGETS = ["png", "jpg", "webp", "avif", "bmp", "gif", "tiff", "ico", "pdf"] as const;
 export const IMAGE_TOOLS = ["img.compress", "img.resize", "img.crop", "img.strip-gps", "img.metadata", "img.to-pdf"] as const;
 
 export const MAX_IMAGE_BYTES = 300 * 1024 * 1024;
 export const CROP_RATIOS = ["1:1", "4:3", "3:2", "16:9", "3:4", "2:3", "9:16"] as const;
+
+/** Targets written in JavaScript (always available), the rest go through canvas encoders. */
+const JS_ENCODED: ReadonlySet<string> = new Set(["pdf", "bmp", "gif", "tiff", "ico"]);
 
 const OPERATIONS: readonly string[] = [...CONVERT_TARGETS.map((t) => `convert:${t}`), ...IMAGE_TOOLS];
 
@@ -31,7 +35,7 @@ function supportsOp(operation: string, rawExt: string): boolean {
     if (!(CONVERT_TARGETS as readonly string[]).includes(target)) return false;
     if (target === ext) return false; // never format -> itself (jpg/jpeg alias included)
     if (!canDecode(ext, caps)) return false;
-    return target === "pdf" || target === "bmp" || target === "ico" || canEncode(target, caps);
+    return JS_ENCODED.has(target) || canEncode(target, caps);
   }
   switch (operation) {
     case "img.compress":

@@ -5,7 +5,8 @@
  *    files (pdf.js worker + fonts + decoders, ffmpeg glue + core loader), so /app works OFFLINE after the first visit.
  *    Extras (CJK CMaps) are fetched afterwards, on request of the page (CACHE_OPTIONAL), and can never fail the install.
  *  - the 31 MB ffmpeg-core.wasm is NOT precached (audio/video load lazily); it is cached the first time it is used,
- *    or when the user presses "Save media offline" (message CACHE_MEDIA).
+ *    or when the user presses "Save media offline" (message CACHE_MEDIA). The OCR, HEIC and background-removal engines
+ *    (/vendor/tesseract, /vendor/heif, /vendor/ort, /vendor/models) are likewise cached the first time a tool loads them.
  *  - versioned caches + update flow: a new build installs next to the old one and WAITS; the page offers "Update"
  *    and sends SKIP_WAITING; old caches are deleted on activate. The first-ever install activates immediately.
  *  - it only ever answers same-origin GET requests for those assets. It never sees, stores or sends user files:

@@ -90,20 +90,20 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
-| img.edit | Edit photos | تحرير الصور | magick | windows | ✓ image:EDIT |
+| img.edit | Edit photos | تحرير الصور | magick | windows, web | ✓ image:EDIT |
 | img.annotate | Annotate photos | التعليق على الصور | dotnet | windows | ✓ image:ANNOTATE |
-| img.background | Add a background | إضافة خلفية | magick | windows | ✓ image:ADD BG |
-| img.redact | Redact photos | إخفاء مناطق في الصور | magick | windows | ✓ image:REDACT |
-| img.collage | Make a collage *(multi-file)* | إنشاء كولاج | magick | windows | ✓ image:COLLAGE |
-| img.icons | Make ICO and favicons | توليد أيقونات ICO وFavicon | magick | windows | — (DropFlow extra) |
-| img.qr | Read or create QR codes | قراءة وإنشاء رموز QR | zxing | windows | — (DropFlow extra) |
+| img.background | Add a background | إضافة خلفية | magick | windows, web | ✓ image:ADD BG |
+| img.redact | Redact photos | إخفاء مناطق في الصور | magick | windows, web | ✓ image:REDACT |
+| img.collage | Make a collage *(multi-file)* | إنشاء كولاج | magick | windows, web | ✓ image:COLLAGE |
+| img.icons | Make ICO and favicons | توليد أيقونات ICO وFavicon | magick | windows, web | — (DropFlow extra) |
+| img.qr | Read or create QR codes | قراءة وإنشاء رموز QR | zxing | windows, web | — (DropFlow extra) |
 | pdf.crop | Crop PDF | اقتصاص PDF | pdfsharp | windows | — (DropFlow extra) |
 | pdf.sign | Sign PDF | توقيع PDF | pdfsharp | windows | — (DropFlow extra) |
 | pdf.redact | Redact PDF | إخفاء محتوى PDF نهائياً | pdfium | windows | — (DropFlow extra) |
 | pdf.compare | Compare PDFs *(multi-file)* | مقارنة ملفي PDF | pdfium | windows | — (DropFlow extra) |
 | arc.extract | Extract archives | فك الأرشيف | dotnet | windows, web | ✓ archive:EXTRACT |
 | arc.zip | Compress to ZIP *(multi-file)* | ضغط إلى ZIP | dotnet | windows, web | — (DropFlow extra) |
-| gen.rename | Batch rename *(multi-file)* | إعادة تسمية جماعية | dotnet | windows | — (DropFlow extra) |
+| gen.rename | Batch rename *(multi-file)* | إعادة تسمية جماعية | dotnet | windows, web | — (DropFlow extra) |
 | gen.hash | File hash (MD5, SHA-256) | بصمة الملف (MD5, SHA-256) | dotnet | windows, web | — (DropFlow extra) |
 | gen.base64 | Base64 encode or decode | ترميز Base64 | dotnet | windows, web | — (DropFlow extra) |
 | act.float | Float | رف عائم | shell | windows | ✓ actions:FLOAT |
@@ -113,8 +113,8 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
 | img.redact-auto | Auto-detect faces and text to redact | كشف الوجوه والنص تلقائياً للإخفاء | onnx | windows | — (DropFlow extra) |
-| img.remove-bg | Remove background | إزالة الخلفية | onnx | windows | — (DropFlow extra) |
-| img.ocr | Extract text (OCR) | استخراج النص (OCR) | ocr | windows | — (DropFlow extra) |
+| img.remove-bg | Remove background | إزالة الخلفية | onnx | windows, web | — (DropFlow extra) |
+| img.ocr | Extract text (OCR) | استخراج النص (OCR) | ocr | windows, web | — (DropFlow extra) |
 | pdf.ocr | Make PDF searchable (OCR) | جعل PDF قابلاً للبحث (OCR) | ocr | windows | — (DropFlow extra) |
 
 ### Phase 7

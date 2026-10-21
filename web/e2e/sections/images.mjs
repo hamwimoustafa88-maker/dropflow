@@ -4,7 +4,7 @@ import { PDFDocument } from "pdf-lib";
 import { sleep } from "../cdp.mjs";
 import {
   addFiles, ascii, check, chipNames, clickWedge, decodeInBrowser, downloadResult, freshApp, hasPanel, isJpeg, isPdf, isPng, runPanel,
-  section, selectTab, setDownloadDir, setOption, waitResults, wedgeIds,
+  section, selectTab, setDownloadDir, setOption, waitResults, wedgeIds, allWedgeIds,
 } from "../helpers.mjs";
 
 export async function images({ b, base, out, files }) {
@@ -15,7 +15,7 @@ export async function images({ b, base, out, files }) {
     await freshApp(b, base, "en");
     await addFiles(b, [files.png]);
     check("file chip shows the name", (await chipNames(b)).includes("photo.png"));
-    const ids = await wedgeIds(b);
+    const ids = await allWedgeIds(b);
     const caps = await b.ev(`(async () => {
       const enc = (m) => new Promise((r) => { const c = document.createElement('canvas'); c.width = c.height = 4; c.toBlob((x) => r(x?.type === m), m); });
       return { webp: await enc('image/webp'), avif: await enc('image/avif') };
@@ -23,7 +23,8 @@ export async function images({ b, base, out, files }) {
     check("convert wheel: JPG BMP ICO PDF always, never PNG->PNG", ["convert:jpg", "convert:bmp", "convert:ico", "convert:pdf"].every((i) => ids.includes(i)) && !ids.includes("convert:png"), ids.join(","));
     check(`WEBP wedge present iff this browser can encode it (${caps.webp})`, ids.includes("convert:webp") === caps.webp);
     check(`AVIF wedge present iff this browser can encode it (${caps.avif}) - never faked`, ids.includes("convert:avif") === caps.avif);
-    check("HEIC / TIFF / GIF are never offered", !ids.some((i) => /heic|tiff|gif/.test(i)));
+    check("HEIC is never offered as a target (needs an HEVC encoder: Windows app); TIFF, GIF and TXT (OCR) are", !ids.includes("convert:heic") && ["convert:tiff", "convert:gif", "convert:txt"].every((i) => ids.includes(i)), ids.join(","));
+    check("the wheel ends with + Add", ids.at(-1) === "wheel.add", ids.join(","));
 
     // PNG -> JPG
     await clickWedge(b, "convert:jpg");
@@ -75,11 +76,11 @@ export async function images({ b, base, out, files }) {
     await freshApp(b, base, "en");
     await addFiles(b, [files.png]);
     await selectTab(b, "tools");
-    const tools = await wedgeIds(b);
+    const tools = await allWedgeIds(b);
     check(
-      "tools wheel has real image tools + zip/hash/base64, but not unimplemented ones",
-      ["img.compress", "img.resize", "img.crop", "img.strip-gps", "img.metadata", "arc.zip", "gen.hash", "gen.base64"].every((t) => tools.includes(t)) &&
-        !tools.includes("img.edit") && !tools.includes("img.ocr") && !tools.includes("img.to-pdf"),
+      "tools wheel has real image tools (photo + OCR + cut-out) + zip/hash/base64, but not unimplemented ones",
+      ["img.compress", "img.resize", "img.crop", "img.strip-gps", "img.metadata", "img.edit", "img.background", "img.redact", "img.icons", "img.qr", "img.remove-bg", "img.ocr", "arc.zip", "gen.hash", "gen.base64"].every((t) => tools.includes(t)) &&
+        !tools.includes("img.annotate") && !tools.includes("img.redact-auto") && !tools.includes("img.to-pdf") && !tools.includes("img.collage"),
       tools.join(","),
     );
 
@@ -148,8 +149,8 @@ export async function images({ b, base, out, files }) {
     await freshApp(b, base, "en");
     await addFiles(b, [files.png, files.png2]);
     await selectTab(b, "tools");
-    const tools = await wedgeIds(b);
-    check("img.to-pdf appears only with 2+ images", tools.includes("img.to-pdf"));
+    const tools = await allWedgeIds(b);
+    check("img.to-pdf and img.collage appear only with 2+ images", tools.includes("img.to-pdf") && tools.includes("img.collage"), tools.join(","));
     await clickWedge(b, "img.to-pdf");
     await runPanel(b);
     const names = await waitResults(b, 1);

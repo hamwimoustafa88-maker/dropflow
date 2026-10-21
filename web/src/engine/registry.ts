@@ -4,11 +4,13 @@
 // Every converter module is a light manifest (heavy engines load on first run), so importing this file is cheap and it
 // is safe in the UI bundle, in the Web Worker and in Node tests.
 
+import { aiConverter } from "./converters/ai";
 import { archiveConverter } from "./converters/archive";
 import { generalConverter } from "./converters/general";
 import { imagesConverter } from "./converters/images";
 import { mediaConverter } from "./converters/media";
 import { pdfConverter } from "./converters/pdf";
+import { photoConverter } from "./converters/photo";
 import { subtitlesConverter } from "./converters/subtitles";
 import { normalizeExt } from "./names";
 import type { Converter } from "./types";
@@ -38,6 +40,8 @@ export class Registry {
 
 export const registry = new Registry([
   imagesConverter,
+  photoConverter,
+  aiConverter,
   pdfConverter,
   mediaConverter,
   subtitlesConverter,

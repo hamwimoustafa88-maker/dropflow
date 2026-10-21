@@ -36,11 +36,9 @@ describe("manifest sanity", () => {
   it("convert operations are exactly catalog image outputs we can really produce", () => {
     const image = catalog.categories.find((x) => x.id === "image")!;
     const converts = c.operations.filter((o) => o.startsWith("convert:")).map((o) => o.slice(8));
-    expect(converts.sort()).toEqual(["avif", "bmp", "ico", "jpg", "pdf", "png", "webp"]);
+    expect(converts.sort()).toEqual(["avif", "bmp", "gif", "ico", "jpg", "pdf", "png", "tiff", "webp"]);
     for (const t of converts) expect(image.outputs).toContain(t);
-    expect(converts).not.toContain("heic");
-    expect(converts).not.toContain("tiff");
-    expect(converts).not.toContain("gif");
+    expect(converts).not.toContain("heic"); // writing HEIC needs an HEVC encoder: Windows app only
   });
 
   it("tool ids exist in the catalog with platform web", () => {
@@ -62,8 +60,10 @@ describe("manifest sanity", () => {
     expect(c.options("convert:png")).toEqual([]);
     expect(c.options("img.strip-gps")).toEqual([]);
     expect(c.supports("img.nope", "png")).toBe(false);
-    expect(c.supports("convert:gif", "png")).toBe(false);
+    expect(c.supports("convert:gif", "png")).toBe(true); // gifenc, in JavaScript
+    expect(c.supports("convert:tiff", "png")).toBe(true); // UTIF, in JavaScript
     expect(c.supports("convert:heic", "png")).toBe(false);
+    expect(c.supports("convert:gif", "gif")).toBe(false);
   });
 });
 
@@ -92,7 +92,7 @@ describe("supports() truth table", () => {
     expect(c.supports("convert:avif", "png")).toBe(true);
   });
 
-  it("AVIF input needs decode support; HEIC and TIFF inputs are never accepted", () => {
+  it("AVIF input needs decode support; HEIC and TIFF inputs are decoded in wasm/JS; other files are refused", () => {
     setImageCaps(PLAIN);
     expect(c.supports("convert:png", "avif")).toBe(false);
     expect(c.supports("img.resize", "avif")).toBe(false);
@@ -100,7 +100,13 @@ describe("supports() truth table", () => {
     expect(c.supports("convert:png", "avif")).toBe(true);
     expect(c.supports("img.resize", "avif")).toBe(true);
     setImageCaps(FULL);
-    for (const ext of ["heic", "heif", "tiff", "tif", "pdf", "txt", "docx", ""]) {
+    for (const ext of ["heic", "heif", "tiff", "tif"]) {
+      expect(c.supports("convert:png", ext), ext).toBe(true);
+      expect(c.supports("img.compress", ext), ext).toBe(true);
+      expect(c.supports("img.to-pdf", ext), ext).toBe(true);
+    }
+    expect(c.supports("convert:tiff", "tif")).toBe(false); // never a format to itself (alias included)
+    for (const ext of ["pdf", "txt", "docx", ""]) {
       expect(c.supports("convert:png", ext), ext).toBe(false);
       expect(c.supports("img.compress", ext), ext).toBe(false);
       expect(c.supports("img.to-pdf", ext), ext).toBe(false);

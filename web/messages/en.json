@@ -259,7 +259,6 @@
     },
     "hint": {
       "title": "Windows app",
-      "soon": "Soon",
       "more": "+{count}",
       "ocr": "OCR",
       "transcribe": "Speech to text",
@@ -270,7 +269,11 @@
       "redact": "Redact",
       "encoder": "Encoder",
       "burnSubs": "Burn subs",
-      "join": "Join"
+      "join": "Join",
+      "download": "Download for Windows",
+      "annotate": "Annotate",
+      "autoRedact": "Auto-redact",
+      "rename": "Batch rename"
     },
     "offline": {
       "badge": "Offline",
@@ -305,7 +308,7 @@
       "emptyPdf": "PDF has no pages",
       "needText": "Enter some text",
       "needTwo": "Pick two or more PDFs",
-      "noText": "No text found. Scanned?",
+      "noText": "No text found, even with OCR",
       "noCues": "No subtitles found",
       "tooManyFiles": "Too many files (max {max})",
       "invalidBase64": "Not valid Base64",
@@ -316,7 +319,14 @@
       "noAudio": "No audio track",
       "invalidTime": "Invalid time",
       "invalidSpeed": "Invalid speed",
-      "noFrame": "No frame at that time"
+      "noFrame": "No frame at that time",
+      "noTextFound": "No text found",
+      "noQrFound": "No QR code found",
+      "invalidRegions": "Invalid area: {value}",
+      "invalidColor": "Invalid colour: {value}",
+      "nothingToDo": "Nothing to change",
+      "needTwoImages": "Pick two or more pictures",
+      "invalidPattern": "Invalid pattern: {value}"
     },
     "sr": {
       "wheelPage": "Page {page} of {total}"
@@ -348,7 +358,16 @@
       "vid_mute": "Mute",
       "vid_snapshot": "Snapshot",
       "vid_speed": "Speed",
-      "vid_compress": "Compress"
+      "vid_compress": "Compress",
+      "img_edit": "Edit",
+      "img_background": "Background",
+      "img_redact": "Redact",
+      "img_collage": "Collage",
+      "img_icons": "Icons",
+      "img_qr": "Read QR",
+      "img_ocr": "Text (OCR)",
+      "img_remove_bg": "Remove background",
+      "gen_rename": "Rename"
     },
     "opt": {
       "quality": "Quality",
@@ -380,11 +399,52 @@
       "scale": "Scale",
       "algorithm": "Algorithm",
       "mode": "Mode",
-      "urlSafe": "URL-safe"
+      "urlSafe": "URL-safe",
+      "brightness": "Brightness",
+      "contrast": "Contrast",
+      "saturation": "Saturation",
+      "sharpen": "Sharpen",
+      "blur": "Blur",
+      "filter": "Filter",
+      "rotate": "Rotate",
+      "flipH": "Flip horizontally",
+      "flipV": "Flip vertically",
+      "background": "Background",
+      "aspect": "Shape",
+      "padding": "Margin %",
+      "radius": "Rounded corners",
+      "shadow": "Shadow",
+      "regions": "Areas (x,y,w,h)",
+      "style": "Style",
+      "color": "Colour",
+      "layout": "Layout",
+      "columns": "Columns",
+      "cell": "Picture size (px)",
+      "spacing": "Spacing (px)",
+      "fit": "Fit",
+      "lang": "Language",
+      "fill": "Background",
+      "pattern": "Name pattern",
+      "find": "Find",
+      "replace": "Replace with",
+      "regex": "Regular expression",
+      "ignoreCase": "Ignore case",
+      "case": "Letter case",
+      "trim": "Trim spaces"
     },
     "optOp": {
       "pdf_page_numbers": {
         "start": "Start at"
+      },
+      "img_background": {
+        "radius": "Rounded corners %"
+      },
+      "img_collage": {
+        "radius": "Rounded corners (px)",
+        "background": "Background colour"
+      },
+      "gen_rename": {
+        "start": "Counter starts at"
       }
     },
     "choice": {
@@ -419,6 +479,53 @@
       "mode": {
         "encode": "Encode",
         "decode": "Decode"
+      },
+      "filter": {
+        "none": "None",
+        "grayscale": "Grayscale",
+        "sepia": "Sepia",
+        "invert": "Invert"
+      },
+      "rotate": {
+        "0": "0°",
+        "90": "90°",
+        "180": "180°",
+        "270": "270°"
+      },
+      "aspect": {
+        "original": "Original"
+      },
+      "style": {
+        "solid": "Solid",
+        "blur": "Blur",
+        "pixelate": "Pixelate"
+      },
+      "layout": {
+        "grid": "Grid",
+        "row": "Row",
+        "column": "Column",
+        "featured": "Featured"
+      },
+      "fit": {
+        "contain": "Fit inside",
+        "cover": "Fill"
+      },
+      "lang": {
+        "auto": "Arabic + English",
+        "ara": "Arabic",
+        "eng": "English"
+      },
+      "fill": {
+        "transparent": "Transparent",
+        "white": "White",
+        "black": "Black"
+      },
+      "case": {
+        "none": "Keep",
+        "lower": "lower case",
+        "upper": "UPPER CASE",
+        "title": "Title Case",
+        "sentence": "Sentence case"
       }
     },
     "ph": {
@@ -430,10 +537,16 @@
       "time": "0:05",
       "ranges": "1-3, 5, 7-9",
       "pages": "1-3, 5",
-      "order": "3, 1, 2, 5-7"
+      "order": "3, 1, 2, 5-7",
+      "background": "#ffffff or gradient:#4338ca:#0e7490",
+      "regions": "10,10,200,80; 300,40,120,60",
+      "color": "#000000",
+      "pattern": "'{name}-{counter:000}{ext}'"
     },
     "warn": {
-      "textToImages": "Text becomes images"
+      "textToImages": "Text becomes images",
+      "ocrFirstUse": "First use loads the text reader (about 8 MB) from this site. Your picture stays on your device.",
+      "rembgFirstUse": "First use loads the background remover (about 18 MB) from this site. Your picture stays on your device."
     },
     "legal": {
       "privacy": "Privacy",
@@ -452,6 +565,22 @@
         "invalid": "That is not a web address (http or https).",
         "empty": "The link returned an empty file.",
         "aborted": "Download cancelled."
+      }
+    },
+    "add": {
+      "wedge": "+ Add",
+      "title": "Add to {wheel}",
+      "note": "Runs now and stays on this wheel for this kind of file.",
+      "back": "Back",
+      "pinned": "Added",
+      "remove": "Remove {name}",
+      "added": "{name} added",
+      "removed": "{name} removed",
+      "txtOcr": "Text (OCR)",
+      "group": {
+        "convert": "Convert to",
+        "tools": "Tools",
+        "actions": "Actions"
       }
     }
   },

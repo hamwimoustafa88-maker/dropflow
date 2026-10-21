@@ -68,6 +68,8 @@ export interface Converter {
   suffix(operation: string): string;
   /** Optional i18n key under `app.warn.*` for a short warning shown in the options panel / before running (e.g. "lossy"). */
   warning?(operation: string): string | undefined;
+  /** Called (main thread) when the person runs the operation after seeing its warning, e.g. to show a first-use note once. */
+  acknowledgeWarning?(operation: string): void;
   /** Optional hard per-file input limit (bytes). Beyond it the UI refuses with the "tooLarge" error before running. */
   maxBytes?(operation: string): number | undefined;
   /** When true the output files keep their own (sanitised) names instead of `name (suffix).ext` — used by archive extraction. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CX, CY, R_IN, fitLabel, labelPos, nextIndex, wedgePath } from "@/engine/wheel-geometry";
+import { CX, CY, R_IN, R_OUT, fitLabel, labelPos, nextIndex, polar, wedgeMid, wedgePath } from "@/engine/wheel-geometry";
 
 export interface WheelItem {
   id: string;
@@ -10,6 +10,10 @@ export interface WheelItem {
   mono?: boolean;
   /** Dots instead of text for the "more" wedge. */
   more?: boolean;
+  /** The "+ Add" wedge (opens the list of everything else). */
+  add?: boolean;
+  /** Added by the person with "+ Add": marked with a small dot near the rim. */
+  pinned?: boolean;
 }
 
 interface Props {
@@ -72,6 +76,7 @@ export function Wheel({ items, label, wheelKey, busyIds, onPick, title, subtitle
         <circle cx={CX} cy={CY} r="196" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="3 9" strokeLinecap="round" className="orbit" />
         {items.map((item, i) => {
           const [lx, ly] = labelPos(n, i);
+          const [px, py] = polar(R_OUT - 14, n <= 1 ? -90 : wedgeMid(n, i));
           const text = item.more ? "•••" : fitLabel(item.label, n);
           return (
             <g
@@ -83,6 +88,7 @@ export function Wheel({ items, label, wheelKey, busyIds, onPick, title, subtitle
               tabIndex={i === index ? 0 : -1}
               aria-label={item.label}
               data-wedge={item.id}
+              data-pinned={item.pinned ? "true" : undefined}
               className="wedge-group"
               onClick={() => {
                 setFocus({ key: wheelKey, index: i });
@@ -91,7 +97,7 @@ export function Wheel({ items, label, wheelKey, busyIds, onPick, title, subtitle
               onFocus={() => setFocus({ key: wheelKey, index: i })}
               onKeyDown={(e) => onKey(e, i)}
             >
-              <path d={wedgePath(n, i)} className="wedge" data-busy={busyIds?.has(item.id) ? "true" : undefined} />
+              <path d={wedgePath(n, i)} className={item.add ? "wedge wedge-add" : "wedge"} data-busy={busyIds?.has(item.id) ? "true" : undefined} />
               <text
                 x={lx}
                 y={ly}
@@ -102,6 +108,7 @@ export function Wheel({ items, label, wheelKey, busyIds, onPick, title, subtitle
               >
                 {text}
               </text>
+              {item.pinned ? <circle cx={px} cy={py} r="3.5" className="wedge-pin" aria-hidden="true" /> : null}
             </g>
           );
         })}

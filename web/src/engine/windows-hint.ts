@@ -19,7 +19,7 @@ export interface WindowsHint {
 }
 
 /** Tools worth naming first when the desktop app has them and the browser does not. */
-const PRIORITY = ["pdf.ocr", "img.ocr", "vid.transcribe", "aud.transcribe", "pdf.protect", "pdf.unlock", "img.remove-bg", "pdf.sign", "pdf.redact", "vid.encoder", "vid.burn-subs", "vid.join", "aud.merge"];
+const PRIORITY = ["pdf.ocr", "img.ocr", "vid.transcribe", "aud.transcribe", "pdf.protect", "pdf.unlock", "img.remove-bg", "img.annotate", "img.redact-auto", "pdf.sign", "pdf.redact", "vid.encoder", "vid.burn-subs", "vid.join", "aud.merge", "gen.rename"];
 
 /** Short names for tools that have no wedge label because they are not implemented on the web. */
 export const HINT_TOOL_LABELS: Record<string, string> = {
@@ -30,6 +30,9 @@ export const HINT_TOOL_LABELS: Record<string, string> = {
   "pdf.protect": "protect",
   "pdf.unlock": "unlock",
   "img.remove-bg": "removeBg",
+  "img.annotate": "annotate",
+  "img.redact-auto": "autoRedact",
+  "gen.rename": "rename",
   "pdf.sign": "sign",
   "pdf.redact": "redact",
   "vid.encoder": "encoder",

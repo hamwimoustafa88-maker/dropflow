@@ -12,8 +12,8 @@ const signal = () => new AbortController().signal;
 const run = (op: string, file: File, options: OptionValues = {}) => generalConverter.run(job(op, file, options), noop, signal());
 
 describe("generalConverter manifest", () => {
-  it("declares gen.hash and gen.base64 with the documented options", () => {
-    expect(generalConverter.operations).toEqual(["gen.hash", "gen.base64"]);
+  it("declares gen.hash, gen.base64 (and gen.rename, see rename.test.ts) with the documented options", () => {
+    expect(generalConverter.operations).toEqual(["gen.hash", "gen.base64", "gen.rename"]);
     expect(generalConverter.options("gen.hash")).toEqual([
       { key: "algorithm", kind: "choice", default: "sha-256", choices: ["sha-256", "sha-1", "sha-384", "sha-512", "md5", "all"] },
     ]);

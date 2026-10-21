@@ -62,6 +62,10 @@ const isRequiredVendor = (u) =>
   /^\/vendor\/pdfjs\/wasm\/[^/]+\.wasm$/.test(u) ||
   /^\/vendor\/pdfjs\/iccs\/[^/]+\.icc$/.test(u) ||
   u === "/vendor/versions.json";
+// ON FIRST USE (neither list): the heavy on-device engines - Tesseract OCR (/vendor/tesseract, ~8 MB), libheif
+// (/vendor/heif, 2 MB), ONNX Runtime + U2-Net-P (/vendor/ort, /vendor/models, ~18 MB). The OPTIONAL list is fetched in the
+// background for EVERY visitor, which would cost ~28 MB on a phone that never uses these tools; instead the service
+// worker's cache-first /vendor route stores each file the first time a tool really loads it, so it then works offline.
 const isOptionalVendor = (u) => /^\/vendor\/pdfjs\/(cmaps\/[^/]+\.bcmap|wasm\/[^/]+\.js)$/.test(u);
 const vendorRequired = vendorAll.filter((v) => isRequiredVendor(v.url)).map((v) => v.url);
 const vendorOptional = vendorAll.filter((v) => !isRequiredVendor(v.url) && isOptionalVendor(v.url)).map((v) => v.url);

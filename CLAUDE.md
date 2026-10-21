@@ -101,6 +101,12 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
+  GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
+  batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),
+  cached by the service worker on first use. "Windows app" tile now links to the release. Site is light-only; hashed CSP for static pages
+  (scripts/csp-hashes.mjs). The live site sat behind a Vercel bot checkpoint (dark page) — owner to switch it off in Firewall.
+  — web/src/engine/**, web/src/components/app/**, web/scripts/*, THIRD-PARTY-NOTICES.md, catalog/tools.json
 - 2026-10-21 — Open source round (owner chose GPL-3.0 over a non-commercial licence so SignPath and OSI apply; ADR-0013, TRADEMARK.md):
   README en/ar, CONTRIBUTING (DCO), CoC, SECURITY, templates, dependabot, code-signing policy + SignPath application pack (owner applies at
   signpath.org/apply; release.yml has a SignPath path gated by repo variable SIGNPATH_ENABLED). Credit: "ScoutHub teams, lead developer

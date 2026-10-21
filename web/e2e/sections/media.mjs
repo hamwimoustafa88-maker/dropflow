@@ -71,7 +71,7 @@ export async function media({ b, base, out, files }) {
     check("the 31 MB ffmpeg core is NOT loaded before any audio/video file is used", before === 0, String(before));
     await addFiles(b, [files.wav]);
     await b.waitFor("document.querySelector('[data-wheel=convert]') && !document.querySelector('[data-wheel=convert]').disabled", 90000, "convert wheel after engine probe");
-    const ids = await wedgeIds(b);
+    const ids = await allWedgeIds(b);
     const targets = ["mp3", "m4a", "flac", "ogg", "opus", "aac", "aiff", "wma"];
     check("WAV wheel lists exactly what the real core can encode (all 8 audio targets, never WAV->WAV)", targets.every((t) => ids.includes(`convert:${t}`)) && !ids.includes("convert:wav"), ids.join(","));
     const coreReq = b.requests.filter((r) => r.url.includes("ffmpeg-core.wasm"));

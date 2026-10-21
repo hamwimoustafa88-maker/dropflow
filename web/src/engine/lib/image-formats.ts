@@ -1,8 +1,8 @@
 // Pure format knowledge for the images converter: mime/extension maps, magic-byte sniffing, header-only
 // dimension readers and SVG size parsing. Node-compatible (no DOM).
 //
-// HEIC and TIFF inputs are deliberately NOT offered: no browser decodes them reliably (only Safari does HEIC) and a
-// license-clean WASM decoder (libheif is LGPL + HEVC patents; ~1.5 MB) is not justified yet. The Windows app handles both.
+// HEIC/HEIF and TIFF inputs are decoded in WebAssembly/JavaScript (lib/heic.ts with libheif, lib/tiff.ts with UTIF), loaded
+// lazily the first time such a file is opened; every other input goes through the browser's own decoder.
 
 import type { ImageCaps } from "../caps";
 import { normalizeExt } from "../names";
@@ -15,6 +15,8 @@ export type Mime =
   | "image/bmp"
   | "image/x-icon"
   | "image/gif"
+  | "image/tiff"
+  | "image/heic"
   | "image/svg+xml"
   | "application/pdf";
 
@@ -26,6 +28,8 @@ const MIME_BY_EXT: Record<string, Mime> = {
   bmp: "image/bmp",
   ico: "image/x-icon",
   gif: "image/gif",
+  tiff: "image/tiff",
+  heic: "image/heic",
   svg: "image/svg+xml",
   pdf: "application/pdf",
 };
@@ -39,15 +43,18 @@ export function extForMime(mime: string): string | undefined {
   if (m === "image/jpg") return "jpg";
   for (const [ext, v] of Object.entries(MIME_BY_EXT)) if (v === m) return ext;
   if (m === "image/vnd.microsoft.icon") return "ico";
+  if (m === "image/heif") return "heic";
   return undefined;
 }
 
 /** Canvas can encode these (subject to runtime detection for webp/avif). */
 export type EncodeFormat = "png" | "jpg" | "webp" | "avif";
 
-/** Extensions the browser can decode through createImageBitmap / <img> (already normalized). AVIF depends on caps. */
+/** Extensions DropFlow Web decodes: the browser's own decoders, plus HEIC and TIFF in wasm/JS. AVIF depends on caps. */
 export function canDecode(ext: string, caps: ImageCaps): boolean {
   switch (normalizeExt(ext)) {
+    case "heic":
+    case "tiff":
     case "png":
     case "jpg":
     case "webp":

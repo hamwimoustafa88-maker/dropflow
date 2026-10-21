@@ -21,14 +21,18 @@ import {
   firstNonEmpty,
   isWebAction,
   pageWedges,
+  pinCategory,
   wheelForKey,
   wheelForModifiers,
+  withPins,
   type ActionState,
   type Wedge,
   type WheelKind,
 } from "@/engine/wheel";
+import { getPins, pin, pinsVersion, subscribePins, unpin } from "@/engine/pins-store";
 import { windowsHint } from "@/engine/windows-hint";
 import { JobList, ResultList } from "./Activity";
+import { AddList, type AddRow } from "./AddList";
 import { DropOverlay } from "./DropOverlay";
 import { OptionsPanel } from "./OptionsPanel";
 import { Wheel, type WheelItem } from "./Wheel";
@@ -89,6 +93,7 @@ export function AppShell() {
   const session = useMemo(() => (typeof window === "undefined" ? null : getSession()), []);
   const snap = useSyncExternalStore(session?.subscribe ?? (() => () => {}), session?.getSnapshot ?? serverSnapshot, serverSnapshot);
   const capsV = useSyncExternalStore(subscribeCaps, capsVersion, () => 0);
+  const pinsV = useSyncExternalStore(subscribePins, pinsVersion, () => 0);
 
   // ---- UI state -----------------------------------------------------------------------------------------------
   const [files, setFiles] = useState<File[]>([]);
@@ -96,6 +101,8 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [pending, setPending] = useState<Wedge | null>(null);
+  // The "+ Add" list is open in place of the wheel.
+  const [adding, setAdding] = useState(false);
   const [drag, setDrag] = useState<{ kind: WheelKind } | null>(null);
   const [toast, setToast] = useState("");
   const [focusToken, setFocusToken] = useState(0);
@@ -163,14 +170,21 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- capsV: converters read the capability store inside supports()
     [files, actionState, capsV],
   );
+  // Items the person added with "+ Add" (per wheel and kind of file), then the "+ Add" wedge itself.
+  const category = useMemo(() => pinCategory(files), [files]);
+  const pinned = useMemo(
+    () => withPins(built, getPins(), category),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pinsV: re-read the pins store when it changes
+    [built, category, pinsV],
+  );
   // While the ffmpeg core is being probed the wheel must not show a half-built ring: the centre shows the loader instead.
-  const wheels = useMemo(() => (engineLoading ? { convert: [], tools: [], actions: built.actions } : built), [engineLoading, built]);
+  const wheels = useMemo(() => (engineLoading ? { convert: [], tools: [], actions: built.actions } : pinned.wheels), [engineLoading, built, pinned]);
   const activeKind = engineLoading ? wheelKind : (firstNonEmpty(wheels, wheelKind) ?? wheelKind);
   const pages = useMemo(() => pageWedges(wheels[activeKind]), [wheels, activeKind]);
   const pageIndex = Math.min(page, pages.length - 1);
   const wedges = pages[pageIndex];
   const labelOf = useCallback((w: Wedge) => w.label ?? (w.labelKey ? t(w.labelKey as never) : w.operation), [t]);
-  const items: WheelItem[] = wedges.map((w) => ({ id: w.id, label: labelOf(w), mono: w.wheel === "convert", more: w.more }));
+  const items: WheelItem[] = wedges.map((w) => ({ id: w.id, label: labelOf(w), mono: w.wheel === "convert" && !w.add, more: w.more, add: w.add, pinned: w.pinned }));
 
   const running = snap.jobs.filter((j) => j.state === "running");
   const busyIds = useMemo(() => new Set(snap.jobs.filter((j) => j.state === "running" || j.state === "waiting").map((j) => j.operation)), [snap.jobs]);
@@ -187,6 +201,7 @@ export function AppShell() {
       setFiles((prev) => dedupeFiles(prev, list));
       setOpen(true);
       setPending(null);
+      setAdding(false);
       setPage(0);
       if (kind) setWheelKind(kind);
       setFocusToken((n) => n + 1);
@@ -300,14 +315,15 @@ export function AppShell() {
   }, []);
 
   // ---- keyboard: tap Shift / Ctrl / Alt to switch wheels, Esc to close ------------------------------------------
-  const live = useRef({ open: false, pending: false, files: 0 });
+  const live = useRef({ open: false, pending: false, adding: false, files: 0 });
   useEffect(() => {
-    live.current = { open, pending: pending !== null, files: files.length };
+    live.current = { open, pending: pending !== null, adding, files: files.length };
   });
   const selectWheel = useCallback((kind: WheelKind) => {
     setWheelKind(kind);
     setPage(0);
     setPending(null);
+    setAdding(false);
   }, []);
   useEffect(() => {
     let tap: string | null = null;
@@ -321,7 +337,10 @@ export function AppShell() {
       tap = null;
       if (e.key === "Escape") {
         if (live.current.pending) setPending(null);
-        else if (live.current.open) setOpen(false);
+        else if (live.current.adding) {
+          setAdding(false);
+          setFocusToken((n) => n + 1);
+        } else if (live.current.open) setOpen(false);
       }
     };
     const onUp = (e: KeyboardEvent) => {
@@ -375,14 +394,9 @@ export function AppShell() {
     [results, files, subject, say, t],
   );
 
-  const onPick = useCallback(
-    (index: number) => {
-      const wedge = wedges[index];
-      if (!wedge) return;
-      if (wedge.more) {
-        setPage((p) => (Math.min(p, pages.length - 1) + 1) % pages.length);
-        return;
-      }
+  /** Runs a wedge's operation: a web action now, a tool with options or a first-use note through the panel, else now. */
+  const runWedge = useCallback(
+    (wedge: Wedge) => {
       if (isWebAction(wedge.operation)) {
         void runAction(wedge.operation);
         return;
@@ -393,7 +407,49 @@ export function AppShell() {
       if (options.length > 0 || converter.warning?.(wedge.operation)) setPending(wedge);
       else start(wedge, defaultValues(options));
     },
-    [wedges, pages.length, converterFor, start, runAction],
+    [converterFor, start, runAction],
+  );
+
+  const onPick = useCallback(
+    (index: number) => {
+      const wedge = wedges[index];
+      if (!wedge) return;
+      if (wedge.more) {
+        setPage((p) => (Math.min(p, pages.length - 1) + 1) % pages.length);
+        return;
+      }
+      if (wedge.add) {
+        setAdding(true);
+        return;
+      }
+      runWedge(wedge);
+    },
+    [wedges, pages.length, runWedge],
+  );
+
+  // "+ Add": picking an item keeps it on this wheel for this kind of file AND runs it now.
+  const addRow = useCallback(
+    (w: Wedge): AddRow => ({
+      wedge: w,
+      label: labelOf(w),
+      hint: w.operation === "convert:txt" && category === "image" ? t("add.txtOcr") : undefined,
+    }),
+    [labelOf, category, t],
+  );
+  const addGroups = useMemo(() => {
+    const g: Record<WheelKind, AddRow[]> = { convert: [], tools: [], actions: [] };
+    for (const w of pinned.addable[activeKind]) g[w.wheel].push(addRow(w));
+    return g;
+  }, [pinned, activeKind, addRow]);
+  const pinnedRows = useMemo(() => pinned.pinned[activeKind].map(addRow), [pinned, activeKind, addRow]);
+  const pickAdded = useCallback(
+    (w: Wedge) => {
+      pin(activeKind, category, w.id);
+      setAdding(false);
+      say(t("add.added", { name: labelOf(w) }));
+      runWedge({ ...w, pinned: true });
+    },
+    [activeKind, category, runWedge, say, t, labelOf],
   );
 
   const pickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -405,10 +461,12 @@ export function AppShell() {
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setPending(null);
+    setAdding(false);
   };
   const clearFiles = () => {
     setFiles([]);
     setPending(null);
+    setAdding(false);
     setOpen(false);
   };
   const changeLimit = (mb: number) => {
@@ -631,9 +689,27 @@ export function AppShell() {
                     title={labelOf(pending)}
                     options={pendingConverter.options(pending.operation)}
                     warning={pendingConverter.warning?.(pending.operation)}
-                    onRun={(values) => start(pending, values)}
+                    onRun={(values) => {
+                      if (pendingConverter.warning?.(pending.operation)) pendingConverter.acknowledgeWarning?.(pending.operation);
+                      start(pending, values);
+                    }}
                     onCancel={() => {
                       setPending(null);
+                      setFocusToken((n) => n + 1);
+                    }}
+                  />
+                ) : open && adding ? (
+                  <AddList
+                    wheel={activeKind}
+                    groups={addGroups}
+                    pinned={pinnedRows}
+                    onPick={pickAdded}
+                    onUnpin={(w) => {
+                      unpin(activeKind, category, w.id);
+                      say(t("add.removed", { name: labelOf(w) }));
+                    }}
+                    onBack={() => {
+                      setAdding(false);
                       setFocusToken((n) => n + 1);
                     }}
                   />

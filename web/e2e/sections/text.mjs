@@ -16,7 +16,7 @@ export async function textTools({ b, base, out, files }) {
     await freshApp(b, base, "ar");
     await addFiles(b, [files.srt]);
     const ids = await wedgeIds(b);
-    check("srt convert wheel = VTT, TXT (no SRT->SRT, no ASS writer)", JSON.stringify(ids) === JSON.stringify(["convert:vtt", "convert:txt"]), ids.join(","));
+    check("srt convert wheel = VTT, TXT (no SRT->SRT, no ASS writer), then + Add", JSON.stringify(ids) === JSON.stringify(["convert:vtt", "convert:txt", "wheel.add"]), ids.join(","));
     await clickWedge(b, "convert:vtt");
     await clickWedge(b, "convert:txt");
     const names = await waitResults(b, 2);
@@ -126,8 +126,8 @@ export async function textTools({ b, base, out, files }) {
   await section("not-in-browser: a .docx gets only generic tools and the Windows app hint", async () => {
     await freshApp(b, base, "en");
     await addFiles(b, [files.docx]);
-    check("docx: Convert tab disabled; tools = zip/hash/base64 only", (await tabEnabled(b, "convert")) === false && JSON.stringify(await wedgeIds(b)) === JSON.stringify(["arc.zip", "gen.hash", "gen.base64"]));
+    check("docx: Convert tab disabled; tools = zip/hash/base64 only (+ Add when this browser can Share)", (await tabEnabled(b, "convert")) === false && JSON.stringify((await wedgeIds(b)).filter((i) => i !== "wheel.add")) === JSON.stringify(["arc.zip", "gen.hash", "gen.base64"]), (await wedgeIds(b)).join(","));
     const hint = await b.ev("document.querySelector('[data-testid=windows-hint]')?.innerText.replace(/\\s+/g, ' ')");
-    check("hint lists what the desktop app is for (PDF, TXT...) with the Soon badge", /Windows app/.test(hint) && /PDF/.test(hint) && /Soon/.test(hint), hint);
+    check("hint lists what the desktop app is for (PDF, TXT...) with the download link", /Windows app/.test(hint) && /PDF/.test(hint) && /Download for Windows/.test(hint) && !/Soon/.test(hint), hint);
   });
 }

@@ -29,18 +29,22 @@ describe("wheel builder with the real registry", () => {
   it("png: converts to formats the browser can write, never to itself; tools only real ones", () => {
     setImageCaps({ encode: { png: true, jpg: true, webp: true, avif: false }, decodeAvif: false });
     const w = buildWheels([f("photo.png")], registry, NO_ACTIONS);
-    expect(ops(w.convert)).toEqual(["convert:jpg", "convert:webp", "convert:bmp", "convert:ico", "convert:pdf"]);
-    expect(w.convert.map((x) => x.label)).toEqual(["JPG", "WEBP", "BMP", "ICO", "PDF"]);
-    // heic/tiff/gif targets are never offered; avif is absent because the (fake) browser cannot encode it
+    expect(ops(w.convert)).toEqual(["convert:jpg", "convert:webp", "convert:tiff", "convert:bmp", "convert:gif", "convert:ico", "convert:pdf", "convert:txt"]);
+    expect(w.convert.map((x) => x.label)).toEqual(["JPG", "WEBP", "TIFF", "BMP", "GIF", "ICO", "PDF", "TXT"]);
+    // HEIC is never offered (no HEVC encoder in the browser); avif is absent because the (fake) browser cannot encode it;
+    // TXT is the web-only OCR target (WEB_EXTRA_OUTPUTS), last
     expect(ops(w.convert)).not.toContain("convert:avif");
     expect(ops(w.convert)).not.toContain("convert:heic");
     expect(ops(w.tools)).toEqual(expect.arrayContaining(["img.compress", "img.resize", "img.crop", "img.strip-gps", "img.metadata", "arc.zip", "gen.hash", "gen.base64"]));
     // multi tool with a single file is hidden (except zip)
     expect(ops(w.tools)).not.toContain("img.to-pdf");
     expect(ops(w.tools)).toContain("arc.zip");
+    // the photo and on-device AI tools are real now
+    expect(ops(w.tools)).toEqual(expect.arrayContaining(["img.edit", "img.background", "img.redact", "img.icons", "img.qr", "img.remove-bg", "img.ocr"]));
     // never an unimplemented catalog tool
-    expect(ops(w.tools)).not.toContain("img.edit");
-    expect(ops(w.tools)).not.toContain("img.ocr");
+    expect(ops(w.tools)).not.toContain("img.annotate");
+    expect(ops(w.tools)).not.toContain("img.redact-auto");
+    expect(ops(w.tools)).not.toContain("img.collage"); // multi: needs two pictures
   });
 
   it("avif appears only when the browser can encode it", () => {
@@ -55,7 +59,7 @@ describe("wheel builder with the real registry", () => {
     expect(ops(two.tools)).toContain("img.to-pdf");
     const mixed = buildWheels([f("a.png"), f("b.pdf")], registry, NO_ACTIONS);
     expect(mixed.convert).toEqual([]);
-    expect(ops(mixed.tools)).toEqual(["arc.zip", "gen.hash", "gen.base64"]);
+    expect(ops(mixed.tools)).toEqual(["arc.zip", "gen.rename", "gen.hash", "gen.base64"]); // rename: 2+ files
   });
 
   it("pdf: png/jpg/txt/md converts and the real pdf tools, in catalog order", () => {

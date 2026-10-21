@@ -141,13 +141,45 @@ export async function extractText(file: File, format: "txt" | "md", onProgress: 
       }
       onProgress(i / open.doc.numPages);
     }
-    if (hasNoText(pages)) throw new ConvertError("noText");
-    const text = format === "md" ? linesToMarkdown(pages) : linesToText(pages);
     const type = format === "md" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8";
+    if (hasNoText(pages)) {
+      // A scanned PDF (pictures of pages, no text layer): read the pages with on-device OCR instead of giving up.
+      const scanned = await ocrPages(open, onProgress, signal);
+      if (!scanned) throw new ConvertError("noText");
+      return [new File([scanned], `text.${format}`, { type })];
+    }
+    const text = format === "md" ? linesToMarkdown(pages) : linesToText(pages);
     return [new File([text], `text.${format}`, { type })];
   } finally {
     await closePdf(open);
   }
+}
+
+/** Renders every page (about 150 dpi) and recognises it with Tesseract (Arabic + English). "" when nothing was found. */
+async function ocrPages(open: OpenPdf, onProgress: ProgressFn, signal: AbortSignal): Promise<string> {
+  const { recognize, hasRealText } = await import("../lib/ocr-engine");
+  const canvas = makeCanvas();
+  const n = open.doc.numPages;
+  const texts: string[] = [];
+  try {
+    for (let i = 1; i <= n; i++) {
+      throwIfAborted(signal);
+      const page = await open.doc.getPage(i);
+      try {
+        await paintPage(open, page, 2, canvas, signal);
+      } finally {
+        page.cleanup();
+      }
+      const png = await canvasBlob(canvas, "image/png");
+      const text = await recognize(png, "auto", (p) => onProgress((i - 1 + p) / n), signal);
+      texts.push(text.trim());
+      onProgress(i / n);
+    }
+  } finally {
+    freeCanvas(canvas);
+  }
+  if (!texts.some(hasRealText)) return "";
+  return texts.join("\n\n") + "\n";
 }
 
 // ---------------------------------------------------------------- compress (render-to-JPEG rebuild)

@@ -212,7 +212,10 @@ describe("formats", () => {
     expect(mimeForExt("jpeg")).toBe("image/jpeg");
     expect(mimeForExt("ico")).toBe("image/x-icon");
     expect(mimeForExt("pdf")).toBe("application/pdf");
-    expect(mimeForExt("heic")).toBeUndefined();
+    expect(mimeForExt("heic")).toBe("image/heic");
+    expect(mimeForExt("tif")).toBe("image/tiff");
+    expect(extForMime("image/heif")).toBe("heic");
+    expect(mimeForExt("docx")).toBeUndefined();
     expect(extForMime("image/jpeg")).toBe("jpg");
     expect(extForMime("image/jpg")).toBe("jpg");
     expect(extForMime("IMAGE/PNG; charset=x")).toBe("png");
@@ -220,13 +223,16 @@ describe("formats", () => {
     expect(extForMime("text/plain")).toBeUndefined();
   });
 
-  it("decode/encode gating follows the detected caps; HEIC and TIFF are never decodable", () => {
+  it("decode/encode gating follows the detected caps; HEIC and TIFF are always decodable (wasm/JS)", () => {
     expect(canDecode("png", caps())).toBe(true);
     expect(canDecode("jpeg", caps())).toBe(true);
     expect(canDecode("avif", caps())).toBe(false);
     expect(canDecode("avif", caps({}, true))).toBe(true);
-    expect(canDecode("heic", caps({}, true))).toBe(false);
-    expect(canDecode("tiff", caps({}, true))).toBe(false);
+    expect(canDecode("heic", caps())).toBe(true);
+    expect(canDecode("heif", caps())).toBe(true);
+    expect(canDecode("tiff", caps())).toBe(true);
+    expect(canDecode("tif", caps())).toBe(true);
+    expect(canDecode("docx", caps())).toBe(false);
     expect(canEncode("webp", caps())).toBe(false);
     expect(canEncode("webp", caps({ webp: true }))).toBe(true);
     expect(canEncode("avif", caps({ avif: true }))).toBe(true);

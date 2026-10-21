@@ -31,6 +31,17 @@ interface Spy {
 
 let spy: Spy;
 let fake: { pages: FakePage[]; failWith?: "password" | "corrupt" };
+/** The on-device OCR used for scanned PDFs (Tesseract is covered by ai-tools.test.ts and the e2e): what it "reads" per page. */
+let ocr: { text: string; calls: number };
+
+vi.mock("../lib/ocr-engine", () => ({
+  recognize: async (_img: Blob, lang: string, onProgress: (p: number) => void) => {
+    ocr.calls++;
+    onProgress(1);
+    return lang === "auto" ? ocr.text : "";
+  },
+  hasRealText: (t: string) => /[\p{L}\p{N}]/u.test(t),
+}));
 
 vi.mock("../lib/pdfjs-setup", () => ({
   pdfjsDocParams: (data: Uint8Array) => ({ data }),
@@ -95,6 +106,7 @@ function installDocument(): void {
 beforeEach(() => {
   spy = { rendered: [], destroyed: 0, cleaned: 0, canvases: [], blobCalls: [] };
   fake = { pages: [] };
+  ocr = { text: "", calls: 0 };
   installDocument();
 });
 afterEach(() => {
@@ -245,8 +257,19 @@ describe("pdf -> text / markdown", () => {
     expect(c.name).toBe("text.txt");
   });
 
-  it("a PDF without any text layer fails with noText", async () => {
+  it("a PDF without any text layer is read with OCR (Arabic + English), page by page", async () => {
     fake.pages = [{ width: 400, height: 800, items: [] }, { width: 400, height: 800, items: [t("   ", 10, 10)] }];
+    ocr.text = "‏مرحبا‎\n";
+    const [f] = await run(job("convert:txt"));
+    expect(await f.text()).toBe("‏مرحبا‎\n\n‏مرحبا‎\n");
+    expect(ocr.calls).toBe(2);
+    expect(spy.rendered.map((r) => r.page)).toEqual([1, 2]);
+    expect(spy.destroyed).toBe(1);
+  });
+
+  it("a PDF without any text, even for OCR, fails with noText", async () => {
+    fake.pages = [{ width: 400, height: 800, items: [] }];
+    ocr.text = "‏ \n";
     expect(await codeOf(run(job("convert:txt")))).toBe("noText");
     expect(spy.destroyed).toBe(1);
   });

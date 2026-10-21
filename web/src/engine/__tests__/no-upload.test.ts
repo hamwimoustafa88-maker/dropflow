@@ -88,6 +88,28 @@ describe("no code path uploads user data", () => {
     for (const f of files) expect(code(f.text)).not.toMatch(/unpkg\.com|jsdelivr|cdnjs|googleapis\.com\/(?!css)/);
   });
 
+  it("on-device OCR, HEIC and background-removal engines load only from /vendor on this origin, through ONE narrow importer", () => {
+    const read = (p: string) => readFileSync(join(srcDir, p), "utf8");
+    const ocr = read("engine/lib/ocr-engine.ts");
+    expect(ocr).toContain('TESS_BASE = "/vendor/tesseract/"');
+    expect(code(ocr)).toContain('cacheMethod: "none"'); // nothing written to IndexedDB
+    expect(code(ocr)).toContain("workerBlobURL: false"); // a plain same-origin worker script
+    expect(read("engine/lib/heic.ts")).toContain('HEIF_BASE = "/vendor/heif/"');
+    const rembg = read("engine/lib/rembg-engine.ts");
+    expect(rembg).toContain('ORT_BASE = "/vendor/ort/"');
+    expect(rembg).toContain('U2NETP_URL = "/vendor/models/u2netp.onnx"');
+    // Runtime (unbundled) imports exist only in the vendor importer, which accepts nothing but /vendor/*.js|mjs paths.
+    const dynamic = files.filter((f) => /import\s*\(\s*\/\*\s*webpackIgnore/.test(f.text)).map((f) => f.path);
+    expect(dynamic).toEqual(["src/engine/lib/vendor-import.ts"]);
+  });
+
+  it("the vendor importer refuses anything that is not a same-origin /vendor module", async () => {
+    const { importVendor } = await import("../lib/vendor-import");
+    for (const bad of ["https://cdn.example.com/x.js", "//evil.example/x.js", "/vendor/../x.js", "/other/x.js", "data:text/javascript,1", "/vendor/x.wasm", "blob:x"]) {
+      await expect(importVendor(bad), bad).rejects.toThrow(/not a vendor module/);
+    }
+  });
+
   it("the service worker only GETs same-origin static assets (no body, no method override)", () => {
     const sw = readFileSync(join(root, "scripts/sw.template.js"), "utf8");
     const swCode = code(sw);

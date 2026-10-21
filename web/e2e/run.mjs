@@ -20,6 +20,7 @@ import { privacy } from "./sections/privacy.mjs";
 import { quality } from "./sections/quality.mjs";
 import { seo } from "./sections/seo.mjs";
 import { link } from "./sections/link.mjs";
+import { extras } from "./sections/extras.mjs";
 
 const args = process.argv.slice(2);
 const base = (args.find((a) => !a.startsWith("--")) ?? "http://localhost:3200").replace(/\/$/, "");
@@ -41,6 +42,7 @@ try {
   if (wants("wheel")) await wheelUx(ctx);
   if (wants("media")) await media(ctx);
   if (wants("link")) await link(ctx);
+  if (wants("extras")) await extras(ctx);
   if (wants("offline")) await offline(ctx);
   if (wants("legal")) await legal(ctx);
   if (wants("seo")) await seo(ctx);

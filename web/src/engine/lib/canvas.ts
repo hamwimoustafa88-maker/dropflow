@@ -81,6 +81,7 @@ async function bitmapOf(file: Blob): Promise<ImageBitmap> {
  */
 export async function decodeImage(file: Blob, ext: string): Promise<Decoded> {
   if (ext === "svg") return decodeSvg(file);
+  if (ext === "heic" || ext === "tiff") return decodeInJs(file, ext);
   const bmp = await bitmapOf(file);
   if (ext === "jpg") {
     // Guard: an engine that ignored the orientation leaves the raw SOF size on a transposing orientation.
@@ -102,6 +103,21 @@ export async function decodeImage(file: Blob, ext: string): Promise<Decoded> {
     }
   }
   return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
+}
+
+/** Formats no browser decodes (except Safari): libheif (wasm) for HEIC, UTIF for TIFF, both loaded on first use. */
+async function decodeInJs(file: Blob, ext: "heic" | "tiff"): Promise<Decoded> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const rgba = ext === "heic" ? await (await import("./heic")).decodeHeic(bytes) : (await import("./tiff")).decodeTiff(bytes);
+  return fromRgba(rgba.data, rgba.width, rgba.height);
+}
+
+/** A canvas holding these RGBA pixels (straight alpha). */
+export function fromRgba(data: Uint8ClampedArray, width: number, height: number): Decoded {
+  const canvas = makeCanvas(width, height);
+  const pixels = data.byteLength === width * height * 4 ? data : data.subarray(0, width * height * 4);
+  get2d(canvas).putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
+  return fromCanvas(canvas);
 }
 
 async function decodeSvg(file: Blob): Promise<Decoded> {
@@ -169,6 +185,6 @@ export function drawScaled(
   return out;
 }
 
-export function rgbaOf(canvas: AnyCanvas): Uint8ClampedArray {
+export function rgbaOf(canvas: AnyCanvas): Uint8ClampedArray<ArrayBuffer> {
   return get2d(canvas).getImageData(0, 0, canvas.width, canvas.height).data;
 }

@@ -80,8 +80,19 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsof
 | @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. GPL-2.0-or-later is compatible with DropFlow's GPL-3.0-or-later (restored 2026-10-21 after the GPL switch, ADR-0013) |
 | @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
 | vitest | 5.0.5 | MIT | Web unit tests (dev only; `@types/node` bumped to 24.19.2 because it requires it) |
+| tesseract.js | 7.0.0 | Apache-2.0 (bundles wasm-feature-detect Apache-2.0, bmp-js MIT, zlibjs MIT, idb-keyval Apache-2.0) | On-device OCR (image -> TXT, "Text (OCR)", scanned PDF -> TXT). Its ES module and worker are served from `/vendor/tesseract`, loaded on first use |
+| tesseract.js-core | 7.0.0 | Apache-2.0 (Tesseract OCR Apache-2.0, Leptonica BSD-2-Clause) | The LSTM-only wasm cores (one of three is loaded, chosen by the browser's SIMD support), `/vendor/tesseract/core` |
+| @tesseract.js-data/eng, @tesseract.js-data/ara | 1.0.0 | MIT (package) / Apache-2.0 (tessdata models) | English + Arabic `best_int` LSTM models, `/vendor/tesseract/lang` (2.8 MB + 1.6 MB, gzip) |
+| libheif-js | 1.23.5 | **LGPL-3.0** (libheif LGPL-3.0, libde265 LGPL-3.0) | HEIC/HEIF input. Used unmodified as a separate, replaceable file (`/vendor/heif/libheif-bundle.mjs`, its ES-module build with the wasm inside), imported at runtime, never bundled into DropFlow's code |
+| utif2 (UTIF.js) + pako | 4.1.0 + 1.0.11 | MIT; pako MIT AND Zlib | TIFF input and output (bundled in a lazy chunk) |
+| gifenc | 1.0.3 | MIT | GIF output for pictures (bundled in a lazy chunk) |
+| jsQR | 1.4.0 | Apache-2.0 | "Read QR" (bundled in a lazy chunk) |
+| onnxruntime-web | 1.30.0 | MIT | Runs the background-removal model on the device (wasm backend, 1 thread). `ort.wasm.min.mjs` + `ort-wasm-simd-threaded.{mjs,wasm}` served from `/vendor/ort`, imported at runtime (not bundled) |
+| U²-Net-P model (`u2netp.onnx`, BritishWerewolf/U-2-Netp ONNX export of xuebinqin/U-2-Net) | commit 7112208 | Apache-2.0 | "Remove background". Downloaded once at install/build time by `scripts/vendor.mjs`, accepted only with SHA-256 `309c8469…ddd8` (same pin as the desktop `ModelCatalog`), served from `/vendor/models` |
 
-The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. Its `connect-src` CSP allows
+The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. The OCR, HEIC and
+background-removal engines are not even in the lazy chunks: they are fetched from the site's own `/vendor` folder the first time
+such a tool runs (OCR and the cut-out show a one-time note with the download size first), then kept by the service worker. Its `connect-src` CSP allows
 `self`, `blob:`, `data:` and `https:` (the last one only so the user can paste a link to a file); a static test asserts that exactly one
 module (`src/engine/lib/fetch-link.ts`) may call `fetch`, with GET, no credentials and no body, and that nothing else uses XHR/WebSocket/beacon.
 

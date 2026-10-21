@@ -259,7 +259,6 @@
     },
     "hint": {
       "title": "تطبيق ويندوز",
-      "soon": "قريباً",
       "more": "+{count}",
       "ocr": "OCR",
       "transcribe": "كلام إلى نص",
@@ -270,7 +269,11 @@
       "redact": "تعتيم",
       "encoder": "مُرمّز",
       "burnSubs": "دمج الترجمة",
-      "join": "ضمّ"
+      "join": "ضمّ",
+      "download": "حمّل تطبيق ويندوز",
+      "annotate": "تعليقات على الصورة",
+      "autoRedact": "تعتيم تلقائي",
+      "rename": "إعادة تسمية جماعية"
     },
     "offline": {
       "badge": "دون إنترنت",
@@ -305,7 +308,7 @@
       "emptyPdf": "ملف PDF بلا صفحات",
       "needText": "أدخل نصاً",
       "needTwo": "اختر ملفَّي PDF أو أكثر",
-      "noText": "لا يوجد نص. ربما ممسوح ضوئياً",
+      "noText": "لا يوجد نص حتى بالتعرّف الضوئي",
       "noCues": "لا توجد ترجمات",
       "tooManyFiles": "ملفات كثيرة (الحد {max})",
       "invalidBase64": "Base64 غير صالح",
@@ -316,7 +319,14 @@
       "noAudio": "لا يوجد مسار صوتي",
       "invalidTime": "وقت غير صالح",
       "invalidSpeed": "سرعة غير صالحة",
-      "noFrame": "لا إطار عند هذا الوقت"
+      "noFrame": "لا إطار عند هذا الوقت",
+      "noTextFound": "لم يُعثر على نص",
+      "noQrFound": "لم يُعثر على رمز QR",
+      "invalidRegions": "منطقة غير صالحة: {value}",
+      "invalidColor": "لون غير صالح: {value}",
+      "nothingToDo": "لا يوجد ما يتغيّر",
+      "needTwoImages": "اختر صورتين أو أكثر",
+      "invalidPattern": "نمط غير صالح: {value}"
     },
     "sr": {
       "wheelPage": "الصفحة {page} من {total}"
@@ -348,7 +358,16 @@
       "vid_mute": "كتم",
       "vid_snapshot": "لقطة",
       "vid_speed": "سرعة",
-      "vid_compress": "ضغط"
+      "vid_compress": "ضغط",
+      "img_edit": "تحرير",
+      "img_background": "خلفية",
+      "img_redact": "تعتيم",
+      "img_collage": "كولاج",
+      "img_icons": "أيقونات",
+      "img_qr": "قراءة QR",
+      "img_ocr": "نص (OCR)",
+      "img_remove_bg": "إزالة الخلفية",
+      "gen_rename": "إعادة تسمية"
     },
     "opt": {
       "quality": "الجودة",
@@ -380,11 +399,52 @@
       "scale": "المقياس",
       "algorithm": "الخوارزمية",
       "mode": "الوضع",
-      "urlSafe": "آمن للروابط"
+      "urlSafe": "آمن للروابط",
+      "brightness": "السطوع",
+      "contrast": "التباين",
+      "saturation": "تشبّع الألوان",
+      "sharpen": "الحدّة",
+      "blur": "التمويه",
+      "filter": "المرشّح",
+      "rotate": "التدوير",
+      "flipH": "قلب أفقي",
+      "flipV": "قلب عمودي",
+      "background": "الخلفية",
+      "aspect": "الشكل",
+      "padding": "الهامش ٪",
+      "radius": "تدوير الزوايا",
+      "shadow": "ظل",
+      "regions": "المناطق (x,y,w,h)",
+      "style": "الطريقة",
+      "color": "اللون",
+      "layout": "التخطيط",
+      "columns": "الأعمدة",
+      "cell": "حجم الصورة (px)",
+      "spacing": "المسافة (px)",
+      "fit": "الملاءمة",
+      "lang": "اللغة",
+      "fill": "الخلفية",
+      "pattern": "نمط الاسم",
+      "find": "ابحث عن",
+      "replace": "استبدل بـ",
+      "regex": "تعبير نمطي",
+      "ignoreCase": "تجاهل حالة الأحرف",
+      "case": "حالة الأحرف",
+      "trim": "حذف المسافات الزائدة"
     },
     "optOp": {
       "pdf_page_numbers": {
         "start": "البدء من"
+      },
+      "img_background": {
+        "radius": "تدوير الزوايا ٪"
+      },
+      "img_collage": {
+        "radius": "تدوير الزوايا (px)",
+        "background": "لون الخلفية"
+      },
+      "gen_rename": {
+        "start": "العدّاد يبدأ من"
       }
     },
     "choice": {
@@ -419,6 +479,53 @@
       "mode": {
         "encode": "ترميز",
         "decode": "فك الترميز"
+      },
+      "filter": {
+        "none": "بلا",
+        "grayscale": "رمادي",
+        "sepia": "بنّي عتيق",
+        "invert": "عكس الألوان"
+      },
+      "rotate": {
+        "0": "0°",
+        "90": "90°",
+        "180": "180°",
+        "270": "270°"
+      },
+      "aspect": {
+        "original": "الأصلي"
+      },
+      "style": {
+        "solid": "لون ثابت",
+        "blur": "تمويه",
+        "pixelate": "بكسلة"
+      },
+      "layout": {
+        "grid": "شبكة",
+        "row": "صف",
+        "column": "عمود",
+        "featured": "صورة بارزة"
+      },
+      "fit": {
+        "contain": "احتواء",
+        "cover": "ملء"
+      },
+      "lang": {
+        "auto": "عربي + إنجليزي",
+        "ara": "العربية",
+        "eng": "الإنجليزية"
+      },
+      "fill": {
+        "transparent": "شفافة",
+        "white": "بيضاء",
+        "black": "سوداء"
+      },
+      "case": {
+        "none": "كما هي",
+        "lower": "أحرف صغيرة",
+        "upper": "أحرف كبيرة",
+        "title": "كبير لكل كلمة",
+        "sentence": "كبير للجملة"
       }
     },
     "ph": {
@@ -430,10 +537,16 @@
       "time": "0:05",
       "ranges": "1-3, 5, 7-9",
       "pages": "1-3, 5",
-      "order": "3, 1, 2, 5-7"
+      "order": "3, 1, 2, 5-7",
+      "background": "#ffffff أو gradient:#4338ca:#0e7490",
+      "regions": "10,10,200,80; 300,40,120,60",
+      "color": "#000000",
+      "pattern": "'{name}-{counter:000}{ext}'"
     },
     "warn": {
-      "textToImages": "النص يصبح صوراً"
+      "textToImages": "النص يصبح صوراً",
+      "ocrFirstUse": "أول استخدام يحمّل قارئ النصوص (نحو 8 ميغابايت) من هذا الموقع. صورتك تبقى على جهازك.",
+      "rembgFirstUse": "أول استخدام يحمّل أداة إزالة الخلفية (نحو 18 ميغابايت) من هذا الموقع. صورتك تبقى على جهازك."
     },
     "legal": {
       "privacy": "الخصوصية",
@@ -452,6 +565,22 @@
         "invalid": "هذا ليس عنوان ويب (http أو https).",
         "empty": "الرابط أعاد ملفًا فارغًا.",
         "aborted": "أُلغي التنزيل."
+      }
+    },
+    "add": {
+      "wedge": "+ إضافة",
+      "title": "إضافة إلى عجلة {wheel}",
+      "note": "يعمل الآن ويبقى على هذه العجلة لهذا النوع من الملفات.",
+      "back": "رجوع",
+      "pinned": "المُضاف",
+      "remove": "إزالة {name}",
+      "added": "أُضيف {name}",
+      "removed": "أُزيل {name}",
+      "txtOcr": "نص (OCR)",
+      "group": {
+        "convert": "تحويل إلى",
+        "tools": "أدوات",
+        "actions": "إجراءات"
       }
     }
   },

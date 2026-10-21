@@ -14,10 +14,10 @@ export async function pdfs({ b, base, out, files }) {
   await section("pdf: wheel, Windows hint, render to PNG / extract text", async () => {
     await freshApp(b, base, "en");
     await addFiles(b, [files.pdf3]);
-    const conv = await wedgeIds(b);
-    check("convert wheel = PNG JPG TXT MD only (no DOCX/PPTX/XLSX: not possible in a browser)", JSON.stringify([...conv].sort()) === JSON.stringify(["convert:jpg", "convert:md", "convert:png", "convert:txt"]), conv.join(","));
+    const conv = (await wedgeIds(b)).filter((i) => i !== "wheel.add");
+    check("convert wheel = PNG JPG TXT MD only (no DOCX/PPTX/XLSX: not possible in a browser), then + Add", JSON.stringify([...conv].sort()) === JSON.stringify(["convert:jpg", "convert:md", "convert:png", "convert:txt"]) && (await wedgeIds(b)).at(-1) === "wheel.add", conv.join(","));
     const hint = await b.ev("document.querySelector('[data-testid=windows-hint]')?.innerText.replace(/\\s+/g, ' ')");
-    check("one honest `Windows app` hint tile lists what only desktop does (DOCX, OCR..), with a Soon badge", /Windows app/.test(hint) && /DOCX/.test(hint) && /OCR/.test(hint) && /Soon/.test(hint), hint);
+    check("one honest `Windows app` hint tile lists what only desktop does (DOCX, OCR..), with a real download link", /Windows app/.test(hint) && /DOCX/.test(hint) && /OCR/.test(hint) && /Download for Windows/.test(hint) && !/Soon/.test(hint), hint);
     await selectTab(b, "tools");
     const page1 = await wedgeIds(b);
     check("a long wheel is paged: 7 wedges + a `more` wedge", page1.length === 8 && page1[7].startsWith("more:"), page1.join(","));

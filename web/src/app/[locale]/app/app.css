@@ -75,6 +75,18 @@
 .wheel-more-dots {
   letter-spacing: 2px;
 }
+/* "+ Add": a lighter wedge so it reads as "more options", not as one of the actions. */
+.wedge-add {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+}
+/* Items the person added with "+ Add": a small accent dot near the rim. */
+.wedge-pin {
+  fill: var(--accent);
+  pointer-events: none;
+}
 
 /* A thin, always-visible scrollbar for the chip row on touch screens. */
 .chips-scroll {

@@ -93,6 +93,15 @@ async function convertOne(target: string, file: File, ext: string, signal: Abort
       const canvas = drawScaled(dec, dec.width, dec.height);
       return [asFile(encodeBmp24(rgbaOf(canvas), canvas.width, canvas.height) as BlobPart, `${stem}.bmp`, "image/bmp")];
     }
+    if (target === "gif" || target === "tiff") {
+      const canvas = drawScaled(dec, dec.width, dec.height);
+      const rgba = rgbaOf(canvas);
+      const bytes =
+        target === "gif"
+          ? (await import("../lib/gif")).encodeGif(rgba, canvas.width, canvas.height)
+          : (await import("../lib/tiff")).encodeTiff(rgba, canvas.width, canvas.height);
+      return [asFile(bytes as BlobPart, `${stem}.${target}`, target === "gif" ? "image/gif" : "image/tiff")];
+    }
     if (target === "ico") {
       const entries = [];
       for (const size of icoSizesFor(dec.width, dec.height)) {

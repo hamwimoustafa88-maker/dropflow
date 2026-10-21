@@ -1,9 +1,10 @@
-// Worker-side implementation of gen.hash and gen.base64 (see general.ts).
+// Worker-side implementation of gen.hash, gen.base64 and gen.rename (see general.ts).
 
 import { algorithmsFor, formatHashReport, hashBlob } from "../lib/md5-digest";
 import { mimeOfExt, sniffExtension } from "../lib/sniff";
 import { base64Parts, base64ToBytes } from "../lib/sniff-base64";
 import { decodeText } from "../lib/text-decode";
+import { renameAll, type CaseMode } from "../lib/rename";
 import { ConvertError, throwIfAborted, type Job, type ProgressFn } from "../types";
 
 const MIB = 1024 * 1024;
@@ -60,6 +61,25 @@ export async function runGeneral(job: Job, onProgress: ProgressFn, signal: Abort
   if (!file) throw new ConvertError("unsupported");
   throwIfAborted(signal);
   if (job.operation === "gen.hash") return runHash(job, onProgress, signal);
+  if (job.operation === "gen.rename") {
+    const start = job.options.start;
+    const names = renameAll(
+      job.files.map((f) => f.name),
+      {
+        pattern: optString(job, "pattern", "{name}{ext}"),
+        find: optString(job, "find", ""),
+        replace: optString(job, "replace", ""),
+        regex: optBool(job, "regex", false),
+        ignoreCase: optBool(job, "ignoreCase", false),
+        case: (["lower", "upper", "title", "sentence"].includes(optString(job, "case", "none")) ? optString(job, "case", "none") : "none") as CaseMode,
+        trim: optBool(job, "trim", false),
+        start: typeof start === "number" && Number.isFinite(start) ? Math.trunc(start) : 1,
+      },
+    );
+    onProgress(1);
+    // Copies that share the original bytes (a File is an immutable view, nothing is read or duplicated in memory).
+    return job.files.map((f, i) => new File([f], names[i], { type: f.type, lastModified: f.lastModified }));
+  }
   if (job.operation === "gen.base64") {
     return optString(job, "mode", "encode") === "decode" ? decodeBase64(file, onProgress, signal) : encodeBase64(file, optBool(job, "urlSafe", false), onProgress, signal);
   }

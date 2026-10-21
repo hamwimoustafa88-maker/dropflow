@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using DropFlow.Core.Sources;
 
 namespace DropFlow.App.Services;
 
@@ -11,6 +12,16 @@ namespace DropFlow.App.Services;
 /// </summary>
 internal static class ClipboardSource
 {
+    /// <summary>
+    /// The address on the clipboard when it holds exactly one http(s) link as text and nothing more specific (no copied files, no picture),
+    /// else null. Several links, or a link inside other text, are left to <see cref="Export"/> (which saves the text).
+    /// </summary>
+    public static Uri? ReadSingleUrl()
+    {
+        if (Clipboard.ContainsFileDropList() || Clipboard.ContainsImage() || !Clipboard.ContainsText()) return null;
+        return LinkText.Classify(Clipboard.GetText(), out var url) == ClipboardTextKind.SingleUrl ? url : null;
+    }
+
     public static IReadOnlyList<string> Export(string tempDirectory, DateTime? now = null)
     {
         if (Clipboard.ContainsFileDropList())

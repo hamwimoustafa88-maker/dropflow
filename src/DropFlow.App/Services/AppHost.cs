@@ -19,6 +19,7 @@ using DropFlow.Core.Registry;
 using DropFlow.Core.Runner;
 using DropFlow.Core.Session;
 using DropFlow.Core.Settings;
+using DropFlow.Core.Sources;
 using DropFlow.Core.Wheel;
 using DropFlow.Engines.Archive.Sharing;
 using DropFlow.Engines.Common;
@@ -107,6 +108,8 @@ internal sealed class AppHost : IDisposable
     private FloatingShelfWindow? _shelfWindow;
     private SettingsWindow? _settingsWindow;
     private HistoryWindow? _historyWindow;
+    private OpenLinkWindow? _linkWindow;
+    private UrlDownloader? _links;
     private Task<IReadOnlyList<string>>? _selectionTask;
     private readonly UpdateService _updates = new("https://github.com/hamwimoustafa88-maker/dropflow");
 
@@ -566,6 +569,16 @@ internal sealed class AppHost : IDisposable
 
     private void OnClipboardHotkey()
     {
+        // A single copied web link is downloaded first; any other clipboard content goes the way it always did.
+        Uri? link = null;
+        try { link = ClipboardSource.ReadSingleUrl(); }
+        catch (System.Runtime.InteropServices.COMException ex) { FileLog.Error("clipboard", ex); }
+        if (link is not null)
+        {
+            _ = OpenLinkFromClipboardAsync(link);
+            return;
+        }
+
         IReadOnlyList<string> files;
         try { files = ClipboardSource.Export(Path.Combine(Path.GetTempPath(), "DropFlow")); }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or IOException or UnauthorizedAccessException)
@@ -575,6 +588,78 @@ internal sealed class AppHost : IDisposable
         }
         if (files.Count == 0) ShowToast(Loc["clipboard.empty"], null, null, [], TimeSpan.FromSeconds(4));
         else OpenWheelFor(files, WheelKind.Convert);
+    }
+
+    // ------------------------------------------------------------------------------------------------------------------ open from link
+
+    private UrlDownloader Links => _links ??= new UrlDownloader();
+
+    /// <summary>Downloads a web address into the Downloads\DropFlow folder. Logs the address without its query string.</summary>
+    private async Task<string> DownloadLinkAsync(Uri url, IProgress<DownloadProgress> progress, CancellationToken cancellationToken)
+    {
+        var shown = UrlDownloader.ForLog(url);
+        FileLog.Info($"download from link: {shown}");
+        try
+        {
+            var path = await Links.DownloadAsync(url.AbsoluteUri, progress, cancellationToken);
+            FileLog.Info($"downloaded {Path.GetFileName(path)} from {shown}");
+            return path;
+        }
+        catch (OperationCanceledException)
+        {
+            FileLog.Info($"download cancelled: {shown}");
+            throw;
+        }
+        catch (UrlDownloadException ex)
+        {
+            FileLog.Info($"download failed ({ex.Kind}): {shown}");
+            throw;
+        }
+    }
+
+    /// <summary>The clipboard shortcut found one web link: download it with a progress toast, then show the wheel for the file.</summary>
+    private async Task OpenLinkFromClipboardAsync(Uri url)
+    {
+        using var cts = new CancellationTokenSource();
+        var finished = false;
+        IReadOnlyList<(string, Action)> cancel = [(Loc["dialog.cancel"], cts.Cancel)];
+        ShowToast(Loc["link.downloading"], url.Host, -1, cancel, null);
+        var progress = new Progress<DownloadProgress>(p =>
+        {
+            if (!finished) ShowToast(Loc["link.downloading"], $"{url.Host} — {p.Describe(Loc)}", p.Fraction ?? -1, cancel, null);
+        });
+
+        try
+        {
+            var path = await DownloadLinkAsync(url, progress, cts.Token);
+            finished = true;
+            _toast?.Hide();
+            OpenWheelFor([path], WheelKind.Convert);
+        }
+        catch (OperationCanceledException)
+        {
+            finished = true;
+            ShowToast(Loc["link.cancelled"], null, null, [], TimeSpan.FromSeconds(3));
+        }
+        catch (UrlDownloadException ex)
+        {
+            finished = true;
+            ShowToast(Loc.Format("result.failed", ex.Describe(Loc)), null, null, [], TimeSpan.FromSeconds(10));
+        }
+    }
+
+    /// <summary>The tray's "Open from link…" window.</summary>
+    private void ShowOpenLink()
+    {
+        if (_linkWindow is { IsVisible: true }) { _linkWindow.Activate(); return; }
+
+        string? initial = null;
+        try { initial = ClipboardSource.ReadSingleUrl()?.AbsoluteUri; }
+        catch (System.Runtime.InteropServices.COMException) { /* clipboard busy: start with an empty box */ }
+
+        _linkWindow = new OpenLinkWindow(Kit, DownloadLinkAsync, path => _ui.BeginInvoke(() => OpenWheelFor([path], WheelKind.Convert)), Links.Folder, initial);
+        _linkWindow.Show();
+        _linkWindow.Activate();
     }
 
     // ------------------------------------------------------------------------------------------------------------------ automation
@@ -636,6 +721,7 @@ internal sealed class AppHost : IDisposable
         };
         MenuItem Item(string key, Action run) { var i = new MenuItem { Header = Loc[key] }; i.Click += (_, _) => run(); return i; }
         menu.Items.Add(pause);
+        menu.Items.Add(Item("tray.openLink", ShowOpenLink));
         menu.Items.Add(Item("tray.shelf", ToggleShelf));
         menu.Items.Add(Item("tray.history", ShowHistory));
         menu.Items.Add(Item("tray.settings", ShowSettings));
@@ -660,6 +746,7 @@ internal sealed class AppHost : IDisposable
         _hotkey.Dispose();
         _clipboardHotkey.Dispose();
         _watch?.Dispose();
+        _links?.Dispose();
         foreach (var converter in Registry.Converters.OfType<IDisposable>()) converter.Dispose();
         Models.Dispose();
         _tray?.Dispose();

@@ -163,7 +163,8 @@ public class HtmlToPdfToolTests(WebHostFixture host) : IClassFixture<WebHostFixt
         var first = await tool.RunAsync(Job(input), new Progress<JobProgress>(), CancellationToken.None);
         var second = await tool.RunAsync(Job(input), new Progress<JobProgress>(), CancellationToken.None);
 
-        Assert.True(first.Success && second.Success);
+        Assert.True(first.Success, $"first run: {first.Error}");
+        Assert.True(second.Success, $"second run: {second.Error}");
         Assert.NotEqual(first.Outputs[0], second.Outputs[0]);
         Assert.True(File.Exists(first.Outputs[0]));
     }

@@ -1003,7 +1003,7 @@
     },
     {
       "id": "pdf.html-to-pdf",
-      "cat": "pdf",
+      "cat": "document",
       "wheel": "tools",
       "en": "HTML or web page to PDF",
       "ar": "تحويل HTML أو صفحة ويب إلى PDF",
@@ -1083,7 +1083,7 @@
       "wheel": "tools",
       "en": "Extract archives",
       "ar": "فك الأرشيف",
-      "engine": "7zip",
+      "engine": "dotnet",
       "platforms": [
         "windows",
         "web"
@@ -1093,17 +1093,18 @@
     },
     {
       "id": "arc.zip",
-      "cat": "archive",
+      "cat": "general",
       "wheel": "tools",
       "en": "Compress to ZIP",
       "ar": "ضغط إلى ZIP",
-      "engine": "7zip",
+      "engine": "dotnet",
       "platforms": [
         "windows",
         "web"
       ],
       "phase": 4,
-      "multi": true
+      "multi": true,
+      "minFiles": 1
     },
     {
       "id": "gen.rename",

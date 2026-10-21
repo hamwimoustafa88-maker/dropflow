@@ -69,7 +69,7 @@
     { "id": "pdf.watermark",  "cat": "pdf", "wheel": "tools", "en": "Add watermark",            "ar": "إضافة علامة مائية",           "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 2 },
     { "id": "pdf.page-numbers","cat": "pdf","wheel": "tools", "en": "Add page numbers",         "ar": "ترقيم الصفحات",               "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 2 },
     { "id": "pdf.repair",     "cat": "pdf", "wheel": "tools", "en": "Repair PDF",               "ar": "إصلاح PDF",                   "engine": "qpdf",        "platforms": ["windows","web"], "phase": 2 },
-    { "id": "pdf.html-to-pdf","cat": "pdf", "wheel": "tools", "en": "HTML or web page to PDF",  "ar": "تحويل HTML أو صفحة ويب إلى PDF","engine": "webview2",  "platforms": ["windows"], "phase": 2 },
+    { "id": "pdf.html-to-pdf","cat": "document", "wheel": "tools", "en": "HTML or web page to PDF",  "ar": "تحويل HTML أو صفحة ويب إلى PDF","engine": "webview2",  "platforms": ["windows"], "phase": 2 },
     { "id": "pdf.crop",       "cat": "pdf", "wheel": "tools", "en": "Crop PDF",                 "ar": "اقتصاص PDF",                  "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 4 },
     { "id": "pdf.sign",       "cat": "pdf", "wheel": "tools", "en": "Sign PDF",                 "ar": "توقيع PDF",                   "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 4 },
     { "id": "pdf.redact",     "cat": "pdf", "wheel": "tools", "en": "Redact PDF",               "ar": "إخفاء محتوى PDF نهائياً",     "engine": "pdfium",      "platforms": ["windows"], "phase": 4 },

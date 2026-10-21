@@ -6,14 +6,6 @@
   --ok: #0b7a4b;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --danger: #ff9b8f;
-    --warn: #fbbf24;
-    --ok: #4ade80;
-  }
-}
-
 .drop-card {
   border: 2px dashed var(--border);
   background: color-mix(in srgb, var(--surface) 70%, transparent);

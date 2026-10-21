@@ -37,6 +37,16 @@ export async function quality({ b, base, out, files }) {
     await b.setViewport(1280, 900, "dark", false);
   });
 
+  await section("quality: the site stays light (white) even when the visitor's system is dark", async () => {
+    for (const path of ["/ar", "/en", "/ar/app", "/ar/privacy"]) {
+      await b.setViewport(1280, 900, "dark", false);
+      await b.goto(`${base}${path}`, 1200);
+      const bg = await b.ev("getComputedStyle(document.body).backgroundColor");
+      const [r, g, bl] = (bg.match(/\d+/g) || []).map(Number);
+      check(`${path}: light background under a dark system theme`, r > 230 && g > 230 && bl > 230, bg);
+    }
+  });
+
   await section("quality: no layout shift, no horizontal overflow (390 / 768 / 1280, ar + en), accessible names, focus ring", async () => {
     await b.send("Page.addScriptToEvaluateOnNewDocument", {
       source: "window.__cls = 0; new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true });",

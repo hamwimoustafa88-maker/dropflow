@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-/* DropFlow identity: indigo + cyan. Tokens only — never raw hex in components. */
+/* DropFlow identity: indigo + cyan on white. Tokens only — never raw hex in components.
+   The site is always light (owner: "white, formal and simple"), whatever the visitor's system theme. */
 :root {
   --bg: #f7f8fc;
   --surface: #ffffff;
@@ -20,28 +21,6 @@
   --ok: #0b7a4b;
   --on-ok: #ffffff;
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #070b1c;
-    --surface: #0f1631;
-    --surface-2: #182044;
-    --fg: #eef1ff;
-    --muted: #a3acd8;
-    --border: #263059;
-    --primary: #8b95fb;
-    --on-primary: #070b1c;
-    --primary-soft: #1b2350;
-    --accent: #22d3ee;
-    --ring: #a5b4fc;
-    --grid: rgb(238 241 255 / 0.05);
-    --glow-a: rgb(99 102 241 / 0.32);
-    --glow-b: rgb(34 211 238 / 0.2);
-    --ok: #4ade80;
-    --on-ok: #070b1c;
-    color-scheme: dark;
-  }
 }
 
 @theme inline {

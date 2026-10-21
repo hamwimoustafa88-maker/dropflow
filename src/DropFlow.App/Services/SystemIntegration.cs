@@ -9,6 +9,16 @@ namespace DropFlow.App.Services;
 /// <summary>Writes the registry/Start-menu entries from <see cref="ShellIntegrationPlan"/> (all per-user, no admin rights).</summary>
 internal static class SystemIntegration
 {
+    /// <summary>Removes every Windows entry DropFlow may have created. Never throws (runs during uninstall).</summary>
+    public static void RemoveAll(string exePath)
+    {
+        foreach (var undo in new Action[] { () => SetStartup(false, exePath), () => SetContextMenu(false, exePath, ""), () => SetSendTo(false, exePath) })
+        {
+            try { undo(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
+        }
+    }
+
     public static bool IsStartupEnabled()
     {
         using var key = Registry.CurrentUser.OpenSubKey(ShellIntegrationPlan.StartupKey);

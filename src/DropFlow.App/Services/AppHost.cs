@@ -189,7 +189,8 @@ internal sealed class AppHost : IDisposable
         StartWatching();
 
         // Quietly look for an update shortly after start (installed copies only).
-        _ = Task.Delay(TimeSpan.FromSeconds(45)).ContinueWith(_ => _ui.InvokeAsync(() => CheckForUpdatesAsync(interactive: false)), TaskScheduler.Default);
+        if (Settings.CheckForUpdates)
+            _ = Task.Delay(TimeSpan.FromSeconds(45)).ContinueWith(_ => _ui.InvokeAsync(() => CheckForUpdatesAsync(interactive: false)), TaskScheduler.Default);
 
         if (Settings.ShowFirstRunTips)
         {

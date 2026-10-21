@@ -47,6 +47,9 @@ public sealed record AppSettings
     /// asks to download anything on its own; the Install buttons in Settings always work.
     /// </summary>
     public bool OfferEngineInstalls { get; init; }
+
+    /// <summary>Look for a new version on GitHub Releases shortly after start (the only automatic network request). On by default.</summary>
+    public bool CheckForUpdates { get; init; } = true;
 }
 
 /// <summary>Reads and writes settings as JSON. A corrupt file falls back to defaults and is kept as ".bad" for inspection.</summary>

@@ -451,5 +451,6 @@
   "encoder.preset.audio-opus-96k.desc": "Sound only, Opus (small files).",
   "encoder.preset.audio-flac": "FLAC (lossless)",
   "encoder.preset.audio-flac.desc": "Sound only, no loss in quality.",
-  "instance.unreachable": "DropFlow is already running but did not answer. It was probably started as administrator. Right-click its icon next to the clock and choose Quit (or restart Windows), then open DropFlow again."
+  "instance.unreachable": "DropFlow is already running but did not answer. It was probably started as administrator. Right-click its icon next to the clock and choose Quit (or restart Windows), then open DropFlow again.",
+  "settings.checkUpdates": "Check for updates automatically (asks GitHub for the latest version; sends nothing about you or your files)"
 }

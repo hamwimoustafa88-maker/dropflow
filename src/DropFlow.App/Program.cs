@@ -12,7 +12,10 @@ public static class Program
     public static int Main(string[] args)
     {
         // Velopack installer/updater hooks (--veloapp-install etc.) run here and exit; a normal launch continues.
-        Velopack.VelopackApp.Build().Run();
+        // Uninstall: remove what DropFlow added to Windows (startup entry, Explorer menu, Send To) so nothing is left behind.
+        Velopack.VelopackApp.Build()
+            .OnBeforeUninstallFastCallback(_ => SystemIntegration.RemoveAll(Environment.ProcessPath ?? "DropFlow.exe"))
+            .Run();
 
         // DropFlow never runs elevated (CLAUDE.md). An installer or console started "as administrator" would start us elevated, and an
         // elevated instance cannot be reached by normal launches (the next double-click then silently did nothing). Restart unelevated.

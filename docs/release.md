@@ -6,10 +6,8 @@ Releases), plus a zipped `dropflow` CLI. Nothing here has been run against a rea
 ## One-time setup
 1. **Make the repository public** (or give the updater a token): the in-app updater reads GitHub Releases anonymously, so a private
    repository gets "no update". Before going public, remove `docs/reference/` (Tangerine's copied site text and screenshots).
-2. **Code signing** (recommended; without it Windows SmartScreen shows a blue warning on first run):
-   buy an OV/EV code-signing certificate or use Azure Trusted Signing, then add the repository secret `SIGN_PARAMS`
-   (the `signtool` arguments, e.g. `/a /f cert.pfx /p <password> /fd sha256 /tr http://timestamp.digicert.com /td sha256`).
-   The release workflow passes it to `vpk pack --signParams`.
+2. **Code signing** (recommended; without it Windows SmartScreen shows a blue warning on first run). The workflow signs only through
+   SignPath (below); the old `SIGN_PARAMS`/`vpk --signParams` path was removed because it would also sign the bundled third-party programs.
    **Free alternative for this GPL project:** SignPath Foundation. The workflow already has a disabled SignPath path that signs only
    DropFlow's own binaries and the installer; it turns on when the repository variable `SIGNPATH_ORGANIZATION_ID` and the secret
    `SIGNPATH_API_TOKEN` are set. How to apply and connect it: [signpath-application.md](signpath-application.md); the public policy:

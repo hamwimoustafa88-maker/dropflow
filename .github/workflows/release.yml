@@ -10,10 +10,10 @@ permissions:
   actions: read # lets the optional SignPath step read this run's artifacts
 
 # Optional code signing through SignPath Foundation (docs/code-signing-policy.md, docs/signpath-application.md).
-# It is OFF until the repository variable SIGNPATH_ORGANIZATION_ID is set (plus the secret SIGNPATH_API_TOKEN). While it is off,
-# every "SignPath:" step is skipped and the release is built exactly as before (unsigned, or signed by vpk with SIGN_PARAMS).
-# Optional variables (defaults in brackets): SIGNPATH_PROJECT_SLUG [dropflow], SIGNPATH_SIGNING_POLICY_SLUG [release-signing],
-# SIGNPATH_BINARIES_CONFIGURATION_SLUG [binaries], SIGNPATH_INSTALLER_CONFIGURATION_SLUG [installer].
+# It is OFF while the repository variable SIGNPATH_ENABLED is not 'true'; every "SignPath:" step is then skipped and the release is
+# built unsigned. The repository defines all SignPath variables (SIGNPATH_ENABLED=false, SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG,
+# SIGNPATH_SIGNING_POLICY_SLUG, SIGNPATH_BINARIES_CONFIGURATION_SLUG, SIGNPATH_INSTALLER_CONFIGURATION_SLUG) and the secret
+# SIGNPATH_API_TOKEN with placeholder values; after SignPath approves the project, put the real values there and set SIGNPATH_ENABLED=true.
 # Each signed release needs two manual approvals in SignPath: DropFlow's own binaries, then the installer.
 
 jobs:
@@ -51,15 +51,15 @@ jobs:
           -p:Version=${{ steps.v.outputs.version }} -o publish/cli
 
       - name: "SignPath: check the configuration"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         env:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
         run: |
-          if (-not $env:SIGNPATH_API_TOKEN) { throw "SIGNPATH_ORGANIZATION_ID is set but the SIGNPATH_API_TOKEN secret is missing." }
+          if (-not $env:SIGNPATH_API_TOKEN -or $env:SIGNPATH_API_TOKEN -eq 'not-set') { throw "SIGNPATH_ENABLED is true but the SIGNPATH_API_TOKEN secret still holds its placeholder." }
 
       - name: "SignPath: collect DropFlow's own binaries (never FFmpeg, qpdf, Tesseract or third-party DLLs)"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force signing/unsigned/app, signing/unsigned/cli | Out-Null
@@ -70,7 +70,7 @@ jobs:
 
       - name: "SignPath: upload the unsigned binaries"
         id: unsigned-binaries
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-binaries
@@ -78,14 +78,14 @@ jobs:
           if-no-files-found: error
 
       - name: "SignPath: sign the binaries (approve the request in SignPath)"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'dropflow' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_BINARIES_CONFIGURATION_SLUG || 'binaries' }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_BINARIES_CONFIGURATION_SLUG }}
           github-artifact-id: ${{ steps.unsigned-binaries.outputs.artifact-id }}
           parameters: |
             version: "${{ steps.v.outputs.version }}"
@@ -94,7 +94,7 @@ jobs:
           output-artifact-directory: signing/signed
 
       - name: "SignPath: put the signed binaries back and verify them"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           Copy-Item signing/signed/app/* publish/app -Force
@@ -113,22 +113,14 @@ jobs:
         run: vpk download github --repoUrl ${{ github.server_url }}/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pack the installer and update feed
-        shell: pwsh
-        run: |
-          $sign = @()
-          # Code signing: set the SIGN_PARAMS secret (for example "/a /f cert.pfx /p ... /fd sha256 /tr http://timestamp.digicert.com /td sha256").
-          # Without it the installer is unsigned and Windows SmartScreen will warn on first run.
-          # With SignPath on, vpk must not sign: it would also sign the bundled third-party programs.
-          if ($env:SIGN_PARAMS -and -not $env:SIGNPATH_ON) { $sign = @("--signParams", $env:SIGN_PARAMS) }
-          vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }} `
-            --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico @sign
-        env:
-          SIGN_PARAMS: ${{ secrets.SIGN_PARAMS }}
-          SIGNPATH_ON: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+        # vpk never signs here: SignPath signs only DropFlow's own files, never the bundled third-party programs.
+        run: >
+          vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }}
+          --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico
 
       - name: "SignPath: upload the unsigned installer"
         id: unsigned-installer
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-installer
@@ -136,14 +128,14 @@ jobs:
           if-no-files-found: error
 
       - name: "SignPath: sign the installer (approve the second request in SignPath)"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'dropflow' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_CONFIGURATION_SLUG || 'installer' }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_CONFIGURATION_SLUG }}
           github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
           parameters: |
             version: "${{ steps.v.outputs.version }}"
@@ -152,7 +144,7 @@ jobs:
           output-artifact-directory: signing/signed-installer
 
       - name: "SignPath: put the signed installer back and verify it"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           Copy-Item signing/signed-installer/DropFlow-win-Setup.exe Releases/DropFlow-win-Setup.exe -Force
@@ -179,7 +171,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "SignPath: link the code signing policy from the release page (SignPath Foundation requires it)"
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
         shell: pwsh
         run: |
           $notes = gh release view ${{ github.ref_name }} --json body --jq .body

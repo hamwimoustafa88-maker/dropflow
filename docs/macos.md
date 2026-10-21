@@ -32,6 +32,9 @@ its result is recorded in docs/status.md.
 - **Apple Developer Program, 99 USD / year**: required for a *Developer ID* signature and **notarization**. Without it macOS Gatekeeper blocks
   the app ("cannot be opened because the developer cannot be verified"). SignPath does not sign macOS apps.
 - Homebrew cask distribution is possible once notarized.
+- **Owner decision (2026-10-21): no paid Apple programme.** The Mac build would ship unsigned (ad-hoc signed only). macOS then blocks the
+  first launch; the user opens it once with right-click → Open, or System Settings → Privacy & Security → "Open Anyway". The download page
+  and README must explain this, and Homebrew cask distribution is not possible.
 
 ## Recommended path
 1. Keep the shared libraries portable (CI job above). Fix the PDFium natives and the engine locator paths for macOS (small).
@@ -44,5 +47,5 @@ Rough size: CLI 1-2 weeks; full Mac app 2-3 months for one developer, plus the A
 ## الخلاصة بالعربية
 تشغيل DropFlow على ماك **ممكن**. تقريباً نصف الكود (النواة وكل محركات التحويل) يعمل على ماك كما هو، والنصف الآخر المرتبط بنظام التشغيل
 يحتاج إعادة كتابة: التقاط السحب ومفاتيح التعديل (يحتاج إذن Accessibility)، والعجلة والواجهة (عبر Avalonia)، وتحويل HTML إلى PDF (WKWebView)،
-وOCR (Apple Vision). يلزم جهاز ماك للاختبار واشتراك Apple Developer بـ 99 دولاراً سنوياً للتوقيع والتوثيق. أقترح البدء بأداة سطر الأوامر
+وOCR (Apple Vision). يلزم جهاز ماك للاختبار. **بقرار المالك لا اشتراك مدفوع مع Apple:** يُوزَّع التطبيق دون توقيع Apple، فيفتحه المستخدم أول مرة بالنقر بزر الفأرة الأيمن ثم «فتح» (أو من إعدادات الخصوصية والأمان ← «فتح على أي حال»). أقترح البدء بأداة سطر الأوامر
 لماك، ثم نموذج أولي لالتقاط السحب على جهاز ماك حقيقي.

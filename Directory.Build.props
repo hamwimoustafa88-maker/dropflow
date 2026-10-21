@@ -3,9 +3,9 @@
        and the same version across a build). The release workflow passes -p:Version=<tag>. -->
   <PropertyGroup>
     <Product>DropFlow</Product>
-    <Company>DropFlow contributors</Company>
-    <Authors>Moustafa Hamwi and contributors</Authors>
-    <Copyright>Copyright (c) 2026 Moustafa Hamwi and contributors. GPL-3.0-or-later.</Copyright>
+    <Company>ScoutHub</Company>
+    <Authors>ScoutHub teams (lead developer: Moustafa Al-Hamwi) and contributors</Authors>
+    <Copyright>Copyright (c) 2026 ScoutHub and contributors. GPL-3.0-or-later.</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/hamwimoustafa88-maker/dropflow</RepositoryUrl>
   </PropertyGroup>

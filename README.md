@@ -140,7 +140,7 @@ how to add a converter: [docs/writing-a-converter.md](docs/writing-a-converter.m
 
 DropFlow is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License,
 version 3 or (at your option) any later version** ([LICENSE](LICENSE), [ADR-0013](docs/adr/0013-gpl3-open-source.md)).
-Copyright (c) 2026 Moustafa Hamwi and contributors.
+Copyright (c) 2026 ScoutHub and contributors. Developed by the **ScoutHub** teams; lead developer **Moustafa Al-Hamwi** (Lebanon) — WhatsApp [+961 70 863 903](https://wa.me/96170863903).
 
 - **Name and logo:** the GPL covers the code, not the name "DropFlow" or its logo. Forks must use another name and logo —
   see [TRADEMARK.md](TRADEMARK.md).

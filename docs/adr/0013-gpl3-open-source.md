@@ -9,7 +9,7 @@ Noncommercial, CC BY-NC) are "source-available", and SignPath Foundation's free 
 commercial dual-licensing. Offered the trade-off, the owner chose **GPL-3.0**.
 
 ## Decision
-- `LICENSE` is the verbatim GNU GPL v3 text; the project is "GPL-3.0-or-later". Copyright (c) 2026 Moustafa Hamwi and contributors.
+- `LICENSE` is the verbatim GNU GPL v3 text; the project is "GPL-3.0-or-later". Copyright (c) 2026 ScoutHub and contributors (developed by the ScoutHub teams; lead developer Moustafa Al-Hamwi).
 - **What protects the project from closed commercial exploitation:** the copyleft. Anyone may use DropFlow, including at work, and may even
   sell copies, but whoever distributes a modified version must release its complete source under the GPL. Nobody can turn it into a closed product.
 - **Name and logo are not licensed by the GPL** (`TRADEMARK.md`): forks must use another name and logo. This stops look-alike paid copies.

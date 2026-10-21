@@ -29,15 +29,21 @@ the repository; planned components are in `docs/plan.md` §3. DropFlow itself is
 Transitive packages that ride along are MIT or Apache-2.0 (for example Microsoft.Extensions.AI.Abstractions 10.2.0,
 System.Numerics.Tensors 9.0.0, Magick.NET.Core 15.0.0).
 
-## External programs (never bundled; installed by the user, with consent, through winget)
+## Programs shipped inside the installer (`engines\` next to DropFlow.exe; separate processes, never linked — ADR-0012)
+
+| Program | Version / source | License | How DropFlow uses it |
+|---|---|---|---|
+| FFmpeg + ffprobe (Gyan.dev "essentials" build) | 9.0.2 - https://www.gyan.dev/ffmpeg/builds/ , source https://ffmpeg.org/releases/ | **GPL-3.0** (the build includes x264, x265, libvpx, SVT-AV1, libaom, lame, opus, vorbis ...) | Audio/video conversion, the Encoder, subtitles. Shipped unmodified as a separate executable with its `LICENSE` and `SOURCE-OFFER.txt`; source also available on request through https://github.com/hamwimoustafa88-maker/dropflow/issues |
+| qpdf | 12.4.2 - https://github.com/qpdf/qpdf | Apache-2.0 | Protect, unlock, repair and compress PDFs |
+| Tesseract OCR | 5.4.0 (UB Mannheim Windows build) - https://github.com/UB-Mannheim/tesseract | Apache-2.0 (its bundled libraries: see `engines\Tesseract\doc`) | OCR fallback and searchable PDFs |
+| Tesseract language data `eng`, `ara`, `osd` (tessdata_fast) | https://github.com/tesseract-ocr/tessdata_fast | Apache-2.0 | English and Arabic text recognition |
+
+## Optional external programs (not shipped; used only if the user installs them)
 
 | Program | License | How DropFlow uses it |
 |---|---|---|
-| FFmpeg (GPL build, e.g. Gyan.FFmpeg) | GPL-3.0 (build includes x264, x265, libass, libvpx, SVT-AV1, lame, opus) | Audio/video conversion, the Encoder, subtitles — run as a separate process |
-| qpdf | Apache-2.0 | Protect, unlock, repair and compress PDFs — separate process |
-| LibreOffice | MPL-2.0 | Office document conversions — separate process (headless) |
+| LibreOffice | MPL-2.0 | Legacy binary Office formats and a few exotic document pairs — separate process (headless) |
 | 7-Zip | LGPL-2.1+ (unRAR restriction on the RAR code) | Writing 7z archives — separate process |
-| Tesseract OCR | Apache-2.0 | OCR fallback and searchable PDFs — separate process |
 
 ## AI models (downloaded only after the user agrees; SHA-256 pinned and verified)
 
@@ -64,13 +70,12 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsof
 | next-intl | 4.14.9 | MIT | Arabic/English routing and messages |
 | TypeScript, ESLint, eslint-config-next, @types/* | 5.x / 9.x | Apache-2.0 / MIT | Dev tooling |
 | IBM Plex Sans Arabic, IBM Plex Mono (fonts) | — | SIL OFL 1.1 | Typography, self-hosted at build via `next/font/google` |
-| @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. **Licence risk for a proprietary site, decision pending (ADR-0010)** |
-| @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
 | pdf-lib | 1.17.1 | MIT (dependencies MIT, one MIT AND Zlib, one 0BSD) | In-browser PDF merge/split/rotate/watermark/metadata |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 | In-browser PDF rendering and text extraction |
 | fflate | 0.8.3 | MIT | ZIP/GZIP in the browser |
 | vitest | 5.0.5 | MIT | Web unit tests (dev only; `@types/node` bumped to 24.19.2 because it requires it) |
 
+The web app ships no audio/video engine: the GPL ffmpeg.wasm core (`@ffmpeg/core`) was removed (2026-10-21) so no GPL code is served; audio and video are Windows-app only.
 The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. Its `connect-src` CSP allows only
 `self`, `blob:` and `data:`, and a static test asserts the source contains no `fetch`/XHR/WebSocket/beacon calls.
 

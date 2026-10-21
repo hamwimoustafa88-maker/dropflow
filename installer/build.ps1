@@ -23,6 +23,11 @@ Remove-Item publish -Recurse -Force -ErrorAction SilentlyContinue
 dotnet publish src/DropFlow.App -c $Configuration -r win-x64 --self-contained "-p:Version=$Version" -o publish/app
 dotnet publish src/DropFlow.Cli -c $Configuration -r win-x64 --self-contained "-p:Version=$Version" -o publish/cli
 
+# Helper programs ship inside the installer so users never download anything (FFmpeg, qpdf, Tesseract + Arabic data).
+if (-not (Test-Path tools/engines/Ffmpeg/ffmpeg.exe)) { & "$root/tools/fetch-engines.ps1" }
+Copy-Item tools/engines publish/app/engines -Recurse -Force
+Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/app -Force
+
 vpk pack --packId DropFlow --packTitle DropFlow --packVersion $Version `
   --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico
 

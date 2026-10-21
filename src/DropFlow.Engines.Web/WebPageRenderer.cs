@@ -88,6 +88,38 @@ public sealed class WebPageRenderer(Dispatcher dispatcher, string userDataFolder
         dispatcher.Invoke(Release);
     }
 
+    /// <summary>Navigates (through about:blank first when a page is showing) and waits for the completion event. Runs on the UI thread.</summary>
+    private async Task<(CoreWebView2NavigationCompletedEventArgs? Result, bool TimedOut)> NavigateAsync(CoreWebView2 core, string uri, CancellationToken ct)
+    {
+        var loaded = new TaskCompletionSource<CoreWebView2NavigationCompletedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e) => loaded.TrySetResult(e);
+        core.NavigationCompleted += OnCompleted;
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(LoadTimeout);
+            try
+            {
+                if (!string.Equals(core.Source, "about:blank", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(core.Source))
+                {
+                    core.Navigate("about:blank");
+                    await loaded.Task.WaitAsync(timeout.Token);
+                    loaded = new TaskCompletionSource<CoreWebView2NavigationCompletedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+                }
+                core.Navigate(uri);
+                return (await loaded.Task.WaitAsync(timeout.Token), false);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return (null, true);
+            }
+        }
+        finally
+        {
+            core.NavigationCompleted -= OnCompleted;
+        }
+    }
+
     /// <summary>Runs on the UI thread. Returns an error message, or null on success.</summary>
     private async Task<string?> PrintOnUiThreadAsync(string htmlPath, string outputPath, HtmlPdfOptions options, IProgress<JobProgress> progress, CancellationToken ct)
     {
@@ -97,28 +129,24 @@ public sealed class WebPageRenderer(Dispatcher dispatcher, string userDataFolder
             var core = await AcquireAsync();
             _allowOnline = options.AllowOnline;
 
-            var loaded = new TaskCompletionSource<CoreWebView2NavigationCompletedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
-            void OnCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e) => loaded.TrySetResult(e);
-            core.NavigationCompleted += OnCompleted;
+            // A navigation that an earlier one overlaps is aborted by WebView2 (seen on CI: "ConnectionAborted" on the second page in a
+            // row). Start from a blank page and retry once; any other failure is reported as is.
             CoreWebView2NavigationCompletedEventArgs navigation;
-            try
+            var uri = new Uri(htmlPath).AbsoluteUri;
+            var attempt = 0;
+            while (true)
             {
-                core.Navigate(new Uri(htmlPath).AbsoluteUri);
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(LoadTimeout);
-                try
-                {
-                    navigation = await loaded.Task.WaitAsync(timeout.Token);
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                var (result, timedOut) = await NavigateAsync(core, uri, ct);
+                if (timedOut)
                 {
                     _broken = true; // a stuck page: do not reuse this browser
                     return "The page took too long to load.";
                 }
-            }
-            finally
-            {
-                core.NavigationCompleted -= OnCompleted;
+                navigation = result!;
+                if (navigation.IsSuccess || ++attempt >= 2
+                    || navigation.WebErrorStatus is not (CoreWebView2WebErrorStatus.ConnectionAborted or CoreWebView2WebErrorStatus.OperationCanceled))
+                    break;
+                await Task.Delay(200, ct);
             }
 
             if (!navigation.IsSuccess) return $"The page could not be loaded ({navigation.WebErrorStatus}).";

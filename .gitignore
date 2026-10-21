@@ -31,3 +31,6 @@ tests/samples/large/
 .env
 .env.*
 !.env.example
+
+# Helper programs fetched at build time and shipped in the installer (tools/fetch-engines.ps1)
+/tools/engines/

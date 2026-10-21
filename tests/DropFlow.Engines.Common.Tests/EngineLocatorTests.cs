@@ -5,10 +5,11 @@ namespace DropFlow.Engines.Common.Tests;
 
 public class EngineLocatorTests
 {
-    private static EngineLocator With(IEnumerable<string> files, string? data = null, string[]? path = null, string[]? known = null, Func<string, IEnumerable<string>>? subDirs = null)
+    private static EngineLocator With(IEnumerable<string> files, string? data = null, string[]? path = null, string[]? known = null, Func<string, IEnumerable<string>>? subDirs = null, string? bundled = null)
     {
         var set = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return new EngineLocator(data, path ?? [], known ?? [], set.Contains, subDirs ?? (_ => []));
+        return new EngineLocator(data, path ?? [], known ?? [], set.Contains, subDirs ?? (_ => []), bundled ?? @"C:
+owhere\engines");
     }
 
     [Fact]
@@ -16,6 +17,21 @@ public class EngineLocatorTests
     {
         var l = With([@"C:\tools\ffmpeg.exe"], path: [@"C:\tools"]);
         Assert.Equal(@"C:\tools\ffmpeg.exe", l.Locate(EngineId.Ffmpeg));
+    }
+
+    [Fact]
+    public void An_engine_shipped_inside_the_app_wins_over_PATH_and_the_data_folder()
+    {
+        var l = With([@"C:\App\engines\Qpdf\bin\qpdf.exe", @"C:\tools\qpdf.exe", @"C:\data\engines\Qpdf\qpdf.exe"],
+            data: @"C:\data", path: [@"C:\tools"], bundled: @"C:\App\engines");
+        Assert.Equal(@"C:\App\engines\Qpdf\bin\qpdf.exe", l.Locate(EngineId.Qpdf));
+    }
+
+    [Fact]
+    public void Ffprobe_is_found_in_the_shipped_Ffmpeg_folder()
+    {
+        var l = With([@"C:\App\engines\Ffmpeg\ffprobe.exe"], bundled: @"C:\App\engines");
+        Assert.Equal(@"C:\App\engines\Ffmpeg\ffprobe.exe", l.Locate(EngineId.Ffprobe));
     }
 
     [Fact]

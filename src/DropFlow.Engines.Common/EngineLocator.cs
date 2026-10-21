@@ -17,6 +17,9 @@ public static class EngineInfo
         _ => [],
     };
 
+    /// <summary>Folder under <c>engines\</c> in the app directory; ffprobe lives with ffmpeg.</summary>
+    public static string BundledFolder(EngineId id) => id == EngineId.Ffprobe ? nameof(EngineId.Ffmpeg) : id.ToString();
+
     /// <summary>winget package id (verified to exist in the winget source on 2026-10-21), or null when winget cannot install it.</summary>
     public static string? WingetId(EngineId id) => id switch
     {
@@ -43,12 +46,14 @@ public static class EngineInfo
 }
 
 /// <summary>
-/// Finds installed engines. Search order: DropFlow's own engine folder, PATH, then well-known install folders
-/// (including winget's package and link folders). Results are cached until <see cref="Refresh"/> (call it after an install).
+/// Finds installed engines. Search order: the engines shipped inside the app (<c>engines\&lt;Engine&gt;\</c> next to DropFlow.exe),
+/// DropFlow's own data folder, PATH, then well-known install folders (including winget's package and link folders).
+/// Results are cached until <see cref="Refresh"/> (call it after an install).
 /// </summary>
 public sealed class EngineLocator : IEngineProvider
 {
     private readonly string? _dataDirectory;
+    private readonly string? _bundledDirectory;
     private readonly IReadOnlyList<string> _pathDirs;
     private readonly IReadOnlyList<string> _knownDirs;
     private readonly Func<string, bool> _fileExists;
@@ -61,9 +66,11 @@ public sealed class EngineLocator : IEngineProvider
         IEnumerable<string>? pathDirs = null,
         IEnumerable<string>? knownDirs = null,
         Func<string, bool>? fileExists = null,
-        Func<string, IEnumerable<string>>? subDirs = null)
+        Func<string, IEnumerable<string>>? subDirs = null,
+        string? bundledDirectory = null)
     {
         _dataDirectory = dataDirectory;
+        _bundledDirectory = bundledDirectory ?? Path.Combine(AppContext.BaseDirectory, "engines");
         _pathDirs = (pathDirs ?? (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToList();
         _knownDirs = (knownDirs ?? DefaultKnownDirs()).ToList();
         _fileExists = fileExists ?? File.Exists;
@@ -88,6 +95,15 @@ public sealed class EngineLocator : IEngineProvider
     private string? Search(EngineId engine)
     {
         var names = EngineInfo.ExecutableNames(engine);
+
+        // 0) Shipped with the app: <app>\engines\<engine>\ (the installer puts FFmpeg, qpdf and Tesseract there, so nothing is downloaded).
+        if (_bundledDirectory is not null)
+        {
+            var shipped = Path.Combine(_bundledDirectory, EngineInfo.BundledFolder(engine));
+            foreach (var dir in new[] { shipped, Path.Combine(shipped, "bin") })
+                foreach (var name in names)
+                    if (_fileExists(Path.Combine(dir, name))) return Path.Combine(dir, name);
+        }
 
         // 1) DropFlow's own folder: <data>\engines\<engine>\ and one level below (zip archives unpack into a subfolder).
         if (_dataDirectory is not null)

@@ -18,6 +18,8 @@ import { legal } from "./sections/legal.mjs";
 import { offline } from "./sections/offline.mjs";
 import { privacy } from "./sections/privacy.mjs";
 import { quality } from "./sections/quality.mjs";
+import { seo } from "./sections/seo.mjs";
+import { link } from "./sections/link.mjs";
 
 const args = process.argv.slice(2);
 const base = (args.find((a) => !a.startsWith("--")) ?? "http://localhost:3200").replace(/\/$/, "");
@@ -38,8 +40,10 @@ try {
   if (wants("text")) await textTools(ctx);
   if (wants("wheel")) await wheelUx(ctx);
   if (wants("media")) await media(ctx);
+  if (wants("link")) await link(ctx);
   if (wants("offline")) await offline(ctx);
   if (wants("legal")) await legal(ctx);
+  if (wants("seo")) await seo(ctx);
   if (wants("quality")) await quality(ctx);
   if (wants("privacy")) await privacy(ctx);
   check("no console errors / exceptions in the whole run", b.errors.length === 0, b.errors.slice(0, 4).join(" | "));

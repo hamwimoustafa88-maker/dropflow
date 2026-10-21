@@ -1,4 +1,4 @@
-// Runtime capability store. Things the browser/engine can only tell us at runtime (canvas encoders...)
+// Runtime capability store. Things the browser/engine can only tell us at runtime (canvas encoders, ffmpeg encoders...)
 // are detected once and kept here; converters read them inside `supports()` so the wheel never offers something that
 // does not work. Plain module state + a tiny subscription so the UI can re-derive the wheel.
 
@@ -17,7 +17,18 @@ export const DEFAULT_IMAGE_CAPS: ImageCaps = {
   decodeAvif: false,
 };
 
+/** Raw capability lists printed by the ffmpeg.wasm core (`-encoders`, `-decoders`, `-muxers`, `-demuxers`, `-filters`). */
+export interface MediaCaps {
+  coreVersion: string;
+  encoders: string[];
+  decoders: string[];
+  muxers: string[];
+  demuxers: string[];
+  filters: string[];
+}
+
 let imageCaps: ImageCaps = DEFAULT_IMAGE_CAPS;
+let mediaCaps: MediaCaps | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
 
@@ -31,6 +42,15 @@ export function getImageCaps(): ImageCaps {
 }
 export function setImageCaps(c: ImageCaps): void {
   imageCaps = c;
+  bump();
+}
+
+/** null until the ffmpeg core has been probed (or a cached probe for the same core version was loaded). */
+export function getMediaCaps(): MediaCaps | null {
+  return mediaCaps;
+}
+export function setMediaCaps(c: MediaCaps | null): void {
+  mediaCaps = c;
   bump();
 }
 

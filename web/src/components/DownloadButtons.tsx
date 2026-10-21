@@ -1,8 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-
-// The installer lives on the GitHub release page (latest release); the page lists the Setup file and the checksums.
-export const RELEASES_URL = "https://github.com/hamwimoustafa88-maker/dropflow/releases/latest";
+import { RELEASES_URL } from "@/lib/site";
 
 export function WindowsButton({ primary = false }: { primary?: boolean }) {
   const t = useTranslations("common");

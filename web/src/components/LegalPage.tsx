@@ -1,15 +1,16 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { ISSUES_URL, LEGAL_LINKS, WHATSAPP_URL, type LegalLinkKey } from "@/lib/site";
+import { GitHubLink } from "./GitHubLink";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Logo } from "./Logo";
 
 // A plain, readable document page (privacy policy, terms of use). All text lives in messages/<locale>.json under the
-// `privacy` / `terms` namespace as { title, lead, sections: [{ h, p?, ul? }] }; nothing is hard-coded here.
-
-export const ISSUES_URL = "https://github.com/hamwimoustafa88-maker/dropflow/issues";
+// `privacy` / `terms` namespace as { title, lead, sections: [{ h, p?, ul?, p2?, links? }] }; nothing is hard-coded here.
+// `links` are keys of LEGAL_LINKS (the URLs live in code, the labels in `legal.links`).
 
 export type LegalDoc = "privacy" | "terms";
-type Section = { h: string; p?: string[]; ul?: string[]; p2?: string[] };
+type Section = { h: string; p?: string[]; ul?: string[]; p2?: string[]; links?: LegalLinkKey[] };
 
 export function LegalPage({ doc }: { doc: LegalDoc }) {
   const t = useTranslations(doc);
@@ -29,6 +30,7 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
             <Link href="/" className="hidden min-h-11 items-center rounded-md px-1 text-sm font-medium text-muted transition-colors duration-200 hover:text-fg sm:inline-flex">
               {tl("home")}
             </Link>
+            <GitHubLink />
             <LocaleSwitcher />
           </div>
         </div>
@@ -64,6 +66,22 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
                   {text}
                 </p>
               ))}
+              {s.links ? (
+                <ul className="mt-3 flex flex-wrap gap-x-6">
+                  {s.links.map((key) => (
+                    <li key={key}>
+                      <a
+                        href={LEGAL_LINKS[key]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center font-semibold text-primary underline decoration-2 underline-offset-4"
+                      >
+                        {tl(`links.${key}`)}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </section>
           ))}
 
@@ -81,6 +99,17 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
                 className="inline-flex min-h-11 items-center break-all font-semibold text-primary underline decoration-2 underline-offset-4"
               >
                 {ISSUES_URL}
+              </a>
+            </p>
+            <p className="mt-1">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="legal-whatsapp"
+                className="inline-flex min-h-11 items-center font-semibold text-primary underline decoration-2 underline-offset-4"
+              >
+                {tl("whatsapp")}
               </a>
             </p>
           </section>

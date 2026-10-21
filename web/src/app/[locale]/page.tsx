@@ -1,5 +1,5 @@
-import { hasLocale, useTranslations } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { hasLocale, useLocale, useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/Header";
@@ -7,10 +7,15 @@ import { Logo } from "@/components/Logo";
 import { WheelDemo } from "@/components/WheelDemo";
 import { CategoryExplorer } from "@/components/CategoryExplorer";
 import { Features } from "@/components/Features";
+import { Developers } from "@/components/Developers";
+import { Faq, faqItems, type FaqItem } from "@/components/Faq";
 import { Marquee } from "@/components/Marquee";
 import { WindowsButton, WebButton } from "@/components/DownloadButtons";
 import { Link } from "@/i18n/navigation";
-import { stats } from "@/lib/catalog";
+import { exploreCategories, stats } from "@/lib/catalog";
+import type { Locale } from "@/i18n/routing";
+import { jsonLdString, softwareJsonLd } from "@/lib/seo";
+import { CONTRIBUTING_URL, ISSUES_URL, LICENSE_URL, REPO_URL, SECURITY_URL, SIGNING_POLICY_URL, WHATSAPP_URL } from "@/lib/site";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -70,11 +75,12 @@ function Numbers() {
 
 function Formats() {
   const t = useTranslations("formats");
+  const locale = useLocale() as Locale;
   return (
     <section id="formats" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:pb-24">
       <h2 className="reveal text-4xl font-bold tracking-tight sm:text-6xl">{t("title")}</h2>
       <div className="mt-8">
-        <CategoryExplorer />
+        <CategoryExplorer categories={exploreCategories(locale)} />
       </div>
     </section>
   );
@@ -96,21 +102,42 @@ function Cta() {
   );
 }
 
+// Project links in the footer: plain links to GitHub (contact = the issues page; the site has no e-mail or form).
+const FOOTER_LINKS = [
+  ["github", REPO_URL],
+  ["issues", ISSUES_URL],
+  ["contributing", CONTRIBUTING_URL],
+  ["security", SECURITY_URL],
+  ["signing", SIGNING_POLICY_URL],
+  ["whatsapp", WHATSAPP_URL],
+] as const;
+
 function Footer() {
   const t = useTranslations("footer");
+  const link = "inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg";
   return (
     <footer className="border-t border-border">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-8 text-sm text-muted sm:px-6">
         <Logo />
-        <nav aria-label={t("legal")} className="flex flex-wrap items-center gap-x-5">
-          <Link href="/privacy" prefetch={false} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg" data-testid="footer-privacy">
+        <nav aria-label={t("legal")} className="flex flex-wrap items-center gap-x-5" data-testid="footer-nav">
+          <Link href="/privacy" prefetch={false} className={link} data-testid="footer-privacy">
             {t("privacy")}
           </Link>
-          <Link href="/terms" prefetch={false} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg" data-testid="footer-terms">
+          <Link href="/terms" prefetch={false} className={link} data-testid="footer-terms">
             {t("terms")}
           </Link>
+          {FOOTER_LINKS.map(([key, href]) => (
+            <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={link} data-testid={`footer-${key}`}>
+              {t(key)}
+            </a>
+          ))}
         </nav>
-        <p>{t("license")}</p>
+        <p className="flex flex-wrap items-center gap-x-3">
+          <span data-testid="footer-credit">{t("credit")}</span>
+          <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className={link} data-testid="footer-license">
+            {t("license")}
+          </a>
+        </p>
       </div>
     </footer>
   );
@@ -129,9 +156,14 @@ export default async function Home({ params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "meta" });
+  const tf = await getTranslations({ locale, namespace: "faq" });
+  const faq = faqItems(tf.raw("items") as FaqItem[]);
 
   return (
     <>
+      {/* Structured data for search engines: a data block, never executed (so the CSP has nothing to allow). */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(softwareJsonLd(locale, t("description"), faq)) }} />
       <SkipLink />
       <Header />
       <main>
@@ -140,6 +172,8 @@ export default async function Home({ params }: Props) {
         <Numbers />
         <Features />
         <Formats />
+        <Developers />
+        <Faq />
         <Cta />
       </main>
       <Footer />

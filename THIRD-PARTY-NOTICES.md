@@ -77,11 +77,13 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsof
 | pdf-lib | 1.17.1 | MIT (dependencies MIT, one MIT AND Zlib, one 0BSD) | In-browser PDF merge/split/rotate/watermark/metadata |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 | In-browser PDF rendering and text extraction |
 | fflate | 0.8.3 | MIT | ZIP/GZIP in the browser |
+| @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. GPL-2.0-or-later is compatible with DropFlow's GPL-3.0-or-later (restored 2026-10-21 after the GPL switch, ADR-0013) |
+| @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
 | vitest | 5.0.5 | MIT | Web unit tests (dev only; `@types/node` bumped to 24.19.2 because it requires it) |
 
-The web app ships no audio/video engine: the GPL ffmpeg.wasm core (`@ffmpeg/core`) was removed (2026-10-21) so no GPL code is served; audio and video are Windows-app only.
-The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. Its `connect-src` CSP allows only
-`self`, `blob:` and `data:`, and a static test asserts the source contains no `fetch`/XHR/WebSocket/beacon calls.
+The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. Its `connect-src` CSP allows
+`self`, `blob:`, `data:` and `https:` (the last one only so the user can paste a link to a file); a static test asserts that exactly one
+module (`src/engine/lib/fetch-link.ts`) may call `fetch`, with GET, no credentials and no body, and that nothing else uses XHR/WebSocket/beacon.
 
 ## Tests
 

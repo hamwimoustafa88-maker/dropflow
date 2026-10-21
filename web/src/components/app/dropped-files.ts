@@ -54,6 +54,13 @@ export function dragHasFiles(dt: DataTransfer | null): boolean {
   return !!dt && [...dt.types].includes("Files");
 }
 
+/** A dragged link (from the address bar or a page) or dragged text that may be a single web address. */
+export function dragHasLink(dt: DataTransfer | null): boolean {
+  if (!dt) return false;
+  const types = [...dt.types];
+  return !types.includes("Files") && (types.includes("text/uri-list") || types.includes("text/plain"));
+}
+
 /** Same file picked or dropped twice? (name + size + lastModified) */
 export function dedupeFiles(existing: readonly File[], added: readonly File[]): File[] {
   const key = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;

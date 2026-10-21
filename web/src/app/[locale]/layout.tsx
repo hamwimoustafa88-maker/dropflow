@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { routing, rtlLocales } from "@/i18n/routing";
+import { pageMetadata, siteMetadata } from "@/lib/seo";
 import "../globals.css";
 
 const plex = IBM_Plex_Sans_Arabic({
@@ -18,12 +19,9 @@ const plexMono = IBM_Plex_Mono({
   weight: ["500"],
   variable: "--font-plex-mono",
   display: "swap",
+  // Only small labels use the mono face: not worth competing with the page's CSS and text font on a slow connection.
+  preload: false,
 });
-
-// Vercel injects VERCEL_PROJECT_PRODUCTION_URL at build time; used for absolute OG/canonical URLs.
-const siteUrl = new URL(
-  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000",
-);
 
 type Props = {
   children: React.ReactNode;
@@ -34,19 +32,15 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// The site is public and indexable (GPL release, ADR-0013): no robots meta. Pages refine title/description/canonical.
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
   const t = await getTranslations({ locale, namespace: "meta" });
   return {
-    metadataBase: siteUrl,
-    title: t("title"),
-    description: t("description"),
-    // Preliminary trial: keep out of search engines until the public launch (Phase 8).
-    robots: { index: false, follow: false },
-    alternates: {
-      languages: Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])),
-    },
+    ...siteMetadata,
+    ...pageMetadata({ locale, path: "", title: t("title"), description: t("description"), imageAlt: t("ogAlt") }),
+    keywords: t.raw("keywords") as string[],
   };
 }
 
@@ -55,8 +49,8 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
   // The web app's strings (`app` namespace) ship only with /app (its own layout); the long legal texts (`privacy`, `terms`)
-  // are rendered on the server and never sent to the browser at all.
-  const SERVER_ONLY = new Set(["app", "privacy", "terms"]);
+  // and the <head> metadata (`meta`) are rendered on the server and never sent to the browser as JSON.
+  const SERVER_ONLY = new Set(["app", "privacy", "terms", "meta", "faq"]);
   const messages = Object.fromEntries(Object.entries(await getMessages()).filter(([key]) => !SERVER_ONLY.has(key)));
 
   return (

@@ -137,7 +137,12 @@ export function WheelDemo() {
                   onClick={() => run(i)}
                   onKeyDown={(e) => onWheelKey(e, i)}
                 >
-                  <path d={wedgePath(i)} className="wedge" data-active={activeIndex === i ? "true" : undefined} />
+                  <path
+                    d={wedgePath(i)}
+                    className="wedge"
+                    data-active={activeIndex === i ? "true" : undefined}
+                    data-done={activeIndex === i && phase === "done" ? "true" : undefined}
+                  />
                   <text x={lx} y={ly} textAnchor="middle" dominantBaseline="central" className="wedge-label">
                     {label}
                   </text>
@@ -158,7 +163,14 @@ export function WheelDemo() {
           </svg>
         </div>
 
-        <p role="status" aria-live="polite" dir="ltr" className="mt-1 min-h-7 text-center text-sm font-medium text-muted">
+        <p
+          role="status"
+          aria-live="polite"
+          dir="ltr"
+          data-testid="demo-status"
+          data-done={phase === "done" ? "true" : undefined}
+          className={`mt-1 min-h-7 text-center text-sm ${phase === "done" ? "font-semibold text-(--ok)" : "font-medium text-muted"}`}
+        >
           {status}
         </p>
 
@@ -173,7 +185,7 @@ export function WheelDemo() {
                 wheel === w.id ? "bg-primary text-on-primary shadow-sm" : "text-muted hover:text-fg"
               }`}
             >
-              <kbd className="font-mono text-xs opacity-80">{t(`keys.${w.key}`)}</kbd>
+              <kbd className="font-mono text-xs">{t(`keys.${w.key}`)}</kbd>
               <span className="text-sm font-semibold">{t(`wheels.${w.id}`)}</span>
             </button>
           ))}

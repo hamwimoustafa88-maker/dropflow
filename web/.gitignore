@@ -45,3 +45,5 @@ next-env.d.ts
 /public/sw.js
 /.next-*
 /.vitest
+# build-time TTF for the share images (scripts/og-font.mjs)
+/.og-cache

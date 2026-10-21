@@ -1,0 +1,5 @@
+Contact: https://github.com/hamwimoustafa88-maker/dropflow/security/advisories/new
+Expires: 2027-10-21T00:00:00Z
+Preferred-Languages: ar, en
+Canonical: https://dropflow.scouthub.dev/.well-known/security.txt
+Policy: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md

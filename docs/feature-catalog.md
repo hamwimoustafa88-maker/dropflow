@@ -9,8 +9,8 @@
 | Category | Inputs | Outputs | Pairs | Phase | Platforms |
 |---|---|---|---|---|---|
 | Images | jpg, png, webp, heic, tiff, avif, bmp, gif, svg, ico | jpg, png, webp, heic, tiff, avif, bmp, gif, ico, pdf (PDF: phase 2) | 91 | 1 | windows, web |
-| Audio | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | 72 | 1 | windows |
-| Video | mp4, mov, mkv, webm, avi, wmv, gif, flv, m4v | mp4, mkv, webm, avi, wmv, gif, mov, mp3, m4a, wav | 83 | 1 | windows |
+| Audio | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | 72 | 1 | windows, web |
+| Video | mp4, mov, mkv, webm, avi, wmv, gif, flv, m4v | mp4, mkv, webm, avi, wmv, gif, mov, mp3, m4a, wav | 83 | 1 | windows, web |
 | PDF | pdf | docx, pptx, xlsx, jpg, png, epub, txt, md, html, pdfa | 10 | 2 | windows, web |
 | Documents | docx, doc, odt, rtf, md, txt, html, pages | docx, pdf, txt, md, html, epub, odt, rtf, png, jpg | 74 | 2 | windows |
 | Slides | pptx, ppt, odp, key | pdf, jpg, png, odp, pptx | 18 | 2 | windows |
@@ -62,13 +62,13 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
-| vid.compress | Compress videos | ضغط الفيديو | ffmpeg | windows | ✓ video:COMPRESS |
+| vid.compress | Compress videos | ضغط الفيديو | ffmpeg | windows, web | ✓ video:COMPRESS |
 | vid.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows | ✓ video:METADATA |
-| vid.mute | Remove audio | إزالة الصوت | ffmpeg | windows | ✓ video:MUTE |
-| vid.trim | Trim videos | قص الفيديو | ffmpeg | windows | ✓ video:TRIM |
+| vid.mute | Remove audio | إزالة الصوت | ffmpeg | windows, web | ✓ video:MUTE |
+| vid.trim | Trim videos | قص الفيديو | ffmpeg | windows, web | ✓ video:TRIM |
 | vid.crop | Crop videos | اقتصاص الفيديو | ffmpeg | windows | ✓ video:CROP |
-| vid.speed | Change playback speed | تغيير سرعة التشغيل | ffmpeg | windows | ✓ video:SPEED |
-| vid.snapshot | Save video frames | حفظ إطارات من الفيديو | ffmpeg | windows | ✓ video:SNAPSHOT |
+| vid.speed | Change playback speed | تغيير سرعة التشغيل | ffmpeg | windows, web | ✓ video:SPEED |
+| vid.snapshot | Save video frames | حفظ إطارات من الفيديو | ffmpeg | windows, web | ✓ video:SNAPSHOT |
 | vid.split | Split videos | تقسيم الفيديو | ffmpeg | windows | ✓ video:SPLIT |
 | vid.join | Join videos *(multi-file)* | دمج مقاطع الفيديو | ffmpeg | windows | ✓ video:JOIN |
 | vid.redact | Redact videos | إخفاء مناطق في الفيديو | ffmpeg | windows | ✓ video:REDACT |
@@ -78,8 +78,8 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 | vid.burn-subs | Burn in subtitles | دمج الترجمة في الفيديو | ffmpeg | windows | — (DropFlow extra) |
 | aud.compress | Compress audio | ضغط الصوت | ffmpeg | windows | ✓ audio:COMPRESS |
 | aud.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows | ✓ audio:METADATA |
-| aud.normalize | Normalize volume | توحيد مستوى الصوت | ffmpeg | windows | ✓ audio:NORMALIZE |
-| aud.trim | Trim audio | قص الصوت | ffmpeg | windows | ✓ audio:TRIM |
+| aud.normalize | Normalize volume | توحيد مستوى الصوت | ffmpeg | windows, web | ✓ audio:NORMALIZE |
+| aud.trim | Trim audio | قص الصوت | ffmpeg | windows, web | ✓ audio:TRIM |
 | aud.channels | Convert audio channels | تحويل قنوات الصوت | ffmpeg | windows | ✓ audio:CHANNELS |
 | aud.visualize | Visualize audio | تصوير الصوت كفيديو موجي | ffmpeg | windows | ✓ audio:VISUALIZE |
 | aud.bleep | Bleep audio | إخفاء مقاطع بصوت صفير | ffmpeg | windows | ✓ audio:BLEEP |

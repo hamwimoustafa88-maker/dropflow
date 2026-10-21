@@ -25,6 +25,9 @@ function code(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
+/** The ONLY module allowed to make a network request: it downloads the file at an address the user gave. */
+const LINK_MODULE = "src/engine/lib/fetch-link.ts";
+
 const FORBIDDEN: [string, RegExp][] = [
   ["fetch()", /\bfetch\s*\(/],
   ["XMLHttpRequest", /\bXMLHttpRequest\b/],
@@ -45,7 +48,8 @@ describe("no code path uploads user data", () => {
 
   for (const [name, re] of FORBIDDEN) {
     it(`app source contains no ${name}`, () => {
-      const hits = files.filter((f) => re.test(code(f.text))).map((f) => f.path);
+      // The one exception: fetch() in the "drop a link" module, checked line by line in the next test.
+      const hits = files.filter((f) => re.test(code(f.text)) && !(name === "fetch()" && f.path === LINK_MODULE)).map((f) => f.path);
       expect(hits).toEqual([]);
     });
   }
@@ -54,10 +58,20 @@ describe("no code path uploads user data", () => {
     const urls = new Set<string>();
     for (const f of files) for (const m of code(f.text).matchAll(/["'`](https?:\/\/[^"'`\s]+)/g)) urls.add(`${f.path}: ${m[1]}`);
     const allowed = [
-      "src/app/[locale]/layout.tsx: https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}",
-      "src/app/[locale]/layout.tsx: http://localhost:3000",
-      "src/components/LegalPage.tsx: https://github.com/hamwimoustafa88-maker/dropflow/issues", // a link the visitor may click, never fetched
-      "src/components/DownloadButtons.tsx: https://github.com/hamwimoustafa88-maker/dropflow/releases/latest", // the Windows download link, clicked by the visitor, never fetched
+      "src/lib/site.ts: https://dropflow.scouthub.dev", // the site's own canonical address (metadata, robots.txt, sitemap), never fetched
+      "src/lib/seo.ts: https://schema.org", // the JSON-LD vocabulary identifier, a name inside structured data, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/issues", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/releases/latest", // the Windows download link, clicked by the visitor, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/CONTRIBUTING.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/LICENSE", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/TRADEMARK.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/THIRD-PARTY-NOTICES.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://www.gnu.org/licenses/gpl-3.0.html", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://wa.me/96170863903", // a link the visitor may click (WhatsApp contact), never fetched
+      "src/engine/converters/media-engine.ts: http://localhost", // a base for parsing relative URLs, never fetched
       "src/engine/lib/strip-meta.ts: http://ns.adobe.com/xap", // the XMP packet signature we look FOR, not a request
     ];
     expect([...urls].filter((u) => !allowed.includes(u))).toEqual([]);
@@ -67,6 +81,9 @@ describe("no code path uploads user data", () => {
     const pdfjs = readFileSync(join(srcDir, "engine/lib/pdfjs-setup.ts"), "utf8");
     expect(pdfjs).toContain('PDFJS_BASE = "/vendor/pdfjs/"');
     expect(code(pdfjs)).not.toMatch(/https?:\/\//);
+    const engine = readFileSync(join(srcDir, "engine/converters/media-engine.ts"), "utf8");
+    expect(engine).toContain('const VENDOR = "/vendor/ffmpeg"');
+    expect(engine).not.toMatch(/unpkg|jsdelivr|cdnjs|cdn\./);
     expect(code(pdfjs)).not.toMatch(/unpkg|jsdelivr|cdnjs|cdn\./);
     for (const f of files) expect(code(f.text)).not.toMatch(/unpkg\.com|jsdelivr|cdnjs|googleapis\.com\/(?!css)/);
   });
@@ -82,30 +99,50 @@ describe("no code path uploads user data", () => {
     expect(swCode).not.toMatch(/\bsendBeacon|XMLHttpRequest|WebSocket|FormData/);
   });
 
-  it("the page CSP forbids talking to any other origin (browser-enforced)", () => {
+  it("the link module is a plain GET of the user's address: no credentials, no referrer, no body, one call only", () => {
+    const link = files.find((f) => f.path === LINK_MODULE);
+    expect(link).toBeDefined();
+    const src = code(link!.text);
+    const calls = [...src.matchAll(/\bfetch\s*\(([^)]*)\)/g)].map((m) => m[1]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('method: "GET"');
+    expect(calls[0]).toContain('credentials: "omit"');
+    expect(calls[0]).toContain('referrerPolicy: "no-referrer"');
+    expect(calls[0]).not.toMatch(/\bbody\b|headers\s*:|keepalive|method:\s*"(?!GET)/);
+    expect(src).not.toMatch(/https?:\/\//); // no built-in address: it only ever downloads what the user gave
+    // only the app shell (the drop zone) uses it
+    const users = files.filter((f) => f.path !== LINK_MODULE && /from "@\/engine\/lib\/fetch-link"/.test(f.text)).map((f) => f.path);
+    expect(users).toEqual(["src/components/app/AppShell.tsx"]);
+  });
+
+  it("the page CSP forbids talking to any other origin (browser-enforced), except https downloads of a given link", () => {
     const cfg = readFileSync(join(root, "next.config.ts"), "utf8");
-    expect(cfg).toContain("connect-src 'self' blob: data:");
+    expect(cfg).toContain("connect-src 'self' blob: data: https:\"");
     expect(cfg).toContain("default-src 'self'");
     expect(cfg).toContain("form-action 'none'");
     expect(cfg).toContain("worker-src 'self' blob:");
-    expect(cfg).not.toMatch(/(connect-src|default-src|img-src|script-src)[^"]*https?:/);
+    // the only scheme-wide source is `https:` in the /app connect-src; no host is ever named, no http:
+    expect(cfg.replace("connect-src 'self' blob: data: https:\"", "")).not.toMatch(/(connect-src|default-src|img-src|script-src|media-src)[^"]*https?:/);
     // Web Workers take their policy from their own script response: the engine/vendor/chunk paths carry it too
     expect(cfg).toContain('"/_next/static/:path*"');
     expect(cfg).toContain('"/vendor/:path*"');
   });
 
-  it("no COOP/COEP headers are needed or sent (no SharedArrayBuffer is used)", () => {
+  it("every other page also carries a same-origin CSP and the security headers", () => {
     const cfg = readFileSync(join(root, "next.config.ts"), "utf8");
-    expect(cfg).not.toMatch(/Cross-Origin-(Opener|Embedder)-Policy/);
+    for (const d of ["connect-src 'self'\"", "frame-ancestors 'none'", "object-src 'none'", "form-action 'self'"]) expect(cfg).toContain(d);
+    for (const h of ["X-Frame-Options", "Strict-Transport-Security", "Permissions-Policy", "Cross-Origin-Resource-Policy", "Referrer-Policy"]) expect(cfg).toContain(`key: "${h}"`);
+    expect(cfg).toContain('source: "/:path*"');
+    expect(cfg).not.toMatch(/Access-Control-Allow-Origin", value: "\*"/);
+  });
+
+  it("no COEP header is needed or sent (single-thread ffmpeg core; COOP alone is a plain security header)", () => {
+    const cfg = readFileSync(join(root, "next.config.ts"), "utf8");
+    expect(cfg).not.toMatch(/Cross-Origin-Embedder-Policy/);
     const vendor = readFileSync(join(root, "scripts/vendor.mjs"), "utf8");
     expect(vendor).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
+    expect(vendor).toContain("@ffmpeg/core/dist/esm/ffmpeg-core.wasm");
     expect(vendor).not.toContain("core-mt");
   });
 
-  it("no GPL ffmpeg engine ships in the web app (proprietary licence, ADR-0010)", () => {
-    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string> };
-    expect(Object.keys(pkg.dependencies).filter((d) => d.startsWith("@ffmpeg/"))).toEqual([]);
-    expect(readFileSync(join(root, "scripts/vendor.mjs"), "utf8")).not.toMatch(/ffmpeg/i);
-    expect(readFileSync(join(root, "scripts/sw.template.js"), "utf8")).not.toMatch(/ffmpeg/i);
-  });
 });

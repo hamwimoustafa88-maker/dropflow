@@ -73,7 +73,8 @@
       ],
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ]
     },
     {
@@ -106,7 +107,8 @@
       ],
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ]
     },
     {
@@ -506,7 +508,8 @@
       "ar": "ضغط الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "video:COMPRESS"
@@ -532,7 +535,8 @@
       "ar": "إزالة الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "video:MUTE"
@@ -545,7 +549,8 @@
       "ar": "قص الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "video:TRIM"
@@ -571,7 +576,8 @@
       "ar": "تغيير سرعة التشغيل",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "video:SPEED"
@@ -584,7 +590,8 @@
       "ar": "حفظ إطارات من الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "video:SNAPSHOT"
@@ -711,7 +718,8 @@
       "ar": "توحيد مستوى الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "audio:NORMALIZE"
@@ -724,7 +732,8 @@
       "ar": "قص الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ],
       "phase": 3,
       "tg": "audio:TRIM"

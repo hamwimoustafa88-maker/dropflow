@@ -23,7 +23,8 @@ export function LocaleSwitcher() {
           type="button"
           lang={l}
           aria-pressed={l === locale}
-          aria-label={labels[l].full}
+          // The accessible name starts with the visible text (WCAG 2.5.3 label in name): "EN English", "ع العربية".
+          aria-label={`${labels[l].short} ${labels[l].full}`}
           onClick={() => router.replace(pathname, { locale: l })}
           className={`min-h-11 min-w-12 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${
             l === locale ? "bg-primary text-on-primary" : "text-muted hover:text-fg"

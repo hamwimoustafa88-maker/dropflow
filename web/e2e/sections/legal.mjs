@@ -6,7 +6,7 @@ const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/;
 
 // Privacy Policy and Terms of Use: four static pages (ar/en x privacy/terms), reachable from the landing footer and the app.
 export async function legal({ b, base }) {
-  await section("legal pages: 200, right language + direction, honest content, no email address, noindex", async () => {
+  await section("legal pages: 200, right language + direction, honest content, no email address, indexable", async () => {
     for (const loc of ["en", "ar"]) {
       for (const doc of ["privacy", "terms"]) {
         const status = await b.ev(`fetch(${JSON.stringify(`/${loc}/${doc}`)}).then(r => r.status)`);
@@ -26,12 +26,13 @@ export async function legal({ b, base }) {
         check(`/${loc}/${doc}: has a heading, 8+ sections and the effective date`, page.h1.length > 3 && page.h2 >= 8 && /2026/.test(page.text), `${page.h2} sections`);
         check(`/${loc}/${doc}: contact is the GitHub issues page and there is no email address`, page.issues === 1 && !EMAIL.test(page.text), `links ${page.issues}`);
         check(`/${loc}/${doc}: links back to the home page and to the other document`, page.home === `/${loc}` && page.other === `/${loc}/${doc === "privacy" ? "terms" : "privacy"}`, `${page.home} ${page.other}`);
-        check(`/${loc}/${doc}: stays noindex (the site is not public yet)`, /noindex/.test(page.robots), page.robots);
+        check(`/${loc}/${doc}: indexable (no noindex: the site is public since the GPL release)`, !/noindex/.test(page.robots), page.robots || "no robots meta");
         check(`/${loc}/${doc}: has its own page title`, new RegExp(doc === "privacy" ? "Privacy|الخصوصية" : "Terms|شروط").test(page.title), page.title);
         if (doc === "privacy") {
           check(`/${loc}/privacy: names Vercel, GitHub and Hugging Face as third parties`, /Vercel/.test(page.text) && /GitHub/.test(page.text) && /Hugging Face/.test(page.text));
         } else {
-          check(`/${loc}/terms: names the owner and the year`, /Moustafa Hamwi|مصطفى حموي/.test(page.text) && /2026/.test(page.text));
+          check(`/${loc}/terms: credits the ScoutHub teams and the lead developer, and the year`, /ScoutHub/.test(page.text) && /Moustafa Al-Hamwi|مصطفى الحموي/.test(page.text) && !/Moustafa Hamwi|مصطفى حموي/.test(page.text) && /2026/.test(page.text));
+          check(`/${loc}/terms: free software under the GPL, no "all rights reserved"`, /GPL-3\.0/.test(page.text) && !/all rights reserved|جميع الحقوق محفوظة|proprietary|برنامج مملوك/i.test(page.text));
         }
       }
     }

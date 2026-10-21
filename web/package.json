@@ -11,10 +11,12 @@
     "vendor": "node scripts/vendor.mjs",
     "postinstall": "node scripts/vendor.mjs",
     "predev": "node scripts/vendor.mjs",
-    "prebuild": "node scripts/vendor.mjs",
+    "prebuild": "node scripts/vendor.mjs && node scripts/og-font.mjs",
     "e2e": "node e2e/run.mjs"
   },
   "dependencies": {
+    "@ffmpeg/core": "0.12.10",
+    "@ffmpeg/ffmpeg": "0.12.15",
     "fflate": "0.8.3",
     "next": "16.4.2",
     "next-intl": "^4.14.9",

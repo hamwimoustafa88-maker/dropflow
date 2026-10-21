@@ -101,6 +101,15 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Open source round (owner chose GPL-3.0 over a non-commercial licence so SignPath and OSI apply; ADR-0013, TRADEMARK.md):
+  README en/ar, CONTRIBUTING (DCO), CoC, SECURITY, templates, dependabot, code-signing policy + SignPath application pack (owner applies at
+  signpath.org/apply; release.yml has a SignPath path gated by repo variable SIGNPATH_ENABLED). Credit: "ScoutHub teams, lead developer
+  Moustafa Al-Hamwi (Lebanon)", WhatsApp on the legal pages. Web: ffmpeg.wasm restored (GPL-compatible now), link drop on /app (only
+  `fetch-link.ts` may fetch; CSP connect-src https:), Arabic-first SEO (/ → /ar, sitemap, hreflang, JSON-LD, FAQ), security headers +
+  security.txt (Kashef scan 91 A-), plain-language privacy/terms. Desktop: v0.1.1 (never stays elevated; data moved to
+  `%LOCALAPPDATA%\DropFlow Data` because Velopack owns `%LOCALAPPDATA%\DropFlow`; update-check switch; uninstall cleanup) and v0.1.2 ("+ Add"
+  slot on every wheel with per-category pins). Arabic Whisper measured on FLEURS (turbo 8.8 % WER). macOS feasibility doc + CI run; no Apple fee.
+  — LICENSE, TRADEMARK.md, README*, docs/{adr/0013,macos,code-signing-policy,signpath-application}.md, src/DropFlow.{Core,App,Overlay}, web/**
 - 2026-10-21 — Published: history rewritten (owner-approved) to remove copied Tangerine screenshots/site text, repo made public, CI green on all jobs,
   tag v0.1.0 built by `release.yml` WITH bundled engines (Setup 263 MB, CLI zip, checksums), landing Windows button + Web button live, privacy/terms live.
   `windows-smoke.yml` passed on windows-2022 and windows-2025 (build 26100, Win11 24H2 code base): app starts, hooks install. Found by CI: HTML to PDF

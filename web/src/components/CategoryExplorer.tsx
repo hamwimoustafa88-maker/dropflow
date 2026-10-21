@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { categories, name, toolsOf } from "@/lib/catalog";
-import type { Locale } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
+
+// Only the display data of the current locale reaches the browser: the server page builds `ExplorerCategory[]` from the
+// catalog (exploreCategories in lib/catalog.ts), so the catalog JSON is not part of the landing page's JavaScript.
+export type ExplorerCategory = { id: string; label: string; inputs: string[]; outputs: string[]; tools: { id: string; label: string }[] };
 
 const MAX_TOOLS = 8;
 const FORMAT_LABEL: Record<string, string> = { pdfa: "PDF/A", gz: "GZ", tgz: "TGZ" };
@@ -22,14 +24,13 @@ function Chip({ children, strong = false }: { children: React.ReactNode; strong?
   );
 }
 
-export function CategoryExplorer() {
+export function CategoryExplorer({ categories }: { categories: ExplorerCategory[] }) {
   const t = useTranslations("formats");
-  const locale = useLocale() as Locale;
   const [active, setActive] = useState(categories[0].id);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const cat = categories.find((c) => c.id === active) ?? categories[0];
-  const catTools = toolsOf(cat.id);
+  const catTools = cat.tools;
 
   function onKeyDown(e: React.KeyboardEvent, index: number) {
     const dir = (document.documentElement.dir === "rtl" ? -1 : 1) * (e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0);
@@ -59,7 +60,7 @@ export function CategoryExplorer() {
               active === c.id ? "border-primary bg-primary text-on-primary" : "border-border bg-surface text-muted hover:text-fg"
             }`}
           >
-            {name(c, locale)}
+            {c.label}
           </button>
         ))}
       </div>
@@ -89,7 +90,7 @@ export function CategoryExplorer() {
             <ul className="mt-3 flex flex-wrap gap-2">
               {catTools.slice(0, MAX_TOOLS).map((tool) => (
                 <li key={tool.id} className="rounded-lg bg-surface-2 px-3 py-1.5 text-sm">
-                  {name(tool, locale)}
+                  {tool.label}
                 </li>
               ))}
               {catTools.length > MAX_TOOLS && (

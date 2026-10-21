@@ -46,3 +46,14 @@ export function toolsOf(categoryId: string): CatalogTool[] {
 export function name(item: { en: string; ar: string }, locale: Locale): string {
   return locale === "ar" ? item.ar : item.en;
 }
+
+/** Display data for the landing page's format explorer, in one locale (built on the server, passed to the client). */
+export function exploreCategories(locale: Locale) {
+  return categories.map((c) => ({
+    id: c.id,
+    label: name(c, locale),
+    inputs: c.inputs,
+    outputs: c.outputs,
+    tools: toolsOf(c.id).map((t) => ({ id: t.id, label: name(t, locale) })),
+  }));
+}

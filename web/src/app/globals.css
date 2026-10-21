@@ -16,6 +16,9 @@
   --grid: rgb(10 15 36 / 0.06);
   --glow-a: rgb(67 56 202 / 0.22);
   --glow-b: rgb(14 116 144 / 0.18);
+  /* success: >= 4.5:1 as text on bg/surface, and on-ok on ok (white on #0b7a4b = 5.5:1) */
+  --ok: #0b7a4b;
+  --on-ok: #ffffff;
   color-scheme: light;
 }
 
@@ -35,6 +38,8 @@
     --grid: rgb(238 241 255 / 0.05);
     --glow-a: rgb(99 102 241 / 0.32);
     --glow-b: rgb(34 211 238 / 0.2);
+    --ok: #4ade80;
+    --on-ok: #070b1c;
     color-scheme: dark;
   }
 }
@@ -133,15 +138,32 @@ a,
 .wedge[data-active="true"] + .wedge-label {
   fill: var(--on-primary);
 }
-/* Keyboard focus highlights the wedge itself instead of the default rectangular outline on the <g>. */
+/* No rectangle around a wedge: a mouse or touch press shows only the wedge highlight (no outline, no tap flash).
+   Keyboard focus (:focus-visible) draws a ring INSIDE the wedge shape instead of a bounding box. */
+.wedge-group {
+  -webkit-tap-highlight-color: transparent;
+}
+.wedge-group:focus,
 .wedge-group:focus-visible {
   outline: none;
 }
 .wedge-group:focus-visible .wedge {
   fill: var(--primary);
+  stroke: var(--ring);
+  stroke-width: 6;
+  paint-order: fill;
 }
 .wedge-group:focus-visible .wedge-label {
   fill: var(--on-primary);
+}
+/* A finished demo conversion turns its wedge green ("Done"). */
+.wedge[data-done="true"],
+.wedge-group:focus-visible .wedge[data-done="true"] {
+  fill: var(--ok);
+}
+.wedge[data-done="true"] + .wedge-label,
+.wedge-group:focus-visible .wedge[data-done="true"] + .wedge-label {
+  fill: var(--on-ok);
 }
 .orbit {
   transform-box: fill-box;

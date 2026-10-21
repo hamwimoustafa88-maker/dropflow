@@ -7,6 +7,7 @@
 import { archiveConverter } from "./converters/archive";
 import { generalConverter } from "./converters/general";
 import { imagesConverter } from "./converters/images";
+import { mediaConverter } from "./converters/media";
 import { pdfConverter } from "./converters/pdf";
 import { subtitlesConverter } from "./converters/subtitles";
 import { normalizeExt } from "./names";
@@ -38,6 +39,7 @@ export class Registry {
 export const registry = new Registry([
   imagesConverter,
   pdfConverter,
+  mediaConverter,
   subtitlesConverter,
   archiveConverter,
   generalConverter,

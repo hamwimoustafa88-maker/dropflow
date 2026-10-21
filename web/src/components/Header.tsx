@@ -1,8 +1,9 @@
 import { useTranslations } from "next-intl";
+import { GitHubLink } from "./GitHubLink";
 import { Logo } from "./Logo";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
-const links = ["features", "formats"] as const;
+const links = ["features", "formats", "developers"] as const;
 
 export function Header() {
   const t = useTranslations("nav");
@@ -21,6 +22,7 @@ export function Header() {
               </a>
             ))}
           </nav>
+          <GitHubLink />
           <LocaleSwitcher />
         </div>
       </div>

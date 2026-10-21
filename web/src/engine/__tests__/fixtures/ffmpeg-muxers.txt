@@ -1,0 +1,32 @@
+File formats:
+ D. = Demuxing supported
+ .E = Muxing supported
+ --
+  E 3g2             3GP2 (3GPP2 file format)
+  E 3gp             3GP (3GPP file format)
+  E a64             a64 - video for Commodore 64
+  E ac3             raw AC-3
+  E adts            ADTS AAC (Advanced Audio Coding)
+  E aiff            Audio IFF
+  E asf             ASF (Advanced / Active Streaming Format)
+  E avi             AVI (Audio Video Interleaved)
+  E crc             CRC testing
+  E flac            raw FLAC
+  E flv             FLV (Flash Video)
+  E g723_1          raw G.723.1
+  E gif             CompuServe Graphics Interchange Format (GIF)
+  E image2          image2 sequence
+  E ipod            iPod H.264 MP4 (MPEG-4 Part 14)
+  E matroska        Matroska
+  E mjpeg           raw MJPEG video
+  E mov             QuickTime / MOV
+  E mp3             MP3 (MPEG audio layer 3)
+  E mp4             MP4 (MPEG-4 Part 14)
+  E ogg             Ogg
+  E opus            Ogg Opus
+  E rtp             RTP output
+  E tee             Multiple muxer tee
+  E wav             WAV / WAVE (Waveform Audio)
+  E webm            WebM
+  E wv              raw WavPack
+Aborted()

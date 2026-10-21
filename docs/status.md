@@ -76,6 +76,26 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Vercel deployment | **Not linked** | connector got 403 on the owner's scope; import the repo with Root Directory `web` |
 | Accounts / payments | Deferred on purpose | ADR-0005, Phase 9 |
 
+## End-to-end acceptance run (2026-10-21, real `dropflow` CLI, real files, no engines installed)
+
+A script generated a PNG, an Arabic SRT, a hand-written one-page text PDF and a folder, then ran 26 commands through the real registry:
+25 succeeded and wrote the expected files, including png to jpg/webp/ico/bmp/pdf, compress/resize/hash/Base64, srt to vtt/txt (Arabic kept),
+zip, PDF watermark/rotate/page numbers/metadata/crop/sign/redact/merge, and pdf to txt/jpg/docx/epub. Re-running a conversion wrote
+`(converted 2)` and the originals were unchanged. Visual checks of the rendered output: the redacted page shows black boxes over
+"secret code" and "482913" with everything else intact, and the bytes of the redacted file contain none of the redacted words (the
+original does); the visible signature sits bottom-right at about 45 mm in a script font with the date under it and no white box.
+
+- The one failure: `pdf.compress` at level `extreme` was refused with "Qpdf is required but not installed". That level does not need qpdf,
+  but `IConverter.EngineFor` is per operation, not per option, so the app and CLI ask for qpdf anyway. Known inconsistency, not fixed.
+- `img.strip-gps` on a file without location data reports that and writes nothing (by design).
+- Not covered by this run: anything needing FFmpeg, qpdf, LibreOffice, models or the UI; the drag flow.
+
+## Input-injection limit of this environment
+
+The shell this work runs in ignores injected mouse and keyboard input (`SendInput`/`mouse_event` return success but change nothing; the
+cursor only moves with `SetCursorPos`), so the Phase 0 drag test could not be scripted here. The owner chose to postpone running it
+outside the sandbox; it remains an open risk until `docs/phase0-checklist.md` is run on a real desktop.
+
 ## Things that need the owner
 
 - Run `docs/phase0-checklist.md` by hand (the drag-detection risk is still open).

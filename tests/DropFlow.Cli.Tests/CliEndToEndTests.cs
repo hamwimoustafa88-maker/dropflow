@@ -26,6 +26,37 @@ public class CliEndToEndTests
         return (code, o.ToString(), e.ToString());
     }
 
+    /// <summary>Needs qpdf unless the chosen level is "extreme" (like PDF compression).</summary>
+    private sealed class OptionDependentEngine : IConverter
+    {
+        public IReadOnlyCollection<string> Operations => ["pdf.compress"];
+        public bool Supports(string operation, string inputExtension) => operation == "pdf.compress" && inputExtension == "pdf";
+        public EngineId EngineFor(string operation) => EngineId.Qpdf;
+        public EngineId EngineFor(string operation, IReadOnlyDictionary<string, object?> options) =>
+            options.TryGetValue("level", out var level) && Equals(level, "extreme") ? EngineId.None : EngineId.Qpdf;
+        public IReadOnlyList<ToolOption> OptionsFor(string operation) => [];
+        public Task<ConversionResult> RunAsync(ConversionJob job, IProgress<JobProgress> progress, CancellationToken cancellationToken) =>
+            Task.FromResult(ConversionResult.Ok([job.Inputs[0]]));
+    }
+
+    [Theory]
+    [InlineData("extreme", 0, "")]
+    [InlineData("less", 1, "Qpdf is required")]
+    public async Task The_engine_check_uses_the_options_given_on_the_command_line(string level, int expectedCode, string expectedError)
+    {
+        using var dir = new TempDir();
+        var pdf = dir.WriteText("a.pdf", "%PDF-1.4");
+        var registry = new ToolRegistry().Register(new OptionDependentEngine());
+        var o = new StringWriter();
+        var e = new StringWriter();
+
+        var code = await new CliRunner(registry, ToolCatalog.LoadEmbedded(), new NoEngines(), [], new Delete(), o, e, "9.9.9")
+            .RunAsync(["run", "pdf.compress", pdf, "--opt", $"level={level}"]);
+
+        Assert.Equal(expectedCode, code);
+        Assert.Contains(expectedError, e.ToString());
+    }
+
     [Fact]
     public async Task Convert_writes_the_result_prints_its_path_and_exits_zero()
     {

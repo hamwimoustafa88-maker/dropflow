@@ -247,7 +247,7 @@ public sealed class CliRunner(
                     await stderr.WriteLineAsync($"DropFlow cannot run '{c.Operation}' on .{ext} files. See 'dropflow list'.");
                     return 2;
                 }
-                var engine = converter.EngineFor(c.Operation!);
+                var engine = converter.EngineFor(c.Operation!, c.Options ?? ConversionJob.NoOptions);
                 if (engine != EngineId.None && engines.Locate(engine) is null)
                 {
                     await stderr.WriteLineAsync($"{engine} is required but not installed. Install it from the DropFlow app (Settings > Engines) or with winget.");

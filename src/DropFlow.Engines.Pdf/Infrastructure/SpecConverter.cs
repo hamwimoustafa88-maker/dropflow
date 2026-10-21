@@ -8,12 +8,17 @@ internal sealed class ConversionFailure(string message) : Exception(message);
 
 internal delegate Task<ConversionResult> OperationRun(JobContext context);
 
-/// <summary>One (operation, input extensions) pair a converter implements, with the options the UI should ask for.</summary>
+/// <summary>
+/// One (operation, input extensions) pair a converter implements, with the options the UI should ask for.
+/// <paramref name="NeedsEngine"/> lets a spec say that, for the options the user chose, its converter's engine is not needed after all
+/// (PDF compression at the "extreme" level never calls qpdf). Null means the converter's engine is always needed.
+/// </summary>
 internal sealed record OperationSpec(
     string Operation,
     IReadOnlyCollection<string> Inputs,
     OperationRun Run,
-    IReadOnlyList<ToolOption>? Options = null)
+    IReadOnlyList<ToolOption>? Options = null,
+    Func<IReadOnlyDictionary<string, object?>, bool>? NeedsEngine = null)
 {
     public static OperationSpec For(string operation, string input, OperationRun run, IReadOnlyList<ToolOption>? options = null) =>
         new(operation, [input], run, options);
@@ -43,6 +48,9 @@ internal sealed class SpecConverter : IConverter
     public bool Supports(string operation, string inputExtension) => Find(operation, inputExtension) is not null;
 
     public EngineId EngineFor(string operation) => _engine;
+
+    public EngineId EngineFor(string operation, IReadOnlyDictionary<string, object?> options) =>
+        _specs.FirstOrDefault(s => s.Operation == operation)?.NeedsEngine is { } needs && !needs(options) ? EngineId.None : _engine;
 
     public IReadOnlyList<ToolOption> OptionsFor(string operation) =>
         _specs.FirstOrDefault(s => s.Operation == operation)?.Options ?? [];

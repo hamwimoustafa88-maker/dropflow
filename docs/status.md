@@ -3,25 +3,25 @@
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
 
-Last updated: 2026-10-21.
+Last updated: 2026-10-21. Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
 ## Test totals (`dotnet test DropFlow.sln`)
 
 | Project | Passed | Skipped | Skipped because |
 |---|---|---|---|
-| DropFlow.Core.Tests | 230 | 0 | |
+| DropFlow.Core.Tests | 233 | 0 | |
 | DropFlow.Hooks.Tests | 16 | 0 | |
 | DropFlow.Overlay.Tests | 83 | 0 | |
 | DropFlow.Engines.Common.Tests | 23 | 0 | |
 | DropFlow.Engines.Images.Tests | 74 | 0 | |
 | DropFlow.Engines.Media.Tests | 659 | 52 | `[EngineFact(Ffmpeg)]` — no ffmpeg on PATH |
-| DropFlow.Engines.Pdf.Tests | 684 | 6 | qpdf (3) and LibreOffice (3) not installed |
+| DropFlow.Engines.Pdf.Tests | 686 | 6 | qpdf (3) and LibreOffice (3) not installed |
 | DropFlow.Engines.Archive.Tests | 561 | 0 | real `7z.exe` and `Rar.exe` exist on this machine; LAN tests need a LAN address and a non-elevated session |
 | DropFlow.AI.Tests | 282 | 7 | Whisper/ONNX models and ffmpeg not present |
 | DropFlow.Engines.Web.Tests | 9 | 0 | real WebView2 runtime 155 |
 | DropFlow.App.Tests | 27 | 0 | |
-| DropFlow.Cli.Tests | 10 | 0 | |
-| **Total (.NET)** | **2,658** | **65** | |
+| DropFlow.Cli.Tests | 12 | 0 | |
+| **Total (.NET)** | **2,665** | **65** | |
 | Web (`web/`) | 834 Vitest + 206 headless-Edge checks | 0 | |
 
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
@@ -85,8 +85,10 @@ zip, PDF watermark/rotate/page numbers/metadata/crop/sign/redact/merge, and pdf 
 "secret code" and "482913" with everything else intact, and the bytes of the redacted file contain none of the redacted words (the
 original does); the visible signature sits bottom-right at about 45 mm in a script font with the date under it and no white box.
 
-- The one failure: `pdf.compress` at level `extreme` was refused with "Qpdf is required but not installed". That level does not need qpdf,
-  but `IConverter.EngineFor` is per operation, not per option, so the app and CLI ask for qpdf anyway. Known inconsistency, not fixed.
+- The one failure: `pdf.compress` at level `extreme` was refused with "Qpdf is required but not installed" although that level does not need
+  it. **Fixed afterwards:** `IConverter` has an option-aware `EngineFor(operation, options)`, the operation runner now asks for options
+  before checking the engine, the CLI checks with the given options, and PDF specs can declare that a choice needs no engine (tests in
+  Core, PDF and CLI). "Compare PDFs" is now offered for exactly two files (catalog `maxFiles`).
 - `img.strip-gps` on a file without location data reports that and writes nothing (by design).
 - Not covered by this run: anything needing FFmpeg, qpdf, LibreOffice, models or the UI; the drag flow.
 

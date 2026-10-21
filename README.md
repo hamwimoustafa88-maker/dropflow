@@ -13,7 +13,7 @@ DropFlow نسخة مطوّرة من تطبيق Tangerine للماك لويندو
 **Status (2026-10-21):** the Windows app, the engines (images, media, PDF/Office, archives, local AI), the Encoder, automation,
 the CLI and the landing page are built and tested (about 2,400 automated tests). What is **not** verified yet — drag detection in
 other apps, Windows 11, the real qpdf/LibreOffice/modern-FFmpeg runs, AI models, a first release — is listed honestly in
-[docs/status.md](docs/status.md). Plan: [docs/plan.md](docs/plan.md) · tools: [docs/feature-catalog.md](docs/feature-catalog.md) ·
+[docs/status.md](docs/status.md), and what is postponed on purpose (with how to resume) in [docs/deferred.md](docs/deferred.md). Plan: [docs/plan.md](docs/plan.md) · tools: [docs/feature-catalog.md](docs/feature-catalog.md) ·
 contributor and agent rules: [CLAUDE.md](CLAUDE.md).
 
 ## Build

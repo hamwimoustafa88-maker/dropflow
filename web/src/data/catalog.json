@@ -1062,7 +1062,8 @@
         "windows"
       ],
       "phase": 4,
-      "multi": true
+      "multi": true,
+      "maxFiles": 2
     },
     {
       "id": "pdf.ocr",

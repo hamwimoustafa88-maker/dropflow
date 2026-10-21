@@ -48,25 +48,15 @@ public sealed class OperationRunner(
             return null;
         }
 
-        var engine = converter.EngineFor(op);
-        if (engine != EngineId.None && engines.Locate(engine) is null)
-        {
-            if (!await prompts.ConfirmEngineInstallAsync(engine, approxSizeMb(engine)).ConfigureAwait(false)) return null;
-
-            var installed = await installer.InstallAsync(engine, new Progress<string>(), cancellationToken).ConfigureAwait(false);
-            if (!installed || engines.Locate(engine) is null)
-            {
-                await prompts.ShowErrorAsync($"{engine} could not be installed. Install it manually and try again.").ConfigureAwait(false);
-                return null;
-            }
-        }
-
+        // A window tool has no options to ask for: make sure its engine exists, then open it.
         if (converter is IInteractiveTool window)
         {
+            if (!await EnsureEngineAsync(converter.EngineFor(op), cancellationToken).ConfigureAwait(false)) return null;
             await window.OpenAsync(op, selection.Files).ConfigureAwait(false);
             return null;
         }
 
+        // Options first, so the choice can decide whether an engine is needed at all (PDF "extreme" compression needs none).
         IReadOnlyDictionary<string, object?>? values = null;
         var options = converter.OptionsFor(op);
         if (options.Count > 0)
@@ -75,6 +65,23 @@ public sealed class OperationRunner(
             if (values is null) return null;      // cancelled
         }
 
+        if (!await EnsureEngineAsync(converter.EngineFor(op, values ?? ConversionJob.NoOptions), cancellationToken).ConfigureAwait(false)) return null;
+
         return queue.Enqueue(new ConversionJob(selection.Files, op, values));
+    }
+
+    /// <summary>True when the engine is not needed or is installed (after asking the user and installing it).</summary>
+    private async Task<bool> EnsureEngineAsync(EngineId engine, CancellationToken cancellationToken)
+    {
+        if (engine == EngineId.None || engines.Locate(engine) is not null) return true;
+        if (!await prompts.ConfirmEngineInstallAsync(engine, approxSizeMb(engine)).ConfigureAwait(false)) return false;
+
+        var installed = await installer.InstallAsync(engine, new Progress<string>(), cancellationToken).ConfigureAwait(false);
+        if (!installed || engines.Locate(engine) is null)
+        {
+            await prompts.ShowErrorAsync($"{engine} could not be installed. Install it manually and try again.").ConfigureAwait(false);
+            return false;
+        }
+        return true;
     }
 }

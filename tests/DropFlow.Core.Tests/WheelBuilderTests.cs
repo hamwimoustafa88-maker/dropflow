@@ -99,6 +99,17 @@ public class WheelBuilderTests
     }
 
     [Fact]
+    public void Compare_is_offered_for_exactly_two_pdfs()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["pdf.compare"]));
+        string[] Offered(params string[] files) => Builder(registry).Build(files, "en", Actions).Tools.Select(w => w.Id).ToArray();
+
+        Assert.Empty(Offered(@"C:\a.pdf"));
+        Assert.Equal(["pdf.compare"], Offered(@"C:\a.pdf", @"C:\b.pdf"));
+        Assert.Empty(Offered(@"C:\a.pdf", @"C:\b.pdf", @"C:\c.pdf"));
+    }
+
+    [Fact]
     public void Zip_is_offered_for_a_single_file_or_folder_even_though_it_aggregates()
     {
         var registry = new ToolRegistry().Register(new FakeConverter(["arc.zip"]));

@@ -97,6 +97,13 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Closing round (owner: "complete everything remaining and defer what cannot be done now"): engine requirement can depend
+  on the chosen option (`IConverter.EngineFor(op, options)`; runner asks options first; PDF "extreme" compression no longer demands qpdf);
+  catalog `maxFiles` (Compare PDFs = exactly two); real-CLI acceptance run on real files (25/26, the failure is the fix above; redaction
+  checked visually and byte by byte); ADRs 0006-0009 (model consent, Kestrel phone share, WebView2 HTML→PDF, web privacy enforcement);
+  `docs/deferred.md` lists everything postponed on purpose (owner decisions/consent, hardware, accounts, engines without a trustworthy
+  path) with how to resume. The Phase 0 drag test is still open: this shell cannot inject input and the owner said "later".
+  — src/DropFlow.Core/{Operations,Runner,Cli,Catalog,Wheel}, src/DropFlow.Engines.Pdf, catalog/tools.json, docs/*
 - 2026-10-21 — PDF crop / visible signature / true redaction / compare added (223 tests; redact proven three ways: PdfPig finds none of
   the word, pixels are black, raw bytes incl. inflated streams do not contain it); every one of the 63 Windows catalog tools now has a
   converter (only `heic→pdf` and `pdf→pdfa` conversions remain, pinned by a test). Fixed a real bug found by that agent: the options

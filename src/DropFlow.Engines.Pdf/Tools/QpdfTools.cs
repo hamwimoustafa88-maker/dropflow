@@ -33,8 +33,13 @@ internal sealed class QpdfTools(IEngineProvider engines, IEngineRunner runner)
         yield return OperationSpec.For("pdf.protect", "pdf", Protect, ProtectOptions);
         yield return OperationSpec.For("pdf.unlock", "pdf", Unlock, UnlockOptions);
         yield return OperationSpec.For("pdf.repair", "pdf", Repair);
-        yield return OperationSpec.For("pdf.compress", "pdf", Compress, CompressOptions);
+        // "extreme" rebuilds the pages with PDFium and never calls qpdf, so it must not demand it
+        yield return new OperationSpec("pdf.compress", ["pdf"], Compress, CompressOptions, NeedsEngine: options => !IsExtreme(options));
     }
+
+    private static bool IsExtreme(IReadOnlyDictionary<string, object?> options) =>
+        options.TryGetValue("level", out var level) &&
+        string.Equals(Convert.ToString(level, System.Globalization.CultureInfo.InvariantCulture)?.Trim(), "extreme", StringComparison.OrdinalIgnoreCase);
 
     // ---- protect / unlock / repair --------------------------------------------------------------------------------------
 

@@ -76,7 +76,7 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
         var wedges = new List<Wedge>();
         foreach (var tool in catalog.Tools.Where(t => t.Cat == "general" || (categoryId is not null && t.Cat == categoryId)))
         {
-            if (fileCount < tool.MinimumFiles) continue;
+            if (!tool.Accepts(fileCount)) continue;
             var converters = extensions.Select(e => registry.Find(tool.Id, e)).ToList();
             if (converters.Any(c => c is null)) continue;
 

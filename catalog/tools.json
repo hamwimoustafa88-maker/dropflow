@@ -73,7 +73,7 @@
     { "id": "pdf.crop",       "cat": "pdf", "wheel": "tools", "en": "Crop PDF",                 "ar": "اقتصاص PDF",                  "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 4 },
     { "id": "pdf.sign",       "cat": "pdf", "wheel": "tools", "en": "Sign PDF",                 "ar": "توقيع PDF",                   "engine": "pdfsharp",    "platforms": ["windows","web"], "phase": 4 },
     { "id": "pdf.redact",     "cat": "pdf", "wheel": "tools", "en": "Redact PDF",               "ar": "إخفاء محتوى PDF نهائياً",     "engine": "pdfium",      "platforms": ["windows"], "phase": 4 },
-    { "id": "pdf.compare",    "cat": "pdf", "wheel": "tools", "en": "Compare PDFs",             "ar": "مقارنة ملفي PDF",             "engine": "pdfium",      "platforms": ["windows"], "phase": 4, "multi": true },
+    { "id": "pdf.compare",    "cat": "pdf", "wheel": "tools", "en": "Compare PDFs",             "ar": "مقارنة ملفي PDF",             "engine": "pdfium",      "platforms": ["windows"], "phase": 4, "multi": true, "maxFiles": 2 },
     { "id": "pdf.ocr",        "cat": "pdf", "wheel": "tools", "en": "Make PDF searchable (OCR)","ar": "جعل PDF قابلاً للبحث (OCR)",  "engine": "ocr",         "platforms": ["windows","web"], "phase": 5 },
 
     { "id": "arc.extract",    "cat": "archive", "wheel": "tools", "en": "Extract archives",     "ar": "فك الأرشيف",                  "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "tg": "archive:EXTRACT" },

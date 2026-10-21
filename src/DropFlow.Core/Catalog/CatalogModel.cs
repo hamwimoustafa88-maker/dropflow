@@ -25,7 +25,8 @@ public sealed record CatalogTool(
     int Phase,
     bool Multi = false,
     string? Tg = null,
-    int? MinFiles = null)
+    int? MinFiles = null,
+    int? MaxFiles = null)
 {
     public string Name(string language) => language == "ar" ? Ar : En;
 
@@ -34,6 +35,9 @@ public sealed record CatalogTool(
     /// "Compress to ZIP" sets <c>minFiles: 1</c> because one file or folder is a fine thing to zip.
     /// </summary>
     public int MinimumFiles => Multi ? MinFiles ?? 2 : 1;
+
+    /// <summary>The most files the tool accepts, or null for no limit ("Compare PDFs" takes exactly two).</summary>
+    public bool Accepts(int fileCount) => fileCount >= MinimumFiles && (MaxFiles is not { } max || fileCount <= max);
 }
 
 /// <summary>The parsed catalog/tools.json. Immutable after load.</summary>

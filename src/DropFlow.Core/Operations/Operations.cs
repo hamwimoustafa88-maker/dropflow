@@ -83,6 +83,12 @@ public interface IConverter
     /// <summary>Engine the operation needs, or <see cref="EngineId.None"/> for pure in-process work.</summary>
     EngineId EngineFor(string operation) => EngineId.None;
 
+    /// <summary>
+    /// The engine a run needs given the options the user chose (PDF compression at the "extreme" level needs none, for example).
+    /// Defaults to <see cref="EngineFor(string)"/>, which is also what the wheel uses before any option is known.
+    /// </summary>
+    EngineId EngineFor(string operation, IReadOnlyDictionary<string, object?> options) => EngineFor(operation);
+
     /// <summary>Options to ask the user for. Empty means "run immediately with defaults".</summary>
     IReadOnlyList<ToolOption> OptionsFor(string operation) => [];
 

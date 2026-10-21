@@ -131,6 +131,44 @@ public class OperationRunnerTests
         Assert.Single(prompts.Log, l => l.StartsWith("error"));
     }
 
+    /// <summary>Like PDF compression: the "extreme" level needs no engine, the others do.</summary>
+    private sealed class OptionDependentEngine : IConverter
+    {
+        public IReadOnlyCollection<string> Operations => ["pdf.compress"];
+        public bool Supports(string operation, string inputExtension) => operation == "pdf.compress";
+        public EngineId EngineFor(string operation) => EngineId.Qpdf;
+        public EngineId EngineFor(string operation, IReadOnlyDictionary<string, object?> options) =>
+            options.TryGetValue("level", out var level) && Equals(level, "extreme") ? EngineId.None : EngineId.Qpdf;
+        public IReadOnlyList<ToolOption> OptionsFor(string operation) => [new ToolOption("level", ToolOptionKind.Choice, "recommended", ["less", "recommended", "extreme"])];
+        public Task<ConversionResult> RunAsync(ConversionJob job, IProgress<JobProgress> progress, CancellationToken cancellationToken) =>
+            Task.FromResult(ConversionResult.Ok([job.Inputs[0] + ".out"]));
+    }
+
+    [Fact]
+    public async Task A_choice_that_needs_no_engine_does_not_ask_to_install_one()
+    {
+        var (runner, prompts, installer, _, _, _) = Rig(new OptionDependentEngine());
+        prompts.OptionsAnswer = new Dictionary<string, object?> { ["level"] = "extreme" };
+
+        var batch = await runner.RunAsync(Sel("pdf.compress", @"C:\a.pdf"));
+
+        Assert.NotNull(batch);
+        Assert.Empty(installer.Installed);
+        Assert.DoesNotContain(prompts.Log, l => l.StartsWith("confirm"));
+    }
+
+    [Fact]
+    public async Task Options_are_asked_before_the_engine_install_so_the_choice_can_decide_it()
+    {
+        var (runner, prompts, installer, _, _, _) = Rig(new OptionDependentEngine());
+        prompts.OptionsAnswer = new Dictionary<string, object?> { ["level"] = "recommended" };
+
+        await runner.RunAsync(Sel("pdf.compress", @"C:\a.pdf"));
+
+        Assert.Equal(["options pdf.compress 'Title:pdf.compress' 1", "confirm Qpdf 100MB"], prompts.Log);
+        Assert.Equal([EngineId.Qpdf], installer.Installed);
+    }
+
     private sealed class WindowTool(EngineId engine = EngineId.None) : IInteractiveTool
     {
         public List<string> Opened { get; } = [];

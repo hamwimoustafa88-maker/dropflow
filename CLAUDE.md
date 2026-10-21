@@ -11,20 +11,21 @@ multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
 are inert "Soon" badges until a release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch
 `main`). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
-installed (new terminals may need a restart to see it on PATH). The dev machine has no modern FFmpeg, qpdf or LibreOffice (only 7-Zip,
-WinRAR's Rar.exe, Tesseract English, and an old FFmpeg 4.0 inside another vendor's app that one test run used); we do not download
-binaries or models without the owner's say-so; engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`.
+installed (new terminals may need a restart to see it on PATH). The dev machine now has FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and
+four AI models, and the installer ships FFmpeg, qpdf and Tesseract (+ Arabic data) inside (ADR-0012): users never download a program.
+`tools/fetch-engines.ps1` fetches them at build time (never commit binaries); engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`
+when a program is missing.
 **Read before any task:** `docs/plan.md` (roadmap, Arabic), `docs/feature-catalog.md` (generated tool list),
 `docs/reference/tangerine-features.md` (parity baseline — DropFlow must never ship less than Tangerine in a category) and
 `docs/writing-a-converter.md` (the contract every converter follows).
 
 ## Stack
 - Desktop: C# / .NET 10, WPF with DropFlow's own theme (WPF-UI was not adopted), CommunityToolkit.Mvvm, H.NotifyIcon (tray), Velopack (updates)
-- Engines: FFmpeg (GPL), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig, LibreOffice headless (Ghostscript dropped: not in winget, AGPL),
+- Engines: FFmpeg (GPL, separate bundled program), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig (PDF/A and HEIC to PDF are in-process; Ghostscript is never used), LibreOffice headless (optional),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
-- Web: Next.js + TypeScript + Tailwind + next-intl on Vercel; in-browser WASM (ffmpeg.wasm, pdf-lib, pdf.js,
-  qpdf/Ghostscript wasm, Tesseract.js, transformers.js)
+- Web: Next.js + TypeScript + Tailwind + next-intl on Vercel (https://dropflow.scouthub.dev); in-browser pdf-lib, pdf.js, fflate
+  (ffmpeg.wasm was removed: GPL)
 - Tests: xUnit with plain `Assert` (desktop — FluentAssertions 8+ is commercially licensed, do not add it), Vitest + Playwright (web) · Installer: Velopack
 
 ## Repository map
@@ -99,6 +100,16 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Owner round 3 ("no program may be downloaded by the user", "publish for release", "privacy and terms", "link import"):
+  (1) FFmpeg 9.0.2 essentials, qpdf 12.4.2 and Tesseract 5.4 + English/Arabic data now ship inside the installer under `engines\`
+  (`EngineLocator` checks it first, `tools/fetch-engines.ps1` pins versions + SHA-256, ADR-0012; FFmpeg is GPL as a separate program, lawyer review advised);
+  suites rerun against exactly those builds, all green; Arabic OCR measured (Tesseract ara 0.0-0.7 % character error vs Windows OCR 2.2-7.3 % on clean
+  synthetic text). (2) `pdf -> pdfa` built in-process (PDF/A-2b, veraPDF PASS, rasterised pages) and `heic -> pdf`: no catalog gaps remain.
+  (3) Web: GPL ffmpeg.wasm removed (media shows the Windows-app tile), privacy and terms pages (ar/en), locale cookie off, catalog web flags match
+  the registry, Windows button links to the GitHub release. (4) Windows app: "Open from link" (UrlDownloader, Ctrl+Alt+V with a link, tray dialog);
+  a real crash from the owner's log fixed (engine install window written from a thread-pool thread). (5) v0.1.0 installer built (264 MB, unsigned),
+  `windows-smoke.yml` workflow for Windows 10/11-class images. Full .NET run: 2,885 passed, 1 optional skip.
+  — tools/fetch-engines.ps1, installer/build.ps1, src/DropFlow.{Engines.Common,Engines.Pdf,Core/Sources,App}, web/**, docs/adr/0012, docs/*
 - 2026-10-21 — Owner confirmed Vercel is live (https://dropflow.scouthub.dev) and that the Phase 0 drag test passed. Checked the live site from
   outside: /en, /ar, /en/app, /ar/app = 200, sw.js + manifest served, strict CSP on /app, noindex, no "open source"/GPL in copy.
   Docs updated (status ledger, deferred A1/A6). — docs/status.md, docs/deferred.md, CLAUDE.md

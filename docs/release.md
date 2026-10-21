@@ -43,8 +43,8 @@ SmartScreen reputation; an unsigned installer is often rejected, so sign first.
 - **WebView2 runtime** (Evergreen) is preinstalled on Windows 11 and on up-to-date Windows 10; HTML → PDF reports a clear error if it is missing.
 - **Windows Firewall**: the first time "Send to phone" listens on the network Windows shows its own allow prompt. If the user cancels it,
   phones cannot connect and the app cannot tell; the share window shows a hint. Not tested with a real phone yet.
-- No engines or models are bundled: FFmpeg, qpdf, LibreOffice and 7-Zip are installed through winget with the user's consent, and AI
-  models are downloaded only after a confirmation dialog.
+- FFmpeg, qpdf and Tesseract (English + Arabic data) ARE bundled under `engines\` (run `tools/fetch-engines.ps1`; `installer/build.ps1` does it
+  when missing; ADR-0012). LibreOffice and 7-Zip stay optional. AI models are downloaded only after a confirmation dialog. The v0.1.0 installer is 264 MB.
 
 ## Before announcing
 - Run the manual matrix in `docs/phase0-checklist.md` on Windows 10 **and** 11 (drag capture, DPI, elevated apps, antivirus).

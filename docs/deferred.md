@@ -9,19 +9,19 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 | # | Item | Why it is waiting | How to resume |
 |---|---|---|---|
 | A1 | **Phase 0 drag test** (`docs/phase0-checklist.md`, rows 1-17) | **Owner reports it passed (2026-10-21).** Per-row results were not recorded here. | Optional: note any failing rows, and repeat on Windows 11, a second monitor and 125-150 % scaling (B1/B2). The input-capture decision record is still unwritten (ADR-0010 is now the licence ADR, so use the next free number). |
-| A2 | **Engines** (FFmpeg, qpdf, LibreOffice) | **Done on the dev PC (2026-10-21, owner granted full permission):** FFmpeg 9.0.2, qpdf 12.4.2 and LibreOffice installed, Media/Pdf suites run with 0 skips. | Remaining: end users get no helper programs unless they install them (Settings > Engines; install prompts are off by default). Decide whether to bundle engines in the installer (licence review needed, ADR-0010). |
-| A3 | **AI models** and `ara.traineddata` | **Models done on the dev PC:** Whisper tiny, u2netp, birefnet-lite and ultraface downloaded with `dropflow models download <id> --yes` (SHA-256 verified); all 293 AI tests pass with real inference. | Still open: `ara.traineddata` for Tesseract Arabic, larger Whisper models, and measuring cut-out / face-redaction / Arabic transcription quality on real files. |
+| A2 | **Engines** | **Done:** FFmpeg, qpdf and Tesseract (+Arabic data) ship inside the installer (ADR-0012); users download nothing. | Only LibreOffice stays optional (legacy Office formats). A lawyer should review shipping the GPL FFmpeg as a separate program. |
+| A3 | **AI models** and Arabic OCR data | Arabic Tesseract data is bundled and measured (see status.md). Models (Whisper tiny, u2netp, birefnet-lite, ultraface) work on the dev PC; end users still download models after a consent dialog (size). | Open: measure Whisper Arabic quality (needs real Arabic speech + transcript; `ggml-small` / `turbo` not downloaded), cut-out and face-redaction quality on real photos. |
 | A4 | **GitHub Actions** | The first run (2026-10-21) started no job: "recent account payments have failed or your spending limit needs to be increased". Account billing is the owner's. | Fix Billing & plans, or make the repository public (free Actions); then `gh run rerun` the latest run and fix whatever it finds. |
-| A5 | **First release** (installer, GitHub Release, winget) | Needs: the repo public (or a decision to release privately), the Velopack packer (`dotnet tool install -g vpk`, a download), and ideally a code-signing certificate (unsigned builds trigger SmartScreen). | Follow `docs/release.md`. Measure the installer size (it now bundles ASP.NET Core for the phone-share server) and check the native libraries land in `publish/app`. |
+| A5 | **First release** | v0.1.0 built (installer 264 MB, **unsigned**), repository published, GitHub release created (see status.md). | Open: a code-signing certificate (SmartScreen warns on unsigned installers), winget submission, a second look at installer size. |
 | A6 | **Vercel** | **Done:** deployed at https://dropflow.scouthub.dev; `sw.js` is served. | Optional: grant the Claude Vercel connector access so deployments and logs can be read from here (403 on the personal scope). |
-| A7 | **Landing page CTAs** ("Windows" and "Web" buttons) | They are inert "Soon" badges until a release exists and the repo is public. | After A5, switch them on in `web/src/components/SoonButton.tsx` and remove `robots: noindex` when ready to launch. |
+| A7 | **Landing page buttons** | **Done:** "Windows" links to the GitHub release page and "Web" to /app. | Remove `robots: noindex` in `web/src/app/[locale]/layout.tsx` when you want search engines to list the site. |
 | A8 | **Accounts, sign-up, payments** (Phase 9) | Deferred by decision (ADR-0005). | Plan when the product is released. |
 
 ## B. Needs hardware or a person
 
 | # | Item | How to resume |
 |---|---|---|
-| B1 | Windows 11, multiple monitors, per-monitor DPI above 100 % (checklist rows 11-12) | Run the checklist there. |
+| B1 | Windows 11, multiple monitors, per-monitor DPI above 100 % (checklist rows 11-12) | No Windows 11 PC or VM here (a VM needs Hyper-V = administrator + reboot, which this tooling must not change). `.github/workflows/windows-smoke.yml` starts the real app on GitHub's windows-2022 and windows-2025 (Windows 11 24H2 code base) images; it proves startup and hook install, not dragging with a real mouse at 150 % scaling. |
 | B2 | **Send to phone** from a real phone, the Windows Firewall prompt, AP isolation, VPN | Open the QR on a phone on the same Wi-Fi. If it cannot connect, allow DropFlow in Windows Security > Firewall > Allow an app. |
 | B3 | Word/PowerPoint/Excel opening the DOCX/PPTX/XLSX that DropFlow writes | Open a few outputs by hand. |
 | B4 | The web app on Firefox/Safari/phones, a real Alt/Shift/Ctrl drag from Explorer into the page, folder drop, files over about 500 MB, PWA install, Lighthouse | Open `/ar/app` on those browsers; run `node e2e/run.mjs` against a deployed URL. |
@@ -31,15 +31,15 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 
 | # | Item | Reason | Possible path |
 |---|---|---|---|
-| C1 | `pdf -> pdfa` | No trustworthy engine: Ghostscript is AGPL and not in winget; qpdf cannot convert to PDF/A; LibreOffice only does it from documents. | Decide an engine (for example Ghostscript as an external AGPL process the user installs) and add a validator (veraPDF) to the tests. |
-| C2 | `heic -> pdf` | No way to create a HEIC test file here, so it is not claimed. | Add a HEIC fixture and a decoder check, then register it. |
+| C1 | `pdf -> pdfa` | **Done in-process** (PDF/A-2b, veraPDF PASS). Text is rasterised, not selectable. | Optional: add an invisible text layer with an embedded font. |
+| C2 | `heic -> pdf` | **Done** with a real HEVC HEIC fixture (BSD-3, source in tests/samples/README.md). | |
 | C3 | CLI: speech to text, OCR, background removal, HTML to PDF | **Mostly done:** the CLI targets Windows, carries the AI tools and has `dropflow models list/download/delete` (download needs `--yes`). | HTML to PDF still needs its own STA thread in the CLI. |
 | C4 | Browser: HEIC/TIFF input, GIF output, Office, OCR, Whisper, protect/unlock/sign/redact | No licence-clean browser decoder/encoder or library justified (ADR-0009). | A hint tile points to the Windows app; revisit per tool. |
 | C5 | `Availability.NeedsModel` on `IConverter` | Today the consent dialog appears after the options dialog (ADR-0006). | Add the member and let the runner ask before the options. |
 | C6 | Option kinds: file picker (sign picture path), multi-line text (redact regions/terms), multi-select (protect permissions) | The generic options form only has text, number, choice, bool, password, folder, range. | Add the kinds to `ToolOptionKind` and the dialog. |
 | C7 | Localised result notes | Notes returned by converters (for example the redact summary) are English and long. | Return resource keys with arguments instead of text. |
 | C8 | Windows ARM64 | PDFiumCore ships win-x64/x86 natives only. | Release win-x64 first. |
-| C9 | Catalog `platforms` for web | Several tools list `web` but are not implemented in the browser, so the flag overstates support (the wheel itself is registry-driven and never shows them). | Make the catalog flag match the web registry, or generate it from it. |
+| C9 | Catalog `platforms` for web | **Done:** the flag now lists exactly the 20 tools the browser implements. | |
 | C10 | Compare PDFs on files whose owner flags forbid copying text | Refused today (as the other text tools do), although the pixel diff alone would work. | Skip the word summary instead of refusing. |
 
 ## Links and exact steps (keyed to the items above)

@@ -3,39 +3,38 @@
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
 
-Last updated: 2026-10-21 (second pass). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
+Last updated: 2026-10-21 (third pass: bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
-## Test totals (`dotnet test DropFlow.sln`, run on the dev PC with FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and four AI models present)
+## Test totals (`dotnet test DropFlow.sln`, dev PC with FFmpeg, qpdf, LibreOffice, Tesseract and four AI models present)
 
 | Project | Passed | Skipped |
 |---|---|---|
-| DropFlow.Core.Tests | 233 | 0 |
+| DropFlow.Core.Tests | 326 | 0 |
 | DropFlow.Hooks.Tests | 16 | 0 |
 | DropFlow.Overlay.Tests | 83 | 0 |
-| DropFlow.Engines.Common.Tests | 24 | 0 |
+| DropFlow.Engines.Common.Tests | 26 | 0 |
 | DropFlow.Engines.Images.Tests | 74 | 0 |
 | DropFlow.Engines.Media.Tests | 712 | 0 |
-| DropFlow.Engines.Pdf.Tests | 692 | 0 |
+| DropFlow.Engines.Pdf.Tests | 713 | 1 (optional veraPDF check, needs `DROPFLOW_VERAPDF`) |
 | DropFlow.Engines.Archive.Tests | 561 | 0 |
 | DropFlow.AI.Tests | 293 | 0 |
 | DropFlow.Engines.Web.Tests | 18 | 0 |
-| DropFlow.App.Tests | 31 | 0 |
+| DropFlow.App.Tests | 45 | 0 |
 | DropFlow.Cli.Tests | 18 | 0 |
-| **Total (.NET)** | **2,755** | **0** |
-| Web (`web/`) | 834 Vitest + 206 headless-Edge checks | 0 |
+| **Total (.NET)** | **2,885** | **1** |
+| Web (`web/`) | 489 Vitest + 230 headless-Edge checks | 0 |
 
-On a machine without those programs and models the engine-dependent tests skip visibly (about 65 skips); nothing is a silent pass.
+The Media, PDF and AI suites were also run with the **bundled** FFmpeg 9.0.2 essentials, qpdf 12.4.2 and Tesseract 5.4 first on PATH (the exact builds the installer ships): 712 + 692 + 293 passed, 0 skipped.
+
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
 
 ## What the catalog covers
 
 `node catalog/build.mjs`: 428 conversions, 63 tools, 7 actions; every Tangerine tool and format target is covered by the catalog.
-`RegistryCoverageTests` computes what has a converter: **all 63 Windows tools and 417 of 419 conversions** (a test pins the exact gaps):
+`RegistryCoverageTests` computes what has a converter: **all 63 Windows tools and all 419 conversions** (a test pins that there are no gaps):
 
-| Gap | Why |
-|---|---|
-| `heic -> pdf` | no way to create a HEIC test file here, so it is not claimed |
-| `pdf -> pdfa` | no trustworthy engine chosen (Ghostscript was dropped: not in winget, AGPL) |
+`pdf -> pdfa` (PDF/A-2b, built in-process, **veraPDF 1.30.3 says PASS**; pages become images, so text is not selectable) and `heic -> pdf`
+(real HEVC fixture, BSD-3 licensed) were the last two gaps; both are closed and need no external program.
 
 ## Area by area
 
@@ -74,6 +73,11 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Background removal, face redaction | **Real models run**: `u2netp`, `birefnet-lite`, `ultraface-rfb-320` (all 293 AI tests, none skipped) | cut-out quality and face recall on real photos are not measured |
 | Model downloads | Verified: against a local test server (resume, hash mismatch, cancel) **and** from the real pinned Hugging Face URLs through `dropflow models download <id> --yes` (SHA-256 checked) | |
 | `dropflow models` (CLI) | Verified | list / download / delete; nothing downloads without `--yes` (6 tests). The CLI now targets Windows and also carries the AI tools |
+| Helper programs bundled in the installer | **Built and measured**: FFmpeg 9.0.2, qpdf 12.4.2, Tesseract 5.4 + English/Arabic data run from `engines\` next to the app | `tools/fetch-engines.ps1` pins versions and SHA-256; `EngineLocator` checks `engines\` first; the published CLI found all three with PATH cleaned. Installer 264 MB. FFmpeg is GPL-3.0 as a separate program: needs a lawyer's review (ADR-0012) |
+| OCR for Arabic | **Measured** on 3 synthetic Arabic images (Arial, Tahoma, Segoe UI; 137 characters each): bundled Tesseract `ara` character error 0.0-0.7 %, Windows OCR (ar-SA) 2.2-7.3 % | clean computer-rendered text only; scans, photos and handwriting are not measured. `auto` still prefers Windows OCR when its pack exists |
+| Open from link (Windows app) | Core verified (local test server: names, redirects, size cap, cancel, no overwrite); window verified by STA tests | the tray item and the Ctrl+Alt+V flow were never run with real input. Not available in the browser (CORS + strict CSP) |
+| Engine install window | **Real bug found in the owner's run log and fixed** (UI-thread crash while winget output arrived), test fails without the fix | |
+| Privacy Policy and Terms (web, ar/en) | Built and checked (200, lang/dir, mobile, footer links, no cookies: the locale cookie was turned off) | drafts: a lawyer should review liability and governing-law wording |
 | Installer / updates (Velopack), CI, release workflow, winget manifests | CI ran once on GitHub (repo public for a few minutes, then private again); installer never built | The private repo cannot run Actions (account billing: "recent account payments have failed"). The first run found 3 real problems, all fixed: `src/DropFlow.AI/Models` was never committed (a bare `models/` ignore rule matched it), the web lockfile lacked Linux entries (`npm ci`), and the Vercel build failed in `build-sw.mjs`. The third run (after fixing 
 pm ci, which rejects a Windows-made lockfile on Linux, so CI uses 
 pm install) was **green on all three jobs**. One WebView2 test (Never_overwrites_an_earlier_output) failed once on the GitHub runner with no message and passed on the next run; it now reports which run failed, so treat it as a possible flake and look at that message if it recurs. `vpk pack` was never run and no release exists |

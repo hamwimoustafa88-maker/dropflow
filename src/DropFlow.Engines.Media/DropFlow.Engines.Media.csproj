@@ -11,4 +11,9 @@
     <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pure argument builders and parsers are internal; the test project exercises them directly. -->
+    <InternalsVisibleTo Include="DropFlow.Engines.Media.Tests" />
+  </ItemGroup>
+
 </Project>

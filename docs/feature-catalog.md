@@ -101,8 +101,8 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 | pdf.sign | Sign PDF | توقيع PDF | pdfsharp | windows, web | — (DropFlow extra) |
 | pdf.redact | Redact PDF | إخفاء محتوى PDF نهائياً | pdfium | windows | — (DropFlow extra) |
 | pdf.compare | Compare PDFs *(multi-file)* | مقارنة ملفي PDF | pdfium | windows | — (DropFlow extra) |
-| arc.extract | Extract archives | فك الأرشيف | 7zip | windows, web | ✓ archive:EXTRACT |
-| arc.zip | Compress to ZIP *(multi-file)* | ضغط إلى ZIP | 7zip | windows, web | — (DropFlow extra) |
+| arc.extract | Extract archives | فك الأرشيف | dotnet | windows, web | ✓ archive:EXTRACT |
+| arc.zip | Compress to ZIP *(multi-file)* | ضغط إلى ZIP | dotnet | windows, web | — (DropFlow extra) |
 | gen.rename | Batch rename *(multi-file)* | إعادة تسمية جماعية | dotnet | windows, web | — (DropFlow extra) |
 | gen.hash | File hash (MD5, SHA-256) | بصمة الملف (MD5, SHA-256) | dotnet | windows, web | — (DropFlow extra) |
 | gen.base64 | Base64 encode or decode | ترميز Base64 | dotnet | windows, web | — (DropFlow extra) |

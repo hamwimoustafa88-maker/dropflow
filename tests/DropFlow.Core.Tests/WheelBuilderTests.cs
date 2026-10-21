@@ -65,14 +65,49 @@ public class WheelBuilderTests
     }
 
     [Fact]
-    public void Mixed_categories_only_get_actions()
+    public void Mixed_categories_get_actions_but_no_conversions_or_category_tools()
     {
-        var registry = new ToolRegistry().Register(ImageConverter());
+        var registry = new ToolRegistry().Register(ImageConverter()).Register(new FakeConverter(["img.compress"]));
         var set = Builder(registry).Build([@"C:\a.png", @"C:\b.pdf"], "en", Actions);
 
         Assert.Empty(set.Convert);
         Assert.Empty(set.Tools);
         Assert.Equal(3, set.Actions.Count);
+    }
+
+    [Fact]
+    public void General_tools_are_offered_for_mixed_unknown_and_folder_selections()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["gen.hash", "gen.rename", "img.compress"]));
+
+        var mixed = Builder(registry).Build([@"C:\a.png", @"C:\b.pdf"], "en", Actions);
+        Assert.Equal(["gen.rename", "gen.hash"], mixed.Tools.Select(w => w.Id));   // catalog order
+
+        var unknown = Builder(registry).Build([@"C:\thing.xyz"], "en", Actions);
+        Assert.Equal(["gen.hash"], unknown.Tools.Select(w => w.Id));   // gen.rename needs two files
+
+        var folder = Builder(registry).Build([@"C:\Users\me\Pictures"], "en", Actions);
+        Assert.Equal(["gen.hash"], folder.Tools.Select(w => w.Id));
+    }
+
+    [Fact]
+    public void General_tools_must_support_every_selected_file()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["gen.hash"], supports: (_, ext) => ext != "xyz"));
+        var set = Builder(registry).Build([@"C:\a.png", @"C:\b.xyz"], "en", Actions);
+        Assert.Empty(set.Tools);
+    }
+
+    [Fact]
+    public void Zip_is_offered_for_a_single_file_or_folder_even_though_it_aggregates()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["arc.zip"]));
+        var one = Builder(registry).Build([@"C:\a.png"], "en", Actions);
+        var folder = Builder(registry).Build([@"C:\Users\me\Pictures"], "en", Actions);
+
+        Assert.Equal(["arc.zip"], one.Tools.Select(w => w.Id));
+        Assert.True(one.Tools.Single().Multi);
+        Assert.Equal(["arc.zip"], folder.Tools.Select(w => w.Id));
     }
 
     [Fact]

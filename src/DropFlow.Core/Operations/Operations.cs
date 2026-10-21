@@ -90,6 +90,17 @@ public interface IConverter
     Task<ConversionResult> RunAsync(ConversionJob job, IProgress<JobProgress> progress, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// A tool that opens its own window instead of producing a file by itself (the Encoder, for example). The runner still makes sure the
+/// engine is installed, then calls <see cref="OpenAsync"/> instead of queueing a job, so <see cref="IConverter.RunAsync"/> is only a
+/// stub that reports the tool cannot run without its window (CLI, recipes).
+/// </summary>
+public interface IInteractiveTool : IConverter
+{
+    /// <summary>Opens the tool's window for <paramref name="files"/> (all of them, in one call). Called on the app's UI thread context.</summary>
+    Task OpenAsync(string operation, IReadOnlyList<string> files);
+}
+
 /// <summary>Tells the core which external engines are installed.</summary>
 public interface IEngineProvider
 {

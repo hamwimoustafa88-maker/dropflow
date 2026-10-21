@@ -37,11 +37,17 @@ internal sealed class PermanentDelete : IFileDisposer
     }
 }
 
-/// <summary>Which converter modules the CLI loads (mirror of the app's list).</summary>
+/// <summary>
+/// Which converter modules the CLI loads: the app's list minus what needs Windows UI or a model download (HTML → PDF, speech to text,
+/// OCR, background removal), which are app-only for now.
+/// </summary>
 internal static class Modules
 {
     public static IReadOnlyList<IConverter> Create(IEngineProvider engines) =>
     [
         .. DropFlow.Engines.Images.ImagesModule.Create(engines),
+        .. DropFlow.Engines.Media.MediaModule.Create(engines),
+        .. DropFlow.Engines.Pdf.PdfModule.Create(engines),
+        .. DropFlow.Engines.Archive.ArchiveModule.Create(engines),
     ];
 }

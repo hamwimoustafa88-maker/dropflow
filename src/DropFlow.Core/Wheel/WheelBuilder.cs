@@ -45,8 +45,10 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
 
         var extensions = files.Select(ToolCatalog.ExtensionOf).ToList();
         var categories = extensions.Select(e => catalog.CategoryForExtension(e)).Distinct().ToList();
+
+        // Mixed or unknown files (and folders) have no conversions, but the general tools (hash, ZIP, rename…) still apply.
         if (categories.Count != 1 || categories[0] is null)
-            return new WheelSet([], [], actions);
+            return new WheelSet([], BuildTools(null, extensions, files.Count, language), actions);
 
         var category = catalog.Category(categories[0]!)!;
         return new WheelSet(
@@ -69,12 +71,12 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
         return wedges;
     }
 
-    private List<Wedge> BuildTools(string categoryId, List<string> extensions, int fileCount, string language)
+    private List<Wedge> BuildTools(string? categoryId, List<string> extensions, int fileCount, string language)
     {
         var wedges = new List<Wedge>();
-        foreach (var tool in catalog.Tools.Where(t => t.Cat == categoryId || t.Cat == "general"))
+        foreach (var tool in catalog.Tools.Where(t => t.Cat == "general" || (categoryId is not null && t.Cat == categoryId)))
         {
-            if (tool.Multi && fileCount < 2) continue;
+            if (fileCount < tool.MinimumFiles) continue;
             var converters = extensions.Select(e => registry.Find(tool.Id, e)).ToList();
             if (converters.Any(c => c is null)) continue;
 

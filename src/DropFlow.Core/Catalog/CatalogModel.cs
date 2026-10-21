@@ -24,9 +24,16 @@ public sealed record CatalogTool(
     IReadOnlyList<string> Platforms,
     int Phase,
     bool Multi = false,
-    string? Tg = null)
+    string? Tg = null,
+    int? MinFiles = null)
 {
     public string Name(string language) => language == "ar" ? Ar : En;
+
+    /// <summary>
+    /// How many files the tool needs before the wheel offers it. A <see cref="Multi"/> tool (merge, join, collage) defaults to 2;
+    /// "Compress to ZIP" sets <c>minFiles: 1</c> because one file or folder is a fine thing to zip.
+    /// </summary>
+    public int MinimumFiles => Multi ? MinFiles ?? 2 : 1;
 }
 
 /// <summary>The parsed catalog/tools.json. Immutable after load.</summary>

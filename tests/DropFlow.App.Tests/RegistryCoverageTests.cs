@@ -1,0 +1,126 @@
+using System.IO;
+using System.Windows.Threading;
+using DropFlow.AI.Models;
+using DropFlow.App.Services;
+using DropFlow.Core.Catalog;
+using DropFlow.Core.Localization;
+using DropFlow.Core.Operations;
+using DropFlow.Core.Registry;
+using DropFlow.Overlay;
+using DropFlow.TestSupport;
+
+namespace DropFlow.App.Tests;
+
+/// <summary>
+/// Cross-module checks over the real converter list the app loads: what the engine projects implement must exist in the catalog,
+/// and every option the generated form can show needs a label in both languages.
+/// </summary>
+public sealed class RegistryCoverageTests : IDisposable
+{
+    private static readonly ToolCatalog Catalog = ToolCatalog.LoadEmbedded();
+    private readonly TempDir _dir = new();
+    private readonly ModelManager _models;
+
+    public RegistryCoverageTests() => _models = new ModelManager(_dir.Combine("models"));
+
+    public void Dispose()
+    {
+        _models.Dispose();
+        _dir.Dispose();
+    }
+
+    private ToolRegistry Registry() =>
+        new ToolRegistry().Register(Modules.Create(TestSupport.Engines.Locator, Dispatcher.CurrentDispatcher, _dir.Combine("web"), _ => Task.CompletedTask, _models));
+
+    [Fact]
+    public void Every_implemented_operation_exists_in_the_catalog()
+    {
+        var problems = new List<string>();
+        foreach (var converter in Registry().Converters)
+        {
+            foreach (var op in converter.Operations)
+            {
+                if (Operation.IsConvert(op))
+                {
+                    var target = Operation.TargetOf(op);
+                    if (!Catalog.Categories.Any(c => c.Outputs.Contains(target))) problems.Add($"{converter.GetType().Name}: {op} is not an output of any category");
+                }
+                else if (Catalog.Tool(op) is null)
+                {
+                    problems.Add($"{converter.GetType().Name}: tool {op} is not in the catalog");
+                }
+            }
+        }
+        AssertNone(problems);
+    }
+
+    [Fact]
+    public void No_operation_and_file_type_is_claimed_by_two_converters_except_the_html_override()
+    {
+        var converters = Registry().Converters;
+        var extensions = Catalog.Categories.SelectMany(c => c.Inputs).Concat(["htm", "xhtml", "tgz", ""]).Distinct().ToList();
+        var problems = new List<string>();
+
+        foreach (var op in converters.SelectMany(c => c.Operations).Distinct())
+            foreach (var ext in extensions)
+            {
+                var owners = converters.Where(c => c.Supports(op, ext)).ToList();
+                if (owners.Count < 2) continue;
+
+                // the built-in browser deliberately takes HTML → PDF before LibreOffice, and it comes first in the registry
+                var isHtmlOverride = op is "convert:pdf" && ext is "html" or "htm" or "xhtml" && owners[0] is Engines.Web.HtmlToPdfTool;
+                if (!isHtmlOverride) problems.Add($"{op} on .{ext}: {string.Join(" and ", owners.Select(o => o.GetType().Name))}");
+            }
+
+        AssertNone(problems);
+    }
+
+    [Fact]
+    public void Every_option_has_a_label_in_both_languages()
+    {
+        var problems = new List<string>();
+        foreach (var lang in new[] { "en", "ar" })
+        {
+            var loc = JsonLocalizer.Load(lang);
+            foreach (var converter in Registry().Converters)
+                foreach (var op in converter.Operations)
+                    foreach (var option in converter.OptionsFor(op))
+                        if (!OptionForm.LabelKeys(op, option).Any(k => loc[k] != k))
+                            problems.Add($"{lang}: opt.{op}.{option.Key}");
+        }
+        AssertNone(problems);
+    }
+
+    private static void AssertNone(IEnumerable<string> problems)
+    {
+        var list = problems.Distinct().OrderBy(x => x).ToList();
+        Assert.True(list.Count == 0, $"{list.Count} problem(s):\n" + string.Join("\n", list));
+    }
+
+    [Fact]
+    public void Every_choice_that_is_a_plain_word_is_translated_in_both_languages()
+    {
+        // Technical values (h264, mp3, 1080 ...) may stay as they are; real words must not leak through in English.
+        var problems = new List<string>();
+        foreach (var lang in new[] { "en", "ar" })
+        {
+            var loc = JsonLocalizer.Load(lang);
+            foreach (var converter in Registry().Converters)
+                foreach (var op in converter.Operations)
+                    foreach (var option in converter.OptionsFor(op).Where(o => o.Kind == ToolOptionKind.Choice && o.Choices is not null))
+                        foreach (var choice in option.Choices!)
+                        {
+                            var keys = new[] { $"opt.{op}.{option.Key}.{choice}", $"opt.{option.Key}.{choice}" };
+                            if (keys.Any(k => loc[k] != k)) continue;
+                            if (IsTechnical(choice)) continue;
+                            problems.Add($"{lang}: opt.{op}.{option.Key}.{choice}");
+                        }
+        }
+        AssertNone(problems);
+    }
+
+    /// <summary>Codec names, formats, sizes, language codes: anything with a digit, or at most three letters, or a known format word.</summary>
+    private static bool IsTechnical(string choice) =>
+        choice.Any(char.IsDigit) || choice.Length <= 3 || choice.Contains('+') || choice.Contains('-')
+        || choice is "h264" or "h265" or "flac" or "opus" or "vorbis" or "tesseract" or "windows" or "sha256" or "sha512" or "all";
+}

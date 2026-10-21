@@ -76,8 +76,8 @@
     { "id": "pdf.compare",    "cat": "pdf", "wheel": "tools", "en": "Compare PDFs",             "ar": "مقارنة ملفي PDF",             "engine": "pdfium",      "platforms": ["windows"], "phase": 4, "multi": true },
     { "id": "pdf.ocr",        "cat": "pdf", "wheel": "tools", "en": "Make PDF searchable (OCR)","ar": "جعل PDF قابلاً للبحث (OCR)",  "engine": "ocr",         "platforms": ["windows","web"], "phase": 5 },
 
-    { "id": "arc.extract",    "cat": "archive", "wheel": "tools", "en": "Extract archives",     "ar": "فك الأرشيف",                  "engine": "7zip", "platforms": ["windows","web"], "phase": 4, "tg": "archive:EXTRACT" },
-    { "id": "arc.zip",        "cat": "archive", "wheel": "tools", "en": "Compress to ZIP",      "ar": "ضغط إلى ZIP",                 "engine": "7zip", "platforms": ["windows","web"], "phase": 4, "multi": true },
+    { "id": "arc.extract",    "cat": "archive", "wheel": "tools", "en": "Extract archives",     "ar": "فك الأرشيف",                  "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "tg": "archive:EXTRACT" },
+    { "id": "arc.zip",        "cat": "general", "wheel": "tools", "en": "Compress to ZIP",      "ar": "ضغط إلى ZIP",                 "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "multi": true, "minFiles": 1 },
 
     { "id": "gen.rename",     "cat": "general", "wheel": "tools", "en": "Batch rename",         "ar": "إعادة تسمية جماعية",          "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "multi": true },
     { "id": "gen.hash",       "cat": "general", "wheel": "tools", "en": "File hash (MD5, SHA-256)","ar": "بصمة الملف (MD5, SHA-256)","engine": "dotnet", "platforms": ["windows","web"], "phase": 4 },

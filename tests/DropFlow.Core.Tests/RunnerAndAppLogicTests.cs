@@ -130,6 +130,51 @@ public class OperationRunnerTests
         Assert.Null(await runner.RunAsync(Sel("convert:png", @"C:\a.xyz")));
         Assert.Single(prompts.Log, l => l.StartsWith("error"));
     }
+
+    private sealed class WindowTool(EngineId engine = EngineId.None) : IInteractiveTool
+    {
+        public List<string> Opened { get; } = [];
+        public IReadOnlyCollection<string> Operations => ["vid.encoder"];
+        public bool Supports(string operation, string inputExtension) => operation == "vid.encoder";
+        public EngineId EngineFor(string operation) => engine;
+        public IReadOnlyList<ToolOption> OptionsFor(string operation) => [new ToolOption("never", ToolOptionKind.Text)];
+        public Task OpenAsync(string operation, IReadOnlyList<string> files) { Opened.Add(operation + ":" + string.Join("|", files)); return Task.CompletedTask; }
+        public Task<ConversionResult> RunAsync(ConversionJob job, IProgress<JobProgress> progress, CancellationToken cancellationToken) =>
+            Task.FromResult(ConversionResult.Fail("opens a window"));
+    }
+
+    [Fact]
+    public async Task A_window_tool_is_opened_with_all_files_instead_of_being_queued_or_asking_for_options()
+    {
+        var tool = new WindowTool();
+        var (runner, prompts, _, _, queue, _) = Rig(tool);
+
+        var batch = await runner.RunAsync(Sel("vid.encoder", @"C:\a.mp4", @"C:\b.mkv"));
+
+        Assert.Null(batch);
+        Assert.Equal([@"vid.encoder:C:\a.mp4|C:\b.mkv"], tool.Opened);
+        Assert.Empty(queue.Batches);
+        Assert.Empty(prompts.Log);
+    }
+
+    [Fact]
+    public async Task A_window_tool_that_needs_an_engine_installs_it_first_and_is_not_opened_when_declined()
+    {
+        var tool = new WindowTool(EngineId.Ffmpeg);
+        var (runner, prompts, installer, _, _, _) = Rig(tool);
+
+        await runner.RunAsync(Sel("vid.encoder", @"C:\a.mp4"));
+        Assert.Equal(["confirm Ffmpeg 100MB"], prompts.Log);
+        Assert.Equal([EngineId.Ffmpeg], installer.Installed);
+        Assert.Single(tool.Opened);
+
+        var declined = new WindowTool(EngineId.Ffmpeg);
+        var (runner2, prompts2, installer2, _, _, _) = Rig(declined);
+        prompts2.InstallAnswer = false;
+        await runner2.RunAsync(Sel("vid.encoder", @"C:\a.mp4"));
+        Assert.Empty(declined.Opened);
+        Assert.Empty(installer2.Installed);
+    }
 }
 
 public class AppLogicTests

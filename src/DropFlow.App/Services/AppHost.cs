@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using DropFlow.AI;
+using DropFlow.AI.Models;
 using DropFlow.App.Views;
 using DropFlow.Core.Automation;
 using DropFlow.Core.App;
@@ -30,10 +32,16 @@ namespace DropFlow.App.Services;
 internal static class Modules
 {
     /// <summary>Web comes first so HTML → PDF uses the built-in browser engine instead of LibreOffice.</summary>
-    public static IReadOnlyList<IConverter> Create(IEngineProvider engines, Dispatcher ui, string webProfileFolder) =>
+    public static IReadOnlyList<IConverter> Create(
+        IEngineProvider engines, Dispatcher ui, string webProfileFolder, Func<IReadOnlyList<string>, Task> openEncoder, ModelManager models) =>
     [
         .. Engines.Web.WebModule.Create(ui, webProfileFolder),
         .. Engines.Images.ImagesModule.Create(engines),
+        .. Engines.Media.MediaModule.Create(engines),
+        new EncoderTool(openEncoder),
+        .. Engines.Pdf.PdfModule.Create(engines),
+        .. Engines.Archive.ArchiveModule.Create(engines),
+        .. AI.AiModule.Create(engines, models),
     ];
 }
 
@@ -77,6 +85,8 @@ internal sealed class AppHost : IDisposable
     private readonly GlobalHotkey _clipboardHotkey = new(0xD0F2);
     private readonly WatchStore _watchStore;
     private readonly RecipeStore _recipeStore;
+    private readonly ModelDownloadService _modelDownloads;
+    private readonly HashSet<BatchHandle> _modelRetries = [];
     private WatchService? _watch;
     private readonly RequestBatcher _requests;
     private readonly ShelfModel _shelf = new();
@@ -107,12 +117,14 @@ internal sealed class AppHost : IDisposable
         Catalog = ToolCatalog.LoadEmbedded();
         Engines = new EngineLocator(Paths.DataDir);
         Installer = new EngineInstaller(Engines);
-        Registry = new ToolRegistry().Register(Modules.Create(Engines, ui, Path.Combine(Paths.DataDir, "webview")));
+        Models = new ModelManager(Paths.ModelsDir);
+        Registry = new ToolRegistry().Register(Modules.Create(Engines, ui, Path.Combine(Paths.DataDir, "webview"), OpenEncoder, Models));
         Queue = new JobQueue(Registry, Catalog, Settings.MaxConcurrency);
         History = new HistoryStore(Paths.HistoryFile);
         _watchStore = new WatchStore(Path.Combine(Paths.DataDir, "watch.json"));
         _recipeStore = new RecipeStore(Path.Combine(Paths.DataDir, "recipes.json"));
         Kit = new UiKit(WheelTheme.FromSystem(), Loc);
+        _modelDownloads = new ModelDownloadService(ui, Kit, Models);
         Disposer = new RecycleBinDisposer();
 
         _requests = new RequestBatcher(_scheduler, files => _ui.BeginInvoke(() => OpenWheelFor(files, null)));
@@ -125,6 +137,7 @@ internal sealed class AppHost : IDisposable
     public ToolCatalog Catalog { get; }
     public EngineLocator Engines { get; }
     public EngineInstaller Installer { get; }
+    public ModelManager Models { get; }
     public ToolRegistry Registry { get; }
     public JobQueue Queue { get; }
     public HistoryStore History { get; }
@@ -297,6 +310,16 @@ internal sealed class AppHost : IDisposable
     {
         if (!_tracked.Remove(batch)) return;
         _lastToast.Remove(batch);
+
+        // An AI tool that needs a model: ask, download, and run the same job again (once).
+        if (!result.Success && !_modelRetries.Contains(batch)
+            && AiFailures.TryParseMissingModel(result.Error) is { } modelId && Models.Find(modelId) is not null)
+        {
+            _ = DownloadModelAndRetryAsync(batch, modelId);
+            return;
+        }
+        _modelRetries.Remove(batch);
+
         var entry = History.Add(batch.Job.Operation, batch.Job.Inputs, result);
 
         if (!result.Success && result.Outputs.Count == 0)
@@ -316,6 +339,29 @@ internal sealed class AppHost : IDisposable
             ? Loc.Format("result.done", Loc.Format("result.files", Math.Max(1, result.Outputs.Count)))
             : Loc.Format("result.failed", result.Error ?? "");
         ShowToast(title, result.Note ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
+    }
+
+    private async Task DownloadModelAndRetryAsync(BatchHandle failed, string modelId)
+    {
+        _toast?.Hide();
+        var tool = Catalog.Tool(failed.Job.Operation)?.Name(Loc.Language) ?? failed.Job.Operation;
+        if (!await _modelDownloads.EnsureAsync(modelId, tool))
+        {
+            ShowToast(Loc.Format("model.declined", tool), null, null, [], TimeSpan.FromSeconds(6));
+            return;
+        }
+
+        var again = Queue.Enqueue(failed.Job);
+        _modelRetries.Add(again);
+        _tracked.Add(again);
+    }
+
+    private Task OpenEncoder(IReadOnlyList<string> files)
+    {
+        var window = new EncoderWindow(Kit, Engines, files, (input, result) => History.Add(EncoderTool.ToolId, [input], result));
+        window.Show();
+        window.Activate();
+        return Task.CompletedTask;
     }
 
     private void ShowToast(string title, string? detail, double? progress, IReadOnlyList<(string Label, Action Run)> actions, TimeSpan? autoHide)
@@ -573,6 +619,7 @@ internal sealed class AppHost : IDisposable
         _clipboardHotkey.Dispose();
         _watch?.Dispose();
         foreach (var converter in Registry.Converters.OfType<IDisposable>()) converter.Dispose();
+        Models.Dispose();
         _tray?.Dispose();
         FileLog.Info("DropFlow stopped");
     }

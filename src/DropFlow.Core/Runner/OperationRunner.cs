@@ -61,6 +61,12 @@ public sealed class OperationRunner(
             }
         }
 
+        if (converter is IInteractiveTool window)
+        {
+            await window.OpenAsync(op, selection.Files).ConfigureAwait(false);
+            return null;
+        }
+
         IReadOnlyDictionary<string, object?>? values = null;
         var options = converter.OptionsFor(op);
         if (options.Count > 0)

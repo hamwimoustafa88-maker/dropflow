@@ -72,7 +72,7 @@ public sealed class RegistryCoverageTests : IDisposable
                     if (!registry.Supports(Operation.Convert(output), input)) missingConversions.Add($"{input}->{output}");
 
         // heic -> pdf: no way to build a HEIC test file here, so it is not claimed; pdf -> pdfa: no trustworthy engine chosen yet.
-        Assert.Equal(["pdf.compare", "pdf.crop", "pdf.redact", "pdf.sign"], missingTools);
+        Assert.Empty(missingTools);
         Assert.Equal(["heic->pdf", "pdf->pdfa"], missingConversions.OrderBy(x => x).ToList());
     }
 

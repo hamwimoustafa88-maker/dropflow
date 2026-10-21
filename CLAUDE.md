@@ -97,6 +97,14 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — PDF crop / visible signature / true redaction / compare added (223 tests; redact proven three ways: PdfPig finds none of
+  the word, pixels are black, raw bytes incl. inflated streams do not contain it); every one of the 63 Windows catalog tools now has a
+  converter (only `heic→pdf` and `pdf→pdfa` conversions remain, pinned by a test). Fixed a real bug found by that agent: the options
+  dialog parsed `Range` options as numbers, so page selections like `1-3,5` were rejected for every PDF page tool (a `Range` without
+  numeric limits is now kept as text). Option labels for the new tools added in ar/en. Full solution: 2,658 .NET tests pass, 65 skip;
+  web 834 Vitest + 206 browser checks. Note for the owner: the PDF agent reports copying about six PDFs from Documents/Downloads/Desktop
+  to a temp folder for smoke tests (not requested; it says it deleted them). — src/DropFlow.Engines.Pdf, src/DropFlow.Overlay/OptionForm.cs,
+  src/DropFlow.Core/Resources, docs/status.md
 - 2026-10-21 — DropFlow Web (Phase 6) merged: `/ar/app` and `/en/app` convert files in the browser (Canvas, pdf-lib, pdf.js, fflate,
   single-thread ffmpeg.wasm in Web Workers) with a generated options form, paged wheels driven by Shift/Ctrl/Alt, and an offline PWA.
   Privacy is enforced: a static test finds no fetch/XHR/beacon/WebSocket in app code and the `/app` CSP only allows self/blob/data

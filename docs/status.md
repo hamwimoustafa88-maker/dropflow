@@ -11,28 +11,28 @@ Last updated: 2026-10-21.
 |---|---|---|---|
 | DropFlow.Core.Tests | 230 | 0 | |
 | DropFlow.Hooks.Tests | 16 | 0 | |
-| DropFlow.Overlay.Tests | 76 | 0 | |
+| DropFlow.Overlay.Tests | 83 | 0 | |
 | DropFlow.Engines.Common.Tests | 23 | 0 | |
 | DropFlow.Engines.Images.Tests | 74 | 0 | |
 | DropFlow.Engines.Media.Tests | 659 | 52 | `[EngineFact(Ffmpeg)]` — no ffmpeg on PATH |
-| DropFlow.Engines.Pdf.Tests | 461 | 6 | qpdf (3) and LibreOffice (3) not installed |
+| DropFlow.Engines.Pdf.Tests | 684 | 6 | qpdf (3) and LibreOffice (3) not installed |
 | DropFlow.Engines.Archive.Tests | 561 | 0 | real `7z.exe` and `Rar.exe` exist on this machine; LAN tests need a LAN address and a non-elevated session |
 | DropFlow.AI.Tests | 282 | 7 | Whisper/ONNX models and ffmpeg not present |
 | DropFlow.Engines.Web.Tests | 9 | 0 | real WebView2 runtime 155 |
-| DropFlow.App.Tests | 14 | 0 | |
+| DropFlow.App.Tests | 27 | 0 | |
 | DropFlow.Cli.Tests | 10 | 0 | |
-| **Total** | **2,380** | **65** | |
+| **Total (.NET)** | **2,658** | **65** | |
+| Web (`web/`) | 834 Vitest + 206 headless-Edge checks | 0 | |
 
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
 
 ## What the catalog covers
 
 `node catalog/build.mjs`: 428 conversions, 63 tools, 7 actions; every Tangerine tool and format target is covered by the catalog.
-`RegistryCoverageTests` computes what has a converter: **59 of 63 Windows tools and 417 of 419 conversions** (a test pins the exact gaps):
+`RegistryCoverageTests` computes what has a converter: **all 63 Windows tools and 417 of 419 conversions** (a test pins the exact gaps):
 
 | Gap | Why |
 |---|---|
-| `pdf.crop`, `pdf.sign`, `pdf.redact`, `pdf.compare` | Phase 4 PDF tools, being added by an agent now |
 | `heic -> pdf` | no way to create a HEIC test file here, so it is not claimed |
 | `pdf -> pdfa` | no trustworthy engine chosen (Ghostscript was dropped: not in winget, AGPL) |
 
@@ -56,6 +56,10 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | DropFlow Encoder window | Settings, presets, plan preview verified (every preset round-trips through the controls; renders in ar/en) | no real encode was run through the window (no ffmpeg) |
 | Subtitles (SRT/VTT/ASS/TXT) | Verified | pure C#, real file tests incl. Arabic and windows-1256 |
 | PDF engine, managed tools | Verified | PDFsharp/PdfPig/PDFium round-trip tests incl. Arabic |
+| PDF crop (CropBox only), visible signature, true redaction, compare | Verified | 223 tests: PDFium renders prove ink/black boxes at the right place for all four page rotations; redact is checked three ways (PdfPig finds none of the word, pixels are black, raw bytes incl. inflated streams do not contain it); mutations caught |
+| PDF sign | Visible stamp only, **not** a cryptographic signature (the result says so) | |
+| PDF redact limits | Terms use the text layer only (scans need regions; no OCR); rasterized pages lose selectable text, links and form fields; peak memory on huge pages not measured | |
+| PDF crop | Non-destructive: cropped-away content is still in the file (use redact for privacy) | |
 | PDF via qpdf (protect/unlock/repair/compress) | **Unverified against the real tool** | argument builders + fake runner only |
 | Office conversions via LibreOffice (113 pairs) | **Unverified against the real tool** | filters and flags written from knowledge, fake runner only |
 | Word/PowerPoint/Excel opening the produced DOCX/PPTX/XLSX | **Unverified** | files pass OpenXml validation, never opened in Office |

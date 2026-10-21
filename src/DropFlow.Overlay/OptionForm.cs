@@ -68,6 +68,11 @@ public static class OptionForm
 
         switch (option.Kind)
         {
+            // A Range with numeric limits is a slider-like number (ZIP level); without limits it is a page selection such as
+            // "1-3,5", "odd" or "3r90" that the tool parses itself, so it is kept as typed.
+            case ToolOptionKind.Range when option.Min is null && option.Max is null:
+                return (NormalizeDigits(raw!.Trim()), null);
+
             case ToolOptionKind.Number:
             case ToolOptionKind.Range:
                 if (!TryParseNumber(raw, out var n)) return (null, "number");

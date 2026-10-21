@@ -44,6 +44,34 @@ public class OptionFormTests
         Assert.Equal((null, "number"), OptionForm.Parse(o, "x"));
     }
 
+    [Theory]
+    [InlineData("1-3,5", "1-3,5")]
+    [InlineData(" 2-4 ", "2-4")]
+    [InlineData("odd", "odd")]
+    [InlineData("3r90, 8-", "3r90, 8-")]
+    [InlineData("last", "last")]
+    public void A_range_option_without_numeric_limits_is_a_page_selection_kept_as_text(string raw, string expected)
+    {
+        var pages = new ToolOption("pages", ToolOptionKind.Range, "");
+        Assert.Equal((expected, null), OptionForm.Parse(pages, raw));
+    }
+
+    [Fact]
+    public void A_required_page_selection_cannot_be_empty_and_an_empty_optional_one_uses_its_default()
+    {
+        Assert.Equal((null, "required"), OptionForm.Parse(new ToolOption("pages", ToolOptionKind.Range, "", Required: true), ""));
+        Assert.Equal(("last", null), OptionForm.Parse(new ToolOption("pages", ToolOptionKind.Range, "last"), ""));
+    }
+
+    [Fact]
+    public void A_range_option_with_limits_is_a_number_like_a_slider()
+    {
+        var level = new ToolOption("level", ToolOptionKind.Range, 6, Min: 0, Max: 9);
+        Assert.Equal((4d, null), OptionForm.Parse(level, "4"));
+        Assert.Equal((null, "max"), OptionForm.Parse(level, "10"));
+        Assert.Equal((null, "number"), OptionForm.Parse(level, "1-3"));
+    }
+
     [Fact]
     public void Empty_input_uses_the_default_unless_the_field_is_required()
     {

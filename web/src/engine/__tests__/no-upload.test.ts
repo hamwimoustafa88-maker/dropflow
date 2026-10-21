@@ -57,6 +57,7 @@ describe("no code path uploads user data", () => {
       "src/app/[locale]/layout.tsx: https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}",
       "src/app/[locale]/layout.tsx: http://localhost:3000",
       "src/components/LegalPage.tsx: https://github.com/hamwimoustafa88-maker/dropflow/issues", // a link the visitor may click, never fetched
+      "src/components/DownloadButtons.tsx: https://github.com/hamwimoustafa88-maker/dropflow/releases/latest", // the Windows download link, clicked by the visitor, never fetched
       "src/engine/lib/strip-meta.ts: http://ns.adobe.com/xap", // the XMP packet signature we look FOR, not a request
     ];
     expect([...urls].filter((u) => !allowed.includes(u))).toEqual([]);

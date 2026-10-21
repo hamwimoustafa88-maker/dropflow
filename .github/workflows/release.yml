@@ -20,8 +20,8 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -71,7 +71,7 @@ jobs:
       - name: "SignPath: upload the unsigned binaries"
         id: unsigned-binaries
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-binaries
           path: signing/unsigned
@@ -121,7 +121,7 @@ jobs:
       - name: "SignPath: upload the unsigned installer"
         id: unsigned-installer
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-installer
           path: Releases/DropFlow-win-Setup.exe

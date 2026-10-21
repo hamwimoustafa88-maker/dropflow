@@ -42,6 +42,17 @@ public class EngineLocatorTests
     }
 
     [Fact]
+    public void An_install_folder_that_carries_the_version_is_found_newest_first()
+    {
+        // the qpdf installer creates "C:\Program Files\qpdf 12.4.2", not "qpdf"
+        var dirs = new[] { @"C:\Program Files\7-Zip", @"C:\Program Files\qpdf 12.4.1", @"C:\Program Files\qpdf 12.4.2", @"C:\Program Files\qpdfx" };
+
+        var found = EngineLocator.VersionedInstallDirs(@"C:\Program Files", "qpdf", dirs).ToList();
+
+        Assert.Equal([@"C:\Program Files\qpdf 12.4.2", @"C:\Program Files\qpdf 12.4.1"], found);
+    }
+
+    [Fact]
     public void Falls_back_to_known_install_folders()
     {
         var l = With([@"C:\Program Files\LibreOffice\program\soffice.exe"], known: [@"C:\Program Files\LibreOffice\program"]);

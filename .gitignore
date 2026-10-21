@@ -18,8 +18,11 @@ next-env.d.ts
 
 # Engines, models and large samples (downloaded by tools/, never committed)
 tools/bin/
-models/
+# root-level only: a bare "models/" also matched the source folder src/DropFlow.AI/Models on Windows (case-insensitive) and kept it out of git
+/models/
 *.onnx
+*.gguf
+*.ggml
 *.gguf
 tests/samples/large/
 

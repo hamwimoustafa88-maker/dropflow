@@ -108,6 +108,16 @@ public sealed class EngineLocator : IEngineProvider
         return null;
     }
 
+    /// <summary>
+    /// Folders in <paramref name="directories"/> named like an install that carries its version ("qpdf 12.4.2" is what the qpdf installer
+    /// creates), newest first. The exact folder name "qpdf" is handled separately.
+    /// </summary>
+    internal static IEnumerable<string> VersionedInstallDirs(string parent, string product, IEnumerable<string> directories) =>
+        directories
+            .Where(d => Path.GetFileName(d).StartsWith(product + " ", StringComparison.OrdinalIgnoreCase)
+                        || Path.GetFileName(d).StartsWith(product + "-", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase);
+
     public static IEnumerable<string> DefaultKnownDirs()
     {
         var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -119,6 +129,7 @@ public sealed class EngineLocator : IEngineProvider
         yield return Path.Combine(pf, "Tesseract-OCR");
         yield return Path.Combine(pf, "7-Zip");
         yield return Path.Combine(pf, "qpdf", "bin");
+        foreach (var dir in VersionedInstallDirs(pf, "qpdf", Directory.Exists(pf) ? Directory.EnumerateDirectories(pf) : [])) yield return Path.Combine(dir, "bin");
         yield return Path.Combine(local, "Pandoc");
         yield return Path.Combine(local, "Microsoft", "WinGet", "Links");
 

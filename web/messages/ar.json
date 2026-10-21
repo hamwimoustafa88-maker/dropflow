@@ -74,11 +74,27 @@
   },
   "features": {
     "title": "المزايا",
-    "pdf": { "title": "PDF", "text": "دمج. تقسيم. ضغط. تحويل." },
-    "media": { "title": "فيديو وصوت", "text": "مُرمّز احترافي. سريع بالـGPU." },
-    "speech": { "title": "كلام إلى نص", "text": "مع العربية.", "caption": "مرحباً بالعالم" },
-    "local": { "title": "محلي 100%", "text": "لا شيء يُرفع." },
-    "lang": { "title": "عربي وإنجليزي", "text": "مصمَّم لـ RTL." }
+    "pdf": {
+      "title": "PDF",
+      "text": "دمج. تقسيم. ضغط. تحويل."
+    },
+    "media": {
+      "title": "فيديو وصوت",
+      "text": "مُرمّز احترافي. سريع بالـGPU."
+    },
+    "speech": {
+      "title": "كلام إلى نص",
+      "text": "مع العربية.",
+      "caption": "مرحباً بالعالم"
+    },
+    "local": {
+      "title": "محلي 100%",
+      "text": "لا شيء يُرفع."
+    },
+    "lang": {
+      "title": "عربي وإنجليزي",
+      "text": "مصمَّم لـ RTL."
+    }
   },
   "formats": {
     "title": "كل الصيغ.",
@@ -90,5 +106,267 @@
   },
   "footer": {
     "license": "مفتوح المصدر · GPL-3.0"
+  },
+  "app": {
+    "meta": {
+      "title": "DropFlow ويب",
+      "description": "حوّل الملفات في متصفحك. لا شيء يُرفع."
+    },
+    "home": "الرئيسية",
+    "drop": {
+      "title": "أفلت الملفات",
+      "choose": "اختر ملفات",
+      "paste": "أو الصق",
+      "privacy": "لا شيء يغادر جهازك",
+      "zone": "منطقة الإفلات"
+    },
+    "over": {
+      "title": "أفلت"
+    },
+    "wheels": {
+      "convert": "تحويل",
+      "tools": "أدوات",
+      "actions": "إجراءات"
+    },
+    "keys": {
+      "shift": "Shift",
+      "ctrl": "Ctrl",
+      "alt": "Alt"
+    },
+    "wheel": {
+      "label": "العجلة",
+      "open": "افتح العجلة",
+      "empty": "لا شيء هنا",
+      "picker": "العجلات",
+      "center": "{count, plural, one {ملف واحد} two {ملفان} few {# ملفات} many {# ملفاً} other {# ملف}}"
+    },
+    "more": "المزيد",
+    "files": {
+      "title": "الملفات",
+      "add": "إضافة",
+      "clear": "مسح",
+      "remove": "إزالة {name}",
+      "list": "الملفات المحددة"
+    },
+    "run": "تشغيل",
+    "cancel": "إلغاء",
+    "stop": "إيقاف الكل",
+    "close": "إغلاق",
+    "dismiss": "إخفاء",
+    "status": {
+      "waiting": "بانتظار الدور",
+      "running": "جارٍ العمل…",
+      "done": "تم",
+      "failed": "فشل",
+      "cancelled": "أُلغي",
+      "engine": "تحميل المحرك…",
+      "engineFailed": "تعذّر تحميل المحرك",
+      "retry": "إعادة",
+      "added": "{count, plural, one {أُضيف ملف} two {أُضيف ملفان} few {أُضيفت # ملفات} many {أُضيف # ملفاً} other {أُضيف # ملف}}"
+    },
+    "results": {
+      "title": "النتائج",
+      "download": "تنزيل",
+      "all": "تنزيل الكل",
+      "zip": "ZIP",
+      "copy": "نسخ النص",
+      "copied": "تم النسخ",
+      "saved": "تم الحفظ",
+      "clear": "مسح",
+      "remove": "إزالة",
+      "list": "النتائج",
+      "preview": "معاينة"
+    },
+    "actions": {
+      "download": "تنزيل",
+      "share": "مشاركة",
+      "copy": "نسخ النص"
+    },
+    "big": {
+      "warn": "ملف كبير · {size}",
+      "slow": "قد يكون بطيئاً",
+      "limit": "تحذير فوق",
+      "off": "إيقاف",
+      "mb": "{n} م.ب",
+      "gb": "{n} غ.ب"
+    },
+    "hint": {
+      "title": "تطبيق ويندوز",
+      "soon": "قريباً",
+      "more": "+{count}",
+      "ocr": "OCR",
+      "transcribe": "كلام إلى نص",
+      "protect": "حماية",
+      "unlock": "فتح القفل",
+      "removeBg": "إزالة الخلفية",
+      "sign": "توقيع",
+      "redact": "تعتيم",
+      "encoder": "مُرمّز",
+      "burnSubs": "دمج الترجمة",
+      "join": "ضمّ"
+    },
+    "offline": {
+      "badge": "دون إنترنت",
+      "ready": "يعمل دون إنترنت",
+      "update": "تحديث",
+      "updating": "جارٍ التحديث…",
+      "save": "حفظ الوسائط دون إنترنت",
+      "saving": "جارٍ الحفظ…",
+      "saved": "حُفظت الوسائط"
+    },
+    "privacy": "الملفات تبقى على جهازك",
+    "back": "الموقع",
+    "err": {
+      "generic": "حدث خطأ ما",
+      "emptyResult": "لا ناتج",
+      "workerFailed": "تعذّر تشغيل المحرك",
+      "decodeFailed": "تعذّرت قراءة الملف",
+      "encodeUnsupported": "المتصفح لا يدعم هذا الترميز",
+      "notSmaller": "حجمه صغير أصلاً",
+      "targetUnreachable": "لا يمكن بلوغ {kb} KB",
+      "invalidSize": "حجم غير صالح",
+      "stripFailed": "فشلت الإزالة",
+      "corrupt": "ملف تالف",
+      "noCanvas": "اللوحة غير متاحة",
+      "engineLoadFailed": "تعذّر تحميل المحرك",
+      "noAudio": "لا يوجد مسار صوتي",
+      "invalidTime": "وقت غير صالح",
+      "invalidSpeed": "سرعة غير صالحة",
+      "tooLarge": "أكبر من قدرة المتصفح",
+      "encodeFailed": "فشل التحويل",
+      "outOfMemory": "نفدت الذاكرة",
+      "noFrame": "لا إطار عند هذا الوقت",
+      "unsupported": "غير مدعوم",
+      "noFiles": "لا ملف",
+      "invalidRange": "نطاق صفحات غير صالح: {spec}",
+      "encrypted": "محمي بكلمة مرور",
+      "emptyPdf": "ملف PDF بلا صفحات",
+      "needText": "أدخل نصاً",
+      "needTwo": "اختر ملفَّي PDF أو أكثر",
+      "noText": "لا يوجد نص. ربما ممسوح ضوئياً",
+      "noCues": "لا توجد ترجمات",
+      "tooManyFiles": "ملفات كثيرة (الحد {max})",
+      "invalidBase64": "Base64 غير صالح",
+      "unsupportedArchive": "أرشيف غير مدعوم",
+      "emptyArchive": "لا شيء لاستخراجه",
+      "noCrypto": "يتطلب صفحة آمنة (HTTPS)"
+    },
+    "sr": {
+      "wheelPage": "الصفحة {page} من {total}"
+    },
+    "ops": {
+      "img_compress": "ضغط",
+      "img_resize": "الحجم",
+      "img_crop": "قص",
+      "img_strip_gps": "بلا موقع",
+      "img_metadata": "معلومات",
+      "img_to_pdf": "إلى PDF",
+      "aud_normalize": "توحيد الصوت",
+      "aud_trim": "اقتطاع",
+      "vid_trim": "اقتطاع",
+      "vid_mute": "كتم",
+      "vid_snapshot": "لقطة",
+      "vid_speed": "سرعة",
+      "vid_compress": "ضغط",
+      "pdf_merge": "دمج",
+      "pdf_split": "تقسيم",
+      "pdf_rotate": "تدوير",
+      "pdf_organize": "ترتيب",
+      "pdf_metadata": "معلومات",
+      "pdf_watermark": "علامة مائية",
+      "pdf_page_numbers": "ترقيم",
+      "pdf_to_images": "صور",
+      "pdf_extract_text": "نص",
+      "pdf_compress": "ضغط",
+      "gen_hash": "بصمة",
+      "gen_base64": "Base64",
+      "arc_zip": "ضغط ZIP",
+      "arc_extract": "فك"
+    },
+    "opt": {
+      "quality": "الجودة",
+      "targetKb": "أقصى حجم KB",
+      "format": "الصيغة",
+      "width": "العرض",
+      "height": "الارتفاع",
+      "keepRatio": "حفظ النسبة",
+      "ratio": "النسبة",
+      "action": "الإجراء",
+      "page": "الصفحة",
+      "start": "البداية",
+      "end": "النهاية",
+      "time": "الوقت",
+      "speed": "السرعة",
+      "level": "الجودة",
+      "ranges": "النطاقات",
+      "pages": "الصفحات",
+      "angle": "الزاوية",
+      "order": "الترتيب",
+      "title": "العنوان",
+      "author": "المؤلف",
+      "subject": "الموضوع",
+      "keywords": "كلمات مفتاحية",
+      "clear": "مسح الكل",
+      "text": "النص",
+      "opacity": "العتامة",
+      "position": "الموضع",
+      "scale": "المقياس",
+      "algorithm": "الخوارزمية",
+      "mode": "الوضع",
+      "urlSafe": "آمن للروابط"
+    },
+    "optOp": {
+      "pdf_page_numbers": {
+        "start": "البدء من"
+      }
+    },
+    "choice": {
+      "format": {
+        "same": "كما هي",
+        "n": "3",
+        "n_of_total": "3 / 12"
+      },
+      "action": {
+        "view": "عرض",
+        "remove": "إزالة"
+      },
+      "page": {
+        "fit": "مطابق"
+      },
+      "level": {
+        "high": "الأفضل",
+        "medium": "متوازن",
+        "small": "الأصغر"
+      },
+      "position": {
+        "bottom_center": "أسفل الوسط",
+        "bottom_right": "أسفل اليمين",
+        "bottom_left": "أسفل اليسار",
+        "top_center": "أعلى الوسط",
+        "top_right": "أعلى اليمين",
+        "top_left": "أعلى اليسار"
+      },
+      "algorithm": {
+        "all": "الكل"
+      },
+      "mode": {
+        "encode": "ترميز",
+        "decode": "فك الترميز"
+      }
+    },
+    "ph": {
+      "targetKb": "0 = إيقاف",
+      "width": "0 = تلقائي",
+      "height": "0 = تلقائي",
+      "start": "0:00",
+      "end": "فارغ = النهاية",
+      "time": "0:05",
+      "ranges": "1-3, 5, 7-9",
+      "pages": "1-3, 5",
+      "order": "3, 1, 2, 5-7"
+    },
+    "warn": {
+      "textToImages": "النص يصبح صوراً"
+    }
   }
 }

@@ -64,8 +64,15 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsof
 | next-intl | 4.14.9 | MIT | Arabic/English routing and messages |
 | TypeScript, ESLint, eslint-config-next, @types/* | 5.x / 9.x | Apache-2.0 / MIT | Dev tooling |
 | IBM Plex Sans Arabic, IBM Plex Mono (fonts) | — | SIL OFL 1.1 | Typography, self-hosted at build via `next/font/google` |
+| @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. GPL-2.0-or-later is compatible with GPL-3.0-or-later |
+| @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
+| pdf-lib | 1.17.1 | MIT (dependencies MIT, one MIT AND Zlib, one 0BSD) | In-browser PDF merge/split/rotate/watermark/metadata |
+| pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 | In-browser PDF rendering and text extraction |
+| fflate | 0.8.3 | MIT | ZIP/GZIP in the browser |
+| vitest | 5.0.5 | MIT | Web unit tests (dev only; `@types/node` bumped to 24.19.2 because it requires it) |
 
-The in-browser app's WebAssembly engines are listed in `web/package.json` and recorded here when that work is merged.
+The in-browser app (`/app`) loads these only on that page (lazy chunks), never on the landing page. Its `connect-src` CSP allows only
+`self`, `blob:` and `data:`, and a static test asserts the source contains no `fetch`/XHR/WebSocket/beacon calls.
 
 ## Tests
 

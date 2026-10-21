@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { routing, rtlLocales } from "@/i18n/routing";
 import "../globals.css";
 
@@ -54,6 +54,8 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  // The web app's strings (`app` namespace) ship only with /app (its own layout), never with the landing page.
+  const messages = Object.fromEntries(Object.entries(await getMessages()).filter(([key]) => key !== "app"));
 
   return (
     <html
@@ -62,7 +64,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${plex.variable} ${plexMono.variable}`}
     >
       <body>
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

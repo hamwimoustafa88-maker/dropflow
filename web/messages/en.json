@@ -74,11 +74,27 @@
   },
   "features": {
     "title": "Features",
-    "pdf": { "title": "PDF", "text": "Merge. Split. Compress. Convert." },
-    "media": { "title": "Video and audio", "text": "Pro encoder. GPU fast." },
-    "speech": { "title": "Speech to text", "text": "Arabic included.", "caption": "Hello, world" },
-    "local": { "title": "100% local", "text": "Nothing is uploaded." },
-    "lang": { "title": "Arabic and English", "text": "Built for RTL." }
+    "pdf": {
+      "title": "PDF",
+      "text": "Merge. Split. Compress. Convert."
+    },
+    "media": {
+      "title": "Video and audio",
+      "text": "Pro encoder. GPU fast."
+    },
+    "speech": {
+      "title": "Speech to text",
+      "text": "Arabic included.",
+      "caption": "Hello, world"
+    },
+    "local": {
+      "title": "100% local",
+      "text": "Nothing is uploaded."
+    },
+    "lang": {
+      "title": "Arabic and English",
+      "text": "Built for RTL."
+    }
   },
   "formats": {
     "title": "Every format.",
@@ -90,5 +106,267 @@
   },
   "footer": {
     "license": "Open source · GPL-3.0"
+  },
+  "app": {
+    "meta": {
+      "title": "DropFlow Web",
+      "description": "Convert files in your browser. Nothing is uploaded."
+    },
+    "home": "Home",
+    "drop": {
+      "title": "Drop files",
+      "choose": "Choose files",
+      "paste": "or paste",
+      "privacy": "Nothing leaves your device",
+      "zone": "Drop zone"
+    },
+    "over": {
+      "title": "Drop"
+    },
+    "wheels": {
+      "convert": "Convert",
+      "tools": "Tools",
+      "actions": "Actions"
+    },
+    "keys": {
+      "shift": "Shift",
+      "ctrl": "Ctrl",
+      "alt": "Alt"
+    },
+    "wheel": {
+      "label": "Wheel",
+      "open": "Open wheel",
+      "empty": "Nothing here",
+      "picker": "Wheels",
+      "center": "{count, plural, one {# file} other {# files}}"
+    },
+    "more": "More",
+    "files": {
+      "title": "Files",
+      "add": "Add",
+      "clear": "Clear",
+      "remove": "Remove {name}",
+      "list": "Selected files"
+    },
+    "run": "Run",
+    "cancel": "Cancel",
+    "stop": "Stop all",
+    "close": "Close",
+    "dismiss": "Dismiss",
+    "status": {
+      "waiting": "Waiting",
+      "running": "Working…",
+      "done": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "engine": "Loading engine…",
+      "engineFailed": "Engine failed",
+      "retry": "Retry",
+      "added": "{count, plural, one {# file added} other {# files added}}"
+    },
+    "results": {
+      "title": "Results",
+      "download": "Download",
+      "all": "Download all",
+      "zip": "ZIP",
+      "copy": "Copy text",
+      "copied": "Copied",
+      "saved": "Saved",
+      "clear": "Clear",
+      "remove": "Remove",
+      "list": "Results",
+      "preview": "Preview"
+    },
+    "actions": {
+      "download": "Download",
+      "share": "Share",
+      "copy": "Copy text"
+    },
+    "big": {
+      "warn": "Large file · {size}",
+      "slow": "May be slow",
+      "limit": "Warn above",
+      "off": "Off",
+      "mb": "{n} MB",
+      "gb": "{n} GB"
+    },
+    "hint": {
+      "title": "Windows app",
+      "soon": "Soon",
+      "more": "+{count}",
+      "ocr": "OCR",
+      "transcribe": "Speech to text",
+      "protect": "Protect",
+      "unlock": "Unlock",
+      "removeBg": "Cutout",
+      "sign": "Sign",
+      "redact": "Redact",
+      "encoder": "Encoder",
+      "burnSubs": "Burn subs",
+      "join": "Join"
+    },
+    "offline": {
+      "badge": "Offline",
+      "ready": "Works offline",
+      "update": "Update",
+      "updating": "Updating…",
+      "save": "Save media offline",
+      "saving": "Saving…",
+      "saved": "Media saved"
+    },
+    "privacy": "Files stay on this device",
+    "back": "Site",
+    "err": {
+      "generic": "Something went wrong",
+      "emptyResult": "No output",
+      "workerFailed": "Engine failed",
+      "decodeFailed": "Can't read this file",
+      "encodeUnsupported": "Browser can't encode this",
+      "notSmaller": "Already small",
+      "targetUnreachable": "Cannot reach {kb} KB",
+      "invalidSize": "Invalid size",
+      "stripFailed": "Removal failed",
+      "corrupt": "Damaged file",
+      "noCanvas": "Canvas unavailable",
+      "engineLoadFailed": "Engine failed to load",
+      "noAudio": "No audio track",
+      "invalidTime": "Invalid time",
+      "invalidSpeed": "Invalid speed",
+      "tooLarge": "Too large for the browser",
+      "encodeFailed": "Conversion failed",
+      "outOfMemory": "Out of memory",
+      "noFrame": "No frame at that time",
+      "unsupported": "Not supported",
+      "noFiles": "No file",
+      "invalidRange": "Bad page range: {spec}",
+      "encrypted": "Password protected",
+      "emptyPdf": "PDF has no pages",
+      "needText": "Enter some text",
+      "needTwo": "Pick two or more PDFs",
+      "noText": "No text found. Scanned?",
+      "noCues": "No subtitles found",
+      "tooManyFiles": "Too many files (max {max})",
+      "invalidBase64": "Not valid Base64",
+      "unsupportedArchive": "Unsupported archive",
+      "emptyArchive": "Nothing to extract",
+      "noCrypto": "Needs a secure page (HTTPS)"
+    },
+    "sr": {
+      "wheelPage": "Page {page} of {total}"
+    },
+    "ops": {
+      "img_compress": "Compress",
+      "img_resize": "Resize",
+      "img_crop": "Crop",
+      "img_strip_gps": "No GPS",
+      "img_metadata": "Info",
+      "img_to_pdf": "To PDF",
+      "aud_normalize": "Normalize",
+      "aud_trim": "Trim",
+      "vid_trim": "Trim",
+      "vid_mute": "Mute",
+      "vid_snapshot": "Snapshot",
+      "vid_speed": "Speed",
+      "vid_compress": "Compress",
+      "pdf_merge": "Merge",
+      "pdf_split": "Split",
+      "pdf_rotate": "Rotate",
+      "pdf_organize": "Organize",
+      "pdf_metadata": "Info",
+      "pdf_watermark": "Watermark",
+      "pdf_page_numbers": "Numbers",
+      "pdf_to_images": "Images",
+      "pdf_extract_text": "Text",
+      "pdf_compress": "Compress",
+      "gen_hash": "Hash",
+      "gen_base64": "Base64",
+      "arc_zip": "Zip",
+      "arc_extract": "Extract"
+    },
+    "opt": {
+      "quality": "Quality",
+      "targetKb": "Max KB",
+      "format": "Format",
+      "width": "Width",
+      "height": "Height",
+      "keepRatio": "Keep ratio",
+      "ratio": "Ratio",
+      "action": "Action",
+      "page": "Page",
+      "start": "Start",
+      "end": "End",
+      "time": "Time",
+      "speed": "Speed",
+      "level": "Quality",
+      "ranges": "Ranges",
+      "pages": "Pages",
+      "angle": "Angle",
+      "order": "Order",
+      "title": "Title",
+      "author": "Author",
+      "subject": "Subject",
+      "keywords": "Keywords",
+      "clear": "Clear all",
+      "text": "Text",
+      "opacity": "Opacity",
+      "position": "Position",
+      "scale": "Scale",
+      "algorithm": "Algorithm",
+      "mode": "Mode",
+      "urlSafe": "URL-safe"
+    },
+    "optOp": {
+      "pdf_page_numbers": {
+        "start": "Start at"
+      }
+    },
+    "choice": {
+      "format": {
+        "same": "Same",
+        "n": "3",
+        "n_of_total": "3 / 12"
+      },
+      "action": {
+        "view": "View",
+        "remove": "Remove"
+      },
+      "page": {
+        "fit": "Fit"
+      },
+      "level": {
+        "high": "Best",
+        "medium": "Balanced",
+        "small": "Smallest"
+      },
+      "position": {
+        "bottom_center": "Bottom center",
+        "bottom_right": "Bottom right",
+        "bottom_left": "Bottom left",
+        "top_center": "Top center",
+        "top_right": "Top right",
+        "top_left": "Top left"
+      },
+      "algorithm": {
+        "all": "All"
+      },
+      "mode": {
+        "encode": "Encode",
+        "decode": "Decode"
+      }
+    },
+    "ph": {
+      "targetKb": "0 = off",
+      "width": "0 = auto",
+      "height": "0 = auto",
+      "start": "0:00",
+      "end": "Empty = end",
+      "time": "0:05",
+      "ranges": "1-3, 5, 7-9",
+      "pages": "1-3, 5",
+      "order": "3, 1, 2, 5-7"
+    },
+    "warn": {
+      "textToImages": "Text becomes images"
+    }
   }
 }

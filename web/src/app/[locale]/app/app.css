@@ -1,0 +1,144 @@
+/* DropFlow Web (/app) styles. Imported by the /app layout only, so the landing page CSS/JS is untouched.
+   Colours come from the shared tokens in globals.css; the three status tokens below exist only here. */
+:root {
+  --danger: #b42318;
+  --warn: #8a5300;
+  --ok: #0b7a4b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --danger: #ff9b8f;
+    --warn: #fbbf24;
+    --ok: #4ade80;
+  }
+}
+
+.drop-card {
+  border: 2px dashed var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.drop-card:hover,
+.drop-card[data-over="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.overlay-in {
+  animation: overlay-in 140ms ease-out both;
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bar {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width 160ms linear;
+}
+
+/* Wheel: the running wedge pulses its stroke; the centre text never wraps. */
+.wedge[data-busy="true"] {
+  fill: var(--primary);
+}
+.wheel-center-title {
+  fill: var(--fg);
+  font-size: 15px;
+  font-weight: 700;
+}
+.wheel-center-sub {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+/* Mouse/script focus on a wedge must not paint the UA's rectangular focus ring around its bounding box. */
+.wedge-group:focus {
+  outline: none;
+}
+.wheel-more-dots {
+  letter-spacing: 2px;
+}
+
+/* A thin, always-visible scrollbar for the chip row on touch screens. */
+.chips-scroll {
+  scrollbar-width: thin;
+}
+
+/* Switch-style checkbox for boolean options. */
+.switch {
+  appearance: none;
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: background-color 160ms ease;
+  flex-shrink: 0;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  width: calc(1.5rem - 6px);
+  height: calc(1.5rem - 6px);
+  border-radius: 9999px;
+  background: var(--muted);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+.switch:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.switch:checked::after {
+  background: var(--on-primary);
+  transform: translateX(1.25rem);
+}
+[dir="rtl"] .switch:checked::after {
+  transform: translateX(-1.25rem);
+}
+
+input[type="range"] {
+  accent-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-in,
+  .spin {
+    animation: none;
+  }
+  .bar > span,
+  .switch,
+  .switch::after,
+  .drop-card {
+    transition: none;
+  }
+}

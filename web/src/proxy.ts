@@ -5,5 +5,6 @@ import { routing } from "./i18n/routing";
 export default createMiddleware(routing);
 
 export const config = {
-  matcher: "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
+  // Static trees (/vendor engines, /icons) and anything with a file extension are never locale-redirected.
+  matcher: "/((?!api|trpc|_next|_vercel|vendor|icons|.*\\..*).*)",
 };

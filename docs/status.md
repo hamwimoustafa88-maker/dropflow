@@ -16,7 +16,7 @@ Last updated: 2026-10-21.
 | DropFlow.Engines.Images.Tests | 74 | 0 | |
 | DropFlow.Engines.Media.Tests | 659 | 52 | `[EngineFact(Ffmpeg)]` — no ffmpeg on PATH |
 | DropFlow.Engines.Pdf.Tests | 461 | 6 | qpdf (3) and LibreOffice (3) not installed |
-| DropFlow.Engines.Archive.Tests | 526 | 0 | real `7z.exe` and `Rar.exe` exist on this machine |
+| DropFlow.Engines.Archive.Tests | 561 | 0 | real `7z.exe` and `Rar.exe` exist on this machine; LAN tests need a LAN address and a non-elevated session |
 | DropFlow.AI.Tests | 282 | 7 | Whisper/ONNX models and ffmpeg not present |
 | DropFlow.Engines.Web.Tests | 9 | 0 | real WebView2 runtime 155 |
 | DropFlow.App.Tests | 14 | 0 | |
@@ -61,7 +61,7 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Word/PowerPoint/Excel opening the produced DOCX/PPTX/XLSX | **Unverified** | files pass OpenXml validation, never opened in Office |
 | HTML -> PDF (built-in WebView2) | Verified | 9 tests: A4/Letter/landscape sizes read back with PdfPig, Arabic path, no overwrite, network blocked unless allowed |
 | Archives (zip/tar/gz/7z/rar-read), hash, Base64, batch rename, QR, ICO/favicons | Verified | 526 tests incl. zip-slip and zip-bomb cases, real 7-Zip and WinRAR files |
-| Send to phone (QR) | Window verified; server verified on loopback | LAN reachability from a real phone and the Windows Firewall prompt are **unverified**; the server is being moved to Kestrel so it needs no administrator rights |
+| Send to phone (QR) | Window verified; server (Kestrel, no administrator rights needed) verified: bind, serve and download through the PC's own LAN address, token/traversal/limits/stop | **Unverified:** a real phone, the first-time Windows Firewall prompt (cancelling it silently blocks phones; this PC has inbound Block rules for `testhost.exe` created that way), Wi-Fi AP isolation, VPNs, IPv6-only networks |
 | Speech to text (Whisper) | Plumbing verified; **real inference never run** | no model downloaded (needs the owner's consent) |
 | OCR | Windows OCR (en-US, ar-SA) and Tesseract (English) verified for real | Arabic via Tesseract needs `ara.traineddata` (not installed) |
 | Background removal, face redaction | Pipeline verified with hand-written ONNX models | the real models were never run; quality and recall unmeasured |

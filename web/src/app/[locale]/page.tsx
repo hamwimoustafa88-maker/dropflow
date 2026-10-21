@@ -8,7 +8,7 @@ import { WheelDemo } from "@/components/WheelDemo";
 import { CategoryExplorer } from "@/components/CategoryExplorer";
 import { Features } from "@/components/Features";
 import { Marquee } from "@/components/Marquee";
-import { SoonButton } from "@/components/SoonButton";
+import { SoonButton, WebButton } from "@/components/SoonButton";
 import { stats } from "@/lib/catalog";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -37,7 +37,7 @@ function Hero() {
           <p className="mt-6 text-xl text-muted sm:text-2xl">{t("subtitle")}</p>
           <div className="mt-9 flex flex-wrap gap-3">
             <SoonButton kind="windows" primary />
-            <SoonButton kind="web" />
+            <WebButton />
           </div>
         </div>
         <WheelDemo />
@@ -88,7 +88,7 @@ function Cta() {
         <h2 className="reveal text-gradient text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <SoonButton kind="windows" primary />
-          <SoonButton kind="web" />
+          <WebButton />
         </div>
       </div>
     </section>

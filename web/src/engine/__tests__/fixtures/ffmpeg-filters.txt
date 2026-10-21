@@ -1,0 +1,41 @@
+Filters:
+  T.. = Timeline support
+  .S. = Slice threading
+  ..C = Command support
+  A = Audio input/output
+  V = Video input/output
+  N = Dynamic number and/or type of input/output
+  | = Source or sink filter
+ ... abench            A->A       Benchmark part of a filtergraph.
+ ..C acompressor       A->A       Audio compressor.
+ ... acontrast         A->A       Simple audio dynamic range compression/expansion filter.
+ T.C afade             A->A       Fade in/out input audio.
+ .S. aiir              A->N       Apply Infinite Impulse Response filter with supplied coefficients.
+ ... aresample         A->A       Resample audio data.
+ ... asdr              AA->A      Measure Audio Signal-to-Distortion Ratio.
+ ..C atempo            A->A       Adjust audio tempo.
+ TSC bass              A->A       Boost or cut lower frequencies.
+ ... join              N->A       Join multiple audio streams into multi-channel output.
+ ... loudnorm          A->A       EBU R128 loudness normalization
+ T.C volume            A->A       Change input volume.
+ ... hilbert           |->A       Generate a Hilbert transform FIR coefficients.
+ TSC chromakey         V->V       Turns a certain color into transparency. Operates on YUV colors.
+ .SC datascope         V->V       Video data analysis.
+ T.C drawtext          V->V       Draw text on top of video frames using libfreetype library.
+ ... fps               V->V       Force constant framerate.
+ ... freezedetect      V->V       Detects frozen video input.
+ TS. identity          VV->V      Calculate the Identity between two video streams.
+ TSC maskedthreshold   VV->V      Pick pixels comparing absolute difference of two streams with threshold.
+ ... palettegen        V->V       Find the optimal palette for a given stream.
+ ... paletteuse        VV->V      Use a palette to downsample an input video stream.
+ T.C perms             V->V       Set permissions for the output video frame.
+ TSC roberts           V->V       Apply roberts cross operator.
+ ..C scale             V->V       Scale the input video size and/or convert the image format.
+ ... setpts            V->V       Set PTS for the output video frame.
+ .S. signalstats       V->V       Generate statistics from video analysis.
+ ... split             V->N       Pass on the input to N video outputs.
+ .S. tonemap           V->V       Conversion to/from different dynamic ranges.
+ .S. xstack            N->V       Stack video inputs into custom layout.
+ ... yuvtestsrc        |->V       Generate YUV test pattern.
+ ... abuffersink       A->|       Buffer audio frames, and make them available to the end of the filter graph.
+Aborted()

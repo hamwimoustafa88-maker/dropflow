@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# DropFlow Web: generated at install/build time (scripts/vendor.mjs, scripts/build-sw.mjs)
+/public/vendor
+/public/sw.js
+/.next-*
+/.vitest

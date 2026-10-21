@@ -1,0 +1,21 @@
+{
+  "id": "/en/app",
+  "name": "DropFlow",
+  "short_name": "DropFlow",
+  "description": "Convert files in your browser. Nothing is uploaded.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/en/app?source=pwa",
+  "scope": "/en/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070b1c",
+  "theme_color": "#070b1c",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

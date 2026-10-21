@@ -33,6 +33,19 @@ winget validate --manifest manifests\d\DropFlow\DropFlow\0.1.0
 then open a pull request with that folder against <https://github.com/microsoft/winget-pkgs>. Their bots check the installer and the
 SmartScreen reputation; an unsigned installer is often rejected, so sign first.
 
+## What the package contains and needs (check before the first release)
+- The app is published **self-contained** (`installer/build.ps1`), so it bundles the .NET desktop runtime **and the ASP.NET Core
+  runtime** (the phone-share server uses Kestrel through `Microsoft.AspNetCore.App`; no NuGet package). That makes the installer
+  larger — measure it with the first real `vpk pack` and, if it matters, trim or consider a smaller server. A framework-dependent
+  install would need the ASP.NET Core 10 runtime on the PC.
+- Native libraries that must end up next to the app (verify in `publish/app`): PDFium (`pdfium.dll`), Whisper runtime, ONNX Runtime,
+  Magick.NET natives, `WebView2Loader.dll`. PDFiumCore ships win-x64/x86 only, so release win-x64 first.
+- **WebView2 runtime** (Evergreen) is preinstalled on Windows 11 and on up-to-date Windows 10; HTML → PDF reports a clear error if it is missing.
+- **Windows Firewall**: the first time "Send to phone" listens on the network Windows shows its own allow prompt. If the user cancels it,
+  phones cannot connect and the app cannot tell; the share window shows a hint. Not tested with a real phone yet.
+- No engines or models are bundled: FFmpeg, qpdf, LibreOffice and 7-Zip are installed through winget with the user's consent, and AI
+  models are downloaded only after a confirmation dialog.
+
 ## Before announcing
 - Run the manual matrix in `docs/phase0-checklist.md` on Windows 10 **and** 11 (drag capture, DPI, elevated apps, antivirus).
 - Check `docs/status.md`: anything still marked "unverified" must be either tested or described honestly in the release notes.

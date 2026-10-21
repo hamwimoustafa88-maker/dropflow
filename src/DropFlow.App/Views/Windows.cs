@@ -124,7 +124,11 @@ internal sealed record SettingsContext(
     string Version,
     IReadOnlyList<WatchRule> Rules,
     IReadOnlyList<string> RecipeNames,
-    Action<IReadOnlyList<WatchRule>> SaveRules);
+    Action<IReadOnlyList<WatchRule>> SaveRules,
+    IReadOnlyList<ModelItem> Models);
+
+/// <summary>One downloadable AI model as the settings window sees it.</summary>
+internal sealed record ModelItem(string Id, string Name, long SizeBytes, Func<bool> IsInstalled, Func<Task<bool>> Download, Func<bool> Delete);
 
 /// <summary>Settings: language, wheel keys, startup, right-click menu, shortcuts, watched folders, engines.</summary>
 internal sealed class SettingsWindow : Window
@@ -218,6 +222,19 @@ internal sealed class SettingsWindow : Window
         foreach (var e in ctx.Engines) eng.Children.Add(EngineRow(e));
         root.Children.Add(ui.Card(eng));
 
+        // AI models
+        root.Children.Add(ui.SectionTitle(ui.Loc["settings.models"]));
+        var modelList = new StackPanel();
+        foreach (var m in ctx.Models) modelList.Children.Add(ModelRow(m));
+        root.Children.Add(ui.Card(new StackPanel
+        {
+            Children =
+            {
+                ui.Text(ui.Loc["settings.models.hint"], 12, muted: true),
+                new ScrollViewer { Content = modelList, MaxHeight = 230, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
+            },
+        }));
+
         // footer
         _message = ui.Text("", 12);
         var save = ui.Primary(ui.Loc["dialog.save"]);
@@ -298,6 +315,51 @@ internal sealed class SettingsWindow : Window
         row.Children.Add(button);
         row.Children.Add(name);
         row.Children.Add(status);
+        return row;
+    }
+
+    private UIElement ModelRow(ModelItem model)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
+        var name = _ui.Text(model.Name, 13, wrap: false);
+        var status = _ui.Text("", 11, muted: true, wrap: false);
+        var button = _ui.Secondary("");
+        button.MinWidth = 84;
+        DockPanel.SetDock(button, Dock.Right);
+
+        void Refresh()
+        {
+            var installed = model.IsInstalled();
+            status.Text = $"{model.SizeBytes / 1_048_576.0:0} MB · " + _ui.Loc[installed ? "settings.model.installed" : "settings.model.missing"];
+            button.Content = _ui.Loc[installed ? "settings.model.delete" : "settings.model.download"];
+        }
+
+        button.Click += async (_, _) =>
+        {
+            button.IsEnabled = false;
+            try
+            {
+                if (model.IsInstalled())
+                {
+                    var sure = MessageBox.Show(this, _ui.Loc.Format("settings.model.confirmDelete", model.Name), model.Name,
+                        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+                    if (sure) model.Delete();
+                }
+                else
+                {
+                    await model.Download();
+                }
+            }
+            finally
+            {
+                button.IsEnabled = true;
+                Refresh();
+            }
+        };
+
+        row.Children.Add(button);
+        row.Children.Add(new StackPanel { Children = { name, status } });
+        Refresh();
         return row;
     }
 

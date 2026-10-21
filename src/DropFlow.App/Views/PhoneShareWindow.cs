@@ -80,6 +80,11 @@ internal sealed class PhoneShareWindow : Window
             warning.Foreground = Brushes.IndianRed;
             root.Children.Add(warning);
         }
+        else
+        {
+            // Windows asks once whether DropFlow may use the network; if that prompt was cancelled the phone silently cannot connect.
+            root.Children.Add(ui.Text(ui.Loc["phone.firewall"], 11, muted: true));
+        }
 
         // files
         root.Children.Add(ui.SectionTitle(ui.Loc["phone.files"]));

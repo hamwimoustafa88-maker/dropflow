@@ -459,7 +459,10 @@ internal sealed class AppHost : IDisposable
             Settings, SystemIntegration.IsStartupEnabled(), SystemIntegration.IsContextMenuInstalled(), ApplyFromWindow,
             engines, e => Engines.Locate(e) is not null,
             e => new EngineInstallService(_ui, Kit, Installer, Engines).InstallAsync(e, new Progress<string>(), CancellationToken.None),
-            Version, _watchStore.Load(), AllRecipes().Select(r => r.Name).ToList(), SaveWatchRules));
+            Version, _watchStore.Load(), AllRecipes().Select(r => r.Name).ToList(), SaveWatchRules,
+            [.. Models.Catalog.Select(m => new ModelItem(
+                m.Id, m.DisplayName, m.SizeBytes, () => Models.IsInstalled(m.Id),
+                () => _modelDownloads.EnsureAsync(m.Id, m.DisplayName), () => Models.Delete(m.Id)))]));
         _settingsWindow.Show();
         _settingsWindow.Activate();
     }

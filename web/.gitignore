@@ -47,3 +47,6 @@ next-env.d.ts
 /.vitest
 # build-time TTF for the share images (scripts/og-font.mjs)
 /.og-cache
+
+# written by scripts/csp-hashes.mjs between the two build passes
+/csp-hashes.json

@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -60,15 +61,22 @@ const SECURITY_HEADERS = [
   { key: "Access-Control-Allow-Origin", value: ORIGIN },
 ];
 
-// Static pages whose CSP gets the SHA-256 hashes of their own inline scripts after the build (scripts/csp-hashes.mjs replaces
-// the 'csp-hashes:<route>' placeholder). With hashes present, browsers ignore 'unsafe-inline' for scripts.
+// Static pages whose CSP carries the SHA-256 hashes of their own inline scripts. csp-hashes.json is written by
+// scripts/csp-hashes.mjs after the first build pass and read here by the second (see package.json "build"); without it a page
+// keeps the plain policy. With hashes present, browsers ignore 'unsafe-inline' for scripts.
 const LOCALES = ["ar", "en"];
 const HASHED_PAGES = ["", "/privacy", "/terms"];
+const CSP_HASHES: Record<string, string[]> = existsSync("csp-hashes.json") ? JSON.parse(readFileSync("csp-hashes.json", "utf8")) : {};
 const withHashes = (policy: string, route: string) =>
-  policy.replace("script-src 'self' 'unsafe-inline'", `script-src 'self' 'unsafe-inline' 'csp-hashes:${route}'`);
+  CSP_HASHES[route]?.length
+    ? policy.replace("script-src 'self' 'unsafe-inline'", `script-src 'self' 'unsafe-inline' ${CSP_HASHES[route].join(" ")}`)
+    : policy;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // A stable build id (the commit on Vercel) keeps the inline bootstrap scripts identical between the two build passes, so the
+  // CSP hashes computed after the first pass match the HTML of the second (see scripts/csp-hashes.mjs).
+  generateBuildId: async () => process.env.VERCEL_GIT_COMMIT_SHA || process.env.DROPFLOW_BUILD_ID || "dropflow-local",
   turbopack: {
     rules: {
       "*.css": {

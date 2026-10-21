@@ -14,8 +14,20 @@ must be written again for macOS. Tangerine itself is Mac-only, so a Mac DropFlow
 | Engines.Archive (SharpCompress, ZXing, QR, hashing) | portable | the phone-share server (Kestrel) is portable |
 | AI: Whisper.net, ONNX Runtime | portable | both ship macOS natives (Whisper can use Metal/Core ML); Windows OCR must be replaced (below) |
 
-`.github/workflows/macos-feasibility.yml` runs the tests of these projects on GitHub's Apple-Silicon runner with Homebrew FFmpeg and qpdf;
-its result is recorded in docs/status.md.
+### Measured on Apple Silicon (GitHub `macos-26-arm64`, macOS 26.6, Homebrew FFmpeg 9.0.2 + qpdf 12.4.2, 2026-10-21)
+`.github/workflows/macos-feasibility.yml`, run 39600303132 — the shared tests compile and run on a Mac unchanged:
+
+| Test project | Passed | Failed | Why it fails |
+|---|---|---|---|
+| Core | 310 / 326 | 16 | tests and code assume Windows paths (`C:\…`) and Windows named pipes (single instance) |
+| Engines.Common | 9 / 26 | 17 | the locator looks for `ffmpeg.exe`, `qpdf.exe`… and Windows install folders |
+| Engines.Images (Magick.NET) | **74 / 74** | 0 | — works as is |
+| Engines.Media | 660 / 712 | 0 (52 skipped) | the 52 real-FFmpeg tests skipped because the locator did not find `ffmpeg` (no `.exe`) |
+| Engines.Pdf | 417 / 714 | 290 | PDFiumCore ships Windows natives only (as predicted) |
+| Engines.Archive | — | — | hung until the 6-hour job limit (probably the phone-share LAN test or a Windows-only process path); not diagnosed |
+
+So: image work is ready today; making the engine locator find Unix executable names and adding macOS PDFium natives would turn most
+red tests green; the archive hang needs a look on a real Mac.
 
 ## What must be rebuilt for macOS
 | Windows piece | macOS replacement | Effort |

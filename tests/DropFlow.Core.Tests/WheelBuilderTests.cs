@@ -1,6 +1,7 @@
 using DropFlow.Core.Catalog;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Registry;
+using DropFlow.Core.Settings;
 using DropFlow.Core.Wheel;
 
 namespace DropFlow.Core.Tests;
@@ -153,6 +154,129 @@ public class WheelBuilderTests
         var registry = new ToolRegistry().Register(new FakeConverter(["pdf.protect"], options: [new ToolOption("password", ToolOptionKind.Password, Required: true)]));
         var set = Builder(registry).Build([@"C:\a.pdf"], "en", Actions);
         Assert.True(set.Tools.Single().NeedsOptions);
+    }
+
+    // ----- "+ Add" and pinned items ------------------------------------------------------------------------------------------
+
+    private static ToolRegistry ImageRegistry() =>
+        new ToolRegistry().Register(ImageConverter()).Register(new FakeConverter(["img.compress", "img.ocr", "pdf.merge"]));
+
+    [Fact]
+    public void Add_is_the_last_wedge_of_every_wheel_that_has_something_to_add()
+    {
+        var set = Builder(ImageRegistry()).Build([@"C:\a.png"], "en", Actions, WheelPins.None);
+
+        foreach (var kind in Enum.GetValues<WheelKind>())
+        {
+            var wedges = set.Of(kind);
+            Assert.True(wedges[^1].IsAdd, $"{kind} should end with + Add");
+            Assert.Single(wedges, w => w.IsAdd);
+        }
+    }
+
+    [Fact]
+    public void Add_appears_only_when_something_is_addable()
+    {
+        // only conversions apply and no actions are available: the Convert wheel already shows everything
+        var set = Builder(new ToolRegistry().Register(ImageConverter())).Build([@"C:\a.png"], "en", [], WheelPins.None);
+        Assert.DoesNotContain(set.Convert, w => w.IsAdd);
+        Assert.Empty(set.AddableFor(WheelKind.Convert));
+        Assert.True(set.Tools.Single().IsAdd);          // the empty Tools wheel can take the conversions
+
+        Assert.Empty(Builder(ImageRegistry()).Build([], "en", Actions, WheelPins.None).Convert);   // no files, no slot
+    }
+
+    [Fact]
+    public void A_picture_offers_ocr_on_the_convert_wheel()
+    {
+        var set = Builder(ImageRegistry()).Build([@"C:\a.png"], "en", Actions, WheelPins.None);
+        var ocr = Assert.Single(set.AddableFor(WheelKind.Convert), w => w.Id == "img.ocr");
+        Assert.Equal(WheelKind.Tools, ocr.Wheel);       // grouped (and run) as a tool
+        Assert.Equal("Extract text (OCR)", ocr.Label);
+    }
+
+    [Fact]
+    public void Addable_excludes_the_wheels_own_items_and_anything_without_a_converter_or_out_of_file_limits()
+    {
+        var set = Builder(ImageRegistry()).Build([@"C:\a.png"], "en", Actions, WheelPins.None);
+        var addable = set.AddableFor(WheelKind.Convert).Select(w => w.Id).ToList();
+
+        Assert.Equal(["img.compress", "img.ocr", "act.copy", "act.move", "act.copy-path"], addable);   // grouped: tools, then actions
+        Assert.DoesNotContain("convert:jpg", addable);  // already on this wheel
+        Assert.DoesNotContain("img.resize", addable);   // in the catalog, but no converter
+        Assert.DoesNotContain("pdf.merge", addable);    // has a converter, but not for pictures
+
+        var tools = set.AddableFor(WheelKind.Tools).Select(w => w.Id).ToList();
+        Assert.Equal(["convert:jpg", "convert:webp", "act.copy", "act.move", "act.copy-path"], tools);
+    }
+
+    [Fact]
+    public void Multi_file_tools_are_addable_only_with_enough_files()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["pdf.merge", "pdf.split"]));
+        Assert.DoesNotContain(Builder(registry).Build([@"C:\a.pdf"], "en", Actions, WheelPins.None).AddableFor(WheelKind.Convert), w => w.Id == "pdf.merge");
+        Assert.Contains(Builder(registry).Build([@"C:\a.pdf", @"C:\b.pdf"], "en", Actions, WheelPins.None).AddableFor(WheelKind.Convert), w => w.Id == "pdf.merge");
+    }
+
+    [Fact]
+    public void A_pin_puts_the_item_on_that_wheel_before_add_for_that_category_only()
+    {
+        var pins = WheelPins.None.With(WheelKind.Convert, "image", "img.ocr");
+        var picture = Builder(ImageRegistry()).Build([@"C:\a.png"], "en", Actions, pins);
+
+        Assert.Equal(["convert:jpg", "convert:webp", "img.ocr", Wedge.AddId], picture.Convert.Select(w => w.Id));
+        Assert.True(picture.Convert[2].Pinned);
+        Assert.DoesNotContain(picture.AddableFor(WheelKind.Convert), w => w.Id == "img.ocr");
+        Assert.Contains(picture.Tools, w => w.Id == "img.ocr" && !w.Pinned);   // still on its own wheel
+        Assert.DoesNotContain(picture.Actions, w => w.Id == "img.ocr");        // other wheels unchanged
+
+        var pdfRegistry = new ToolRegistry().Register(new FakeConverter(["img.ocr", "pdf.split"]));
+        var pdf = Builder(pdfRegistry).Build([@"C:\a.pdf"], "en", Actions, pins);
+        Assert.DoesNotContain(pdf.Convert, w => w.Id == "img.ocr");             // pinned for pictures, not for PDFs
+    }
+
+    [Fact]
+    public void A_pin_that_does_not_apply_to_the_selection_is_kept_but_not_shown()
+    {
+        var pins = WheelPins.None.With(WheelKind.Convert, "image", "img.collage");   // no converter in this registry
+        var set = Builder(ImageRegistry()).Build([@"C:\a.png"], "en", Actions, pins);
+        Assert.DoesNotContain(set.Convert, w => w.Id == "img.collage");
+        Assert.Equal("image", set.Category);
+    }
+
+    [Fact]
+    public void Mixed_selections_keep_their_pins_under_other()
+    {
+        var registry = new ToolRegistry().Register(new FakeConverter(["gen.hash"]));
+        Assert.Equal(WheelBuilder.OtherCategory, Builder(registry).CategoryKey([@"C:\a.png", @"C:\b.pdf"]));
+        Assert.Equal(WheelBuilder.OtherCategory, Builder(registry).CategoryKey([@"C:\Users\me\Pictures"]));
+
+        var pins = WheelPins.None.With(WheelKind.Actions, WheelBuilder.OtherCategory, "gen.hash");
+        var set = Builder(registry).Build([@"C:\a.png", @"C:\b.pdf"], "en", Actions, pins);
+        Assert.Contains(set.Actions, w => w.Id == "gen.hash" && w.Pinned);
+        Assert.Equal([Wedge.AddId], set.Convert.Select(w => w.Id));          // an empty Convert wheel still offers "+ Add"
+    }
+
+    [Fact]
+    public void Add_stays_reachable_on_a_very_full_wheel()
+    {
+        // every PDF tool in the catalog: the Tools wheel is as full as it gets, and "+ Add" is still its last wedge
+        var allPdfTools = Catalog.Tools.Where(t => t.Cat is "pdf" or "general").Select(t => t.Id).ToArray();
+        var registry = new ToolRegistry().Register(new FakeConverter(allPdfTools)).Register(new FakeConverter(["convert:docx"]));
+        var set = Builder(registry).Build([@"C:\a.pdf", @"C:\b.pdf"], "en", Actions, WheelPins.None);
+
+        Assert.True(set.Tools.Count > 20, $"only {set.Tools.Count} wedges");
+        Assert.True(set.Tools[^1].IsAdd);
+        Assert.Contains(set.AddableFor(WheelKind.Tools), w => w.Id == "convert:docx");
+    }
+
+    [Fact]
+    public void Labels_for_pinned_ids_are_readable()
+    {
+        var b = Builder(new ToolRegistry());
+        Assert.Equal("PDF", b.LabelOf("convert:pdf", "en"));
+        Assert.Equal("Extract text (OCR)", b.LabelOf("img.ocr", "en"));
+        Assert.Equal("unknown.id", b.LabelOf("unknown.id", "en"));
     }
 
     [Theory]

@@ -97,6 +97,15 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — DropFlow Web (Phase 6) merged: `/ar/app` and `/en/app` convert files in the browser (Canvas, pdf-lib, pdf.js, fflate,
+  single-thread ffmpeg.wasm in Web Workers) with a generated options form, paged wheels driven by Shift/Ctrl/Alt, and an offline PWA.
+  Privacy is enforced: a static test finds no fetch/XHR/beacon/WebSocket in app code and the `/app` CSP only allows self/blob/data
+  connections (tested to block a foreign POST, beacon, WebSocket and image ping). Re-verified here: lint, build, 834 Vitest tests,
+  `npm audit --omit=dev` = 0, and 206/206 headless-Edge checks. `@ffmpeg/core` is GPL-2.0-or-later (served from `/vendor`, generated
+  at build time, gitignored, recorded in THIRD-PARTY-NOTICES). Also: phone-share server moved from HttpListener to Kestrel (the former
+  refuses LAN listening without admin rights, so phones could never connect); settings list/download/delete AI models; the
+  phone window explains the Windows Firewall prompt. Next 16/Turbopack gotchas are in `web/README.md`. — web/**, src/DropFlow.Engines.Archive,
+  src/DropFlow.App/Views, docs/status.md, docs/release.md
 - 2026-10-21 — Engines merged and wired (five agents worked in parallel on separate folders): Media (FFmpeg conversions, 20 tools,
   Encoder planner + 12 presets, subtitles), Pdf (managed PDFsharp/PdfPig/PDFium tools, qpdf and LibreOffice drivers, 113 Office pairs),
   Archive (safe extraction, zip/tar/gz/7z, QR, ICO/favicons, hash/Base64/rename, phone-share server), AI (Whisper, OCR, background

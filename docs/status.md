@@ -67,7 +67,8 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Background removal, face redaction | Pipeline verified with hand-written ONNX models | the real models were never run; quality and recall unmeasured |
 | Model downloads | Verified against a local test server (resume, hash mismatch, cancel) | the real Hugging Face URLs answered a 1-byte Range request but no model was downloaded |
 | Installer / updates (Velopack), CI, release workflow, winget manifests | Written | `vpk pack` and the GitHub workflows were never run; no release exists |
-| Web app (in-browser, `web/`) | In progress (agent) | see below when merged |
+| Web app (in-browser, `/app`, `web/`) | Verified in headless Edge | 206 browser checks run by its author (real file inputs, synthesized drags with Shift/Ctrl/Alt, real downloads re-parsed, offline reload), 834 Vitest tests (169 run the real ffmpeg core in Node); lint, production build, tests and `npm audit --omit=dev` (0) re-run here. No-upload proof: static scan finds no fetch/XHR/beacon/WebSocket in app code, and the `/app` CSP only allows self/blob/data |
+| Web app gaps | **Unverified** | a real OS drag from Explorer with Alt/Shift/Ctrl; Firefox, Safari, phones; folder drop and AVIF/SVG/GIF/ICO inputs in e2e; files over ~500 MB; PWA install prompt; the service worker's own requests are not network-audited; `public/sw.js` is generated after `next build` and is assumed to be collected by Vercel. HEIC/TIFF input, GIF output, Office, OCR, Whisper, protect/unlock/sign/redact are not offered in the browser (a hint tile points to the Windows app) |
 | Vercel deployment | **Not linked** | connector got 403 on the owner's scope; import the repo with Root Directory `web` |
 | Accounts / payments | Deferred on purpose | ADR-0005, Phase 9 |
 

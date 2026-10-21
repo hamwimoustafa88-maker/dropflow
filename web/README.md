@@ -29,3 +29,20 @@ refuses it (CSP `connect-src 'self'` on `/app`, on the worker chunks and on the 
 
 Not possible in a browser, so never offered (the app shows a short "Windows app" hint instead): Office/PDF→Word, 7z/RAR create,
 OCR, Whisper, HEIC/TIFF (no license-clean decoder justified), password-protect/unlock PDF.
+
+## Gotchas found while building it (Next 16 / Turbopack)
+
+1. The `@ffmpeg/ffmpeg` `FFmpeg` class cannot be bundled: Turbopack fails on its `new Worker(new URL(classWorkerURL, import.meta.url))`
+   ("Can't resolve <dynamic>"). `engine/converters/ffmpeg-client.ts` speaks the same protocol to the unmodified vendored worker instead.
+2. Turbopack's worker bootstrap reads `?params=` from the worker script URL. A service worker answering from the Cache API returns a
+   response with no query, giving "Missing worker bootstrap config"; serve a URL-less copy of the cached response.
+3. `<Link href="/app">` on the landing page prefetches `/app` chunks into the landing: keep `prefetch={false}`.
+4. The next-intl proxy matcher redirects extensionless static files (for example `LICENSE_FOXIT`), which stalled the service-worker
+   install. `/vendor` and `/icons` are excluded in `src/proxy.ts`.
+5. `NextIntlClientProvider` ships every message to every page, so the landing layout filters out the `app` namespace.
+6. `body { overflow-x: clip }` hides real overflow from `scrollWidth`; measure element edges instead (this caught a real 390 px overflow).
+7. `html { scroll-behavior: smooth }` breaks coordinate-based clicks in tests unless `scrollIntoView` uses `instant`.
+8. The ffmpeg core crashes after about 60 commands and leaks memory: the engine recycles the instance every 20 commands and retries once.
+9. `next dev` and `next build` use separate output directories, so building next to a dev server on port 3000 is safe.
+10. `public/sw.js` is generated *after* `next build` (`build-sw.mjs`). It works under `next start`; that Vercel collects `public/` after the
+    build command is assumed, not verified: check the first deployment.

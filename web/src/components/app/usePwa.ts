@@ -6,8 +6,6 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 // never registers a worker). The worker file is generated at build time (scripts/build-sw.mjs) and does not exist in
 // `next dev`, so registration is production-only.
 
-const MEDIA_CORE = "/vendor/ffmpeg/ffmpeg-core.wasm";
-
 function subscribeOnline(cb: () => void): () => void {
   window.addEventListener("online", cb);
   window.addEventListener("offline", cb);
@@ -17,13 +15,10 @@ function subscribeOnline(cb: () => void): () => void {
   };
 }
 
-export type MediaCache = "unknown" | "missing" | "saving" | "saved";
-
 export function usePwa() {
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [ready, setReady] = useState(false);
   const [update, setUpdate] = useState(false);
-  const [media, setMedia] = useState<MediaCache>("unknown");
   const reg = useRef<ServiceWorkerRegistration | null>(null);
   const reloading = useRef(false);
 
@@ -35,13 +30,7 @@ export function usePwa() {
     const onController = () => {
       if (reloading.current) window.location.reload();
     };
-    const onMessage = (e: MessageEvent) => {
-      const type = (e.data as { type?: string } | null)?.type;
-      if (type === "MEDIA_CACHED") setMedia("saved");
-      else if (type === "MEDIA_FAILED") setMedia("missing");
-    };
     sw.addEventListener("controllerchange", onController);
-    sw.addEventListener("message", onMessage);
 
     sw.register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then((registration) => {
@@ -60,12 +49,6 @@ export function usePwa() {
           // Extras (CJK CMaps) are cached in the background, after the shell is safe: never blocks the install.
           r.active?.postMessage({ type: "CACHE_OPTIONAL" });
         });
-        void caches
-          .match(MEDIA_CORE)
-          .then((hit) => {
-            if (!cancelled) setMedia(hit ? "saved" : "missing");
-          })
-          .catch(() => {});
       })
       .catch(() => {
         /* registration can fail in private windows; the app still works online */
@@ -74,7 +57,6 @@ export function usePwa() {
     return () => {
       cancelled = true;
       sw.removeEventListener("controllerchange", onController);
-      sw.removeEventListener("message", onMessage);
     };
   }, []);
 
@@ -85,13 +67,5 @@ export function usePwa() {
     else window.location.reload();
   }, []);
 
-  /** Explicit, user-triggered download of the 31 MB ffmpeg core so audio/video also work offline. */
-  const saveMedia = useCallback(() => {
-    const controller = navigator.serviceWorker?.controller;
-    if (!controller) return;
-    setMedia("saving");
-    controller.postMessage({ type: "CACHE_MEDIA" });
-  }, []);
-
-  return { online, ready, update, media, applyUpdate, saveMedia };
+  return { online, ready, update, applyUpdate };
 }

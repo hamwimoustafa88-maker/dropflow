@@ -52,11 +52,10 @@ const faviconRoute = existsSync(join(dist, "server", "app", "icon.svg")) ? ["/ic
 // 4. Vendor files (copied from node_modules by scripts/vendor.mjs).
 const vendorRoot = join(publicDir, "vendor");
 const vendorAll = walk(vendorRoot).map((f) => ({ url: toUrl(publicDir, f), size: statSync(f).size }));
-// REQUIRED (installed with the shell, so offline works right after the first visit): ffmpeg glue + core loader, the
+// REQUIRED (installed with the shell, so offline works right after the first visit): the
 // pdf.js worker, its standard fonts, image-decoder wasm and ICC profiles. OPTIONAL (best-effort, fetched after install
-// when the page asks): the ~170 CJK CMap files and no-wasm fallbacks. The 31 MB ffmpeg-core.wasm is never precached.
+// when the page asks): the ~170 CJK CMap files and no-wasm fallbacks.
 const isRequiredVendor = (u) =>
-  /^\/vendor\/ffmpeg\/(worker|const|errors|ffmpeg-core)\.js$/.test(u) ||
   u === "/vendor/pdfjs/pdf.worker.min.mjs" ||
   /^\/vendor\/pdfjs\/standard_fonts\/[^/]+\.(pfb|ttf)$/.test(u) ||
   /^\/vendor\/pdfjs\/wasm\/[^/]+\.wasm$/.test(u) ||

@@ -9,9 +9,9 @@
 | Category | Inputs | Outputs | Pairs | Phase | Platforms |
 |---|---|---|---|---|---|
 | Images | jpg, png, webp, heic, tiff, avif, bmp, gif, svg, ico | jpg, png, webp, heic, tiff, avif, bmp, gif, ico, pdf (PDF: phase 2) | 91 | 1 | windows, web |
-| Audio | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | 72 | 1 | windows, web |
-| Video | mp4, mov, mkv, webm, avi, wmv, gif, flv, m4v | mp4, mkv, webm, avi, wmv, gif, mov, mp3, m4a, wav | 83 | 1 | windows, web |
-| PDF | pdf | docx, pptx, xlsx, jpg, png, epub, txt, md, html, pdfa | 10 | 2 | windows |
+| Audio | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | mp3, m4a, wav, flac, ogg, opus, aiff, wma, aac | 72 | 1 | windows |
+| Video | mp4, mov, mkv, webm, avi, wmv, gif, flv, m4v | mp4, mkv, webm, avi, wmv, gif, mov, mp3, m4a, wav | 83 | 1 | windows |
+| PDF | pdf | docx, pptx, xlsx, jpg, png, epub, txt, md, html, pdfa | 10 | 2 | windows, web |
 | Documents | docx, doc, odt, rtf, md, txt, html, pages | docx, pdf, txt, md, html, epub, odt, rtf, png, jpg | 74 | 2 | windows |
 | Slides | pptx, ppt, odp, key | pdf, jpg, png, odp, pptx | 18 | 2 | windows |
 | Spreadsheets | xlsx, xls, ods, csv, tsv, numbers, json | xlsx, ods, csv, tsv, pdf, json, html | 44 | 2 | windows |
@@ -51,59 +51,59 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 | pdf.to-images | Save pages as images | حفظ الصفحات كصور | pdfium | windows, web | ✓ pdf:SAVE IMAGES |
 | pdf.extract-text | Extract text and Markdown | استخراج النص وMarkdown | pdfpig | windows, web | ✓ pdf:EXTRACT TEXT |
 | pdf.rotate | Rotate PDF | تدوير PDF | qpdf | windows, web | — (DropFlow extra) |
-| pdf.protect | Protect PDF (AES-256) | حماية PDF بكلمة مرور | qpdf | windows, web | — (DropFlow extra) |
-| pdf.unlock | Unlock PDF (known password) | فتح قفل PDF (بكلمة مرور معروفة) | qpdf | windows, web | — (DropFlow extra) |
+| pdf.protect | Protect PDF (AES-256) | حماية PDF بكلمة مرور | qpdf | windows | — (DropFlow extra) |
+| pdf.unlock | Unlock PDF (known password) | فتح قفل PDF (بكلمة مرور معروفة) | qpdf | windows | — (DropFlow extra) |
 | pdf.watermark | Add watermark | إضافة علامة مائية | pdfsharp | windows, web | — (DropFlow extra) |
 | pdf.page-numbers | Add page numbers | ترقيم الصفحات | pdfsharp | windows, web | — (DropFlow extra) |
-| pdf.repair | Repair PDF | إصلاح PDF | qpdf | windows, web | — (DropFlow extra) |
+| pdf.repair | Repair PDF | إصلاح PDF | qpdf | windows | — (DropFlow extra) |
 | pdf.html-to-pdf | HTML or web page to PDF | تحويل HTML أو صفحة ويب إلى PDF | webview2 | windows | — (DropFlow extra) |
 
 ### Phase 3
 
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
-| vid.compress | Compress videos | ضغط الفيديو | ffmpeg | windows, web | ✓ video:COMPRESS |
-| vid.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows, web | ✓ video:METADATA |
-| vid.mute | Remove audio | إزالة الصوت | ffmpeg | windows, web | ✓ video:MUTE |
-| vid.trim | Trim videos | قص الفيديو | ffmpeg | windows, web | ✓ video:TRIM |
-| vid.crop | Crop videos | اقتصاص الفيديو | ffmpeg | windows, web | ✓ video:CROP |
-| vid.speed | Change playback speed | تغيير سرعة التشغيل | ffmpeg | windows, web | ✓ video:SPEED |
-| vid.snapshot | Save video frames | حفظ إطارات من الفيديو | ffmpeg | windows, web | ✓ video:SNAPSHOT |
-| vid.split | Split videos | تقسيم الفيديو | ffmpeg | windows, web | ✓ video:SPLIT |
-| vid.join | Join videos *(multi-file)* | دمج مقاطع الفيديو | ffmpeg | windows, web | ✓ video:JOIN |
-| vid.redact | Redact videos | إخفاء مناطق في الفيديو | ffmpeg | windows, web | ✓ video:REDACT |
+| vid.compress | Compress videos | ضغط الفيديو | ffmpeg | windows | ✓ video:COMPRESS |
+| vid.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows | ✓ video:METADATA |
+| vid.mute | Remove audio | إزالة الصوت | ffmpeg | windows | ✓ video:MUTE |
+| vid.trim | Trim videos | قص الفيديو | ffmpeg | windows | ✓ video:TRIM |
+| vid.crop | Crop videos | اقتصاص الفيديو | ffmpeg | windows | ✓ video:CROP |
+| vid.speed | Change playback speed | تغيير سرعة التشغيل | ffmpeg | windows | ✓ video:SPEED |
+| vid.snapshot | Save video frames | حفظ إطارات من الفيديو | ffmpeg | windows | ✓ video:SNAPSHOT |
+| vid.split | Split videos | تقسيم الفيديو | ffmpeg | windows | ✓ video:SPLIT |
+| vid.join | Join videos *(multi-file)* | دمج مقاطع الفيديو | ffmpeg | windows | ✓ video:JOIN |
+| vid.redact | Redact videos | إخفاء مناطق في الفيديو | ffmpeg | windows | ✓ video:REDACT |
 | vid.encoder | Open in DropFlow Encoder | فتح في مُرمّز DropFlow | ffmpeg | windows | — (DropFlow extra) |
-| vid.target-size | Compress to a target size | ضغط إلى حجم مستهدف | ffmpeg | windows, web | — (DropFlow extra) |
-| vid.transcribe | Speech to text | تحويل الكلام إلى نص | whisper | windows, web | — (DropFlow extra) |
+| vid.target-size | Compress to a target size | ضغط إلى حجم مستهدف | ffmpeg | windows | — (DropFlow extra) |
+| vid.transcribe | Speech to text | تحويل الكلام إلى نص | whisper | windows | — (DropFlow extra) |
 | vid.burn-subs | Burn in subtitles | دمج الترجمة في الفيديو | ffmpeg | windows | — (DropFlow extra) |
-| aud.compress | Compress audio | ضغط الصوت | ffmpeg | windows, web | ✓ audio:COMPRESS |
-| aud.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows, web | ✓ audio:METADATA |
-| aud.normalize | Normalize volume | توحيد مستوى الصوت | ffmpeg | windows, web | ✓ audio:NORMALIZE |
-| aud.trim | Trim audio | قص الصوت | ffmpeg | windows, web | ✓ audio:TRIM |
-| aud.channels | Convert audio channels | تحويل قنوات الصوت | ffmpeg | windows, web | ✓ audio:CHANNELS |
-| aud.visualize | Visualize audio | تصوير الصوت كفيديو موجي | ffmpeg | windows, web | ✓ audio:VISUALIZE |
-| aud.bleep | Bleep audio | إخفاء مقاطع بصوت صفير | ffmpeg | windows, web | ✓ audio:BLEEP |
-| aud.transcribe | Speech to text | تحويل الكلام إلى نص | whisper | windows, web | — (DropFlow extra) |
-| aud.merge | Join audio files *(multi-file)* | دمج الملفات الصوتية | ffmpeg | windows, web | — (DropFlow extra) |
+| aud.compress | Compress audio | ضغط الصوت | ffmpeg | windows | ✓ audio:COMPRESS |
+| aud.metadata | Edit metadata | تعديل البيانات الوصفية | ffmpeg | windows | ✓ audio:METADATA |
+| aud.normalize | Normalize volume | توحيد مستوى الصوت | ffmpeg | windows | ✓ audio:NORMALIZE |
+| aud.trim | Trim audio | قص الصوت | ffmpeg | windows | ✓ audio:TRIM |
+| aud.channels | Convert audio channels | تحويل قنوات الصوت | ffmpeg | windows | ✓ audio:CHANNELS |
+| aud.visualize | Visualize audio | تصوير الصوت كفيديو موجي | ffmpeg | windows | ✓ audio:VISUALIZE |
+| aud.bleep | Bleep audio | إخفاء مقاطع بصوت صفير | ffmpeg | windows | ✓ audio:BLEEP |
+| aud.transcribe | Speech to text | تحويل الكلام إلى نص | whisper | windows | — (DropFlow extra) |
+| aud.merge | Join audio files *(multi-file)* | دمج الملفات الصوتية | ffmpeg | windows | — (DropFlow extra) |
 
 ### Phase 4
 
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
-| img.edit | Edit photos | تحرير الصور | magick | windows, web | ✓ image:EDIT |
-| img.annotate | Annotate photos | التعليق على الصور | dotnet | windows, web | ✓ image:ANNOTATE |
-| img.background | Add a background | إضافة خلفية | magick | windows, web | ✓ image:ADD BG |
-| img.redact | Redact photos | إخفاء مناطق في الصور | magick | windows, web | ✓ image:REDACT |
-| img.collage | Make a collage *(multi-file)* | إنشاء كولاج | magick | windows, web | ✓ image:COLLAGE |
-| img.icons | Make ICO and favicons | توليد أيقونات ICO وFavicon | magick | windows, web | — (DropFlow extra) |
-| img.qr | Read or create QR codes | قراءة وإنشاء رموز QR | zxing | windows, web | — (DropFlow extra) |
-| pdf.crop | Crop PDF | اقتصاص PDF | pdfsharp | windows, web | — (DropFlow extra) |
-| pdf.sign | Sign PDF | توقيع PDF | pdfsharp | windows, web | — (DropFlow extra) |
+| img.edit | Edit photos | تحرير الصور | magick | windows | ✓ image:EDIT |
+| img.annotate | Annotate photos | التعليق على الصور | dotnet | windows | ✓ image:ANNOTATE |
+| img.background | Add a background | إضافة خلفية | magick | windows | ✓ image:ADD BG |
+| img.redact | Redact photos | إخفاء مناطق في الصور | magick | windows | ✓ image:REDACT |
+| img.collage | Make a collage *(multi-file)* | إنشاء كولاج | magick | windows | ✓ image:COLLAGE |
+| img.icons | Make ICO and favicons | توليد أيقونات ICO وFavicon | magick | windows | — (DropFlow extra) |
+| img.qr | Read or create QR codes | قراءة وإنشاء رموز QR | zxing | windows | — (DropFlow extra) |
+| pdf.crop | Crop PDF | اقتصاص PDF | pdfsharp | windows | — (DropFlow extra) |
+| pdf.sign | Sign PDF | توقيع PDF | pdfsharp | windows | — (DropFlow extra) |
 | pdf.redact | Redact PDF | إخفاء محتوى PDF نهائياً | pdfium | windows | — (DropFlow extra) |
 | pdf.compare | Compare PDFs *(multi-file)* | مقارنة ملفي PDF | pdfium | windows | — (DropFlow extra) |
 | arc.extract | Extract archives | فك الأرشيف | dotnet | windows, web | ✓ archive:EXTRACT |
 | arc.zip | Compress to ZIP *(multi-file)* | ضغط إلى ZIP | dotnet | windows, web | — (DropFlow extra) |
-| gen.rename | Batch rename *(multi-file)* | إعادة تسمية جماعية | dotnet | windows, web | — (DropFlow extra) |
+| gen.rename | Batch rename *(multi-file)* | إعادة تسمية جماعية | dotnet | windows | — (DropFlow extra) |
 | gen.hash | File hash (MD5, SHA-256) | بصمة الملف (MD5, SHA-256) | dotnet | windows, web | — (DropFlow extra) |
 | gen.base64 | Base64 encode or decode | ترميز Base64 | dotnet | windows, web | — (DropFlow extra) |
 | act.float | Float | رف عائم | shell | windows | ✓ actions:FLOAT |
@@ -113,9 +113,9 @@ Windows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → W
 | ID | Tool | الأداة | Engine | Platforms | Tangerine |
 |---|---|---|---|---|---|
 | img.redact-auto | Auto-detect faces and text to redact | كشف الوجوه والنص تلقائياً للإخفاء | onnx | windows | — (DropFlow extra) |
-| img.remove-bg | Remove background | إزالة الخلفية | onnx | windows, web | — (DropFlow extra) |
-| img.ocr | Extract text (OCR) | استخراج النص (OCR) | ocr | windows, web | — (DropFlow extra) |
-| pdf.ocr | Make PDF searchable (OCR) | جعل PDF قابلاً للبحث (OCR) | ocr | windows, web | — (DropFlow extra) |
+| img.remove-bg | Remove background | إزالة الخلفية | onnx | windows | — (DropFlow extra) |
+| img.ocr | Extract text (OCR) | استخراج النص (OCR) | ocr | windows | — (DropFlow extra) |
+| pdf.ocr | Make PDF searchable (OCR) | جعل PDF قابلاً للبحث (OCR) | ocr | windows | — (DropFlow extra) |
 
 ### Phase 7
 

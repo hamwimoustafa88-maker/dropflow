@@ -57,12 +57,12 @@ export interface Converter {
   /**
    * True ONLY when this converter really handles `operation` for an input with this extension (lower-case, no dot).
    * Never true for converting a format to itself. Must be cheap and synchronous (the wheel calls it often);
-   * capability-dependent operations (avif, ffmpeg targets) read `getImageCaps()` / `getMediaCaps()`.
+   * capability-dependent operations (webp / avif targets) read `getImageCaps()`.
    */
   supports(operation: string, ext: string): boolean;
   /** Options to ask the user for. Empty array means "run immediately with defaults". */
   options(operation: string): readonly ToolOption[];
-  /** "worker": heavy pure work (runs in the DropFlow Web Worker). "main": needs the DOM/canvas, or drives its own worker (ffmpeg, pdf.js). */
+  /** "worker": heavy pure work (runs in the DropFlow Web Worker). "main": needs the DOM/canvas, or drives its own worker (pdf.js). */
   runtime(operation: string, ext: string): Runtime;
   /** The word inside the output name: `name (suffix).ext`, e.g. "converted", "compressed", "merged". English, ASCII, lower-case. */
   suffix(operation: string): string;

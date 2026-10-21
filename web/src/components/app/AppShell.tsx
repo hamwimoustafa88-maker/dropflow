@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Logo } from "@/components/Logo";
-import { capsVersion, getMediaCaps, subscribeCaps } from "@/engine/caps";
-import { categoryForExtension } from "@/engine/catalog-web";
+import { Link } from "@/i18n/navigation";
+import { capsVersion, subscribeCaps } from "@/engine/caps";
 import { ensureImageCaps } from "@/engine/converters/images";
-import { loadMediaCaps } from "@/engine/converters/media";
 import { getSession, serverSnapshot } from "@/engine/app-session";
 import { extensionOf, formatBytes } from "@/engine/names";
 import { defaultValues } from "@/engine/option-values";
@@ -97,8 +96,6 @@ export function AppShell() {
   const [toast, setToast] = useState("");
   const [focusToken, setFocusToken] = useState(0);
   const bigMb = useSyncExternalStore(subscribeLimit, readLimit, () => DEFAULT_LIMIT_MB);
-  const [engineFailed, setEngineFailed] = useState(false);
-  const [retry, setRetry] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const activityRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,29 +115,6 @@ export function AppShell() {
 
   // ---- derived: wheels -----------------------------------------------------------------------------------------
   const results = snap.results;
-  const needsMedia = useMemo(
-    () =>
-      files.some((f) => {
-        const id = categoryForExtension(extensionOf(f.name))?.id;
-        return id === "audio" || id === "video";
-      }),
-    [files],
-  );
-  // `capsV` re-derives these when the capability store changes (media probe finished, image formats detected).
-  const mediaReady = capsV >= 0 && getMediaCaps() !== null;
-  const engineLoading = needsMedia && !mediaReady && !engineFailed;
-
-  useEffect(() => {
-    if (!needsMedia || getMediaCaps()) return;
-    let cancelled = false;
-    loadMediaCaps().catch(() => {
-      if (!cancelled) setEngineFailed(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [needsMedia, retry]);
-
   const subject = useMemo(() => (results.length ? results.map((r) => r.file) : files), [results, files]);
   const actionState = useMemo<ActionState>(
     () => ({
@@ -155,9 +129,8 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- capsV: converters read the capability store inside supports()
     [files, actionState, capsV],
   );
-  // While the ffmpeg core is being probed the wheel must not show a half-built ring: the centre shows the loader instead.
-  const wheels = useMemo(() => (engineLoading ? { convert: [], tools: [], actions: built.actions } : built), [engineLoading, built]);
-  const activeKind = engineLoading ? wheelKind : (firstNonEmpty(wheels, wheelKind) ?? wheelKind);
+  const wheels = built;
+  const activeKind = firstNonEmpty(wheels, wheelKind) ?? wheelKind;
   const pages = useMemo(() => pageWedges(wheels[activeKind]), [wheels, activeKind]);
   const pageIndex = Math.min(page, pages.length - 1);
   const wedges = pages[pageIndex];
@@ -364,8 +337,8 @@ export function AppShell() {
   };
 
   const pendingConverter = pending ? converterFor(pending.operation) : undefined;
-  const centerTitle = engineLoading ? t("status.engine") : files.length === 1 ? files[0].name : t("wheel.center", { count: files.length });
-  const centerSub = engineFailed ? t("status.engineFailed") : running.length ? t("status.running") : undefined;
+  const centerTitle = files.length === 1 ? files[0].name : t("wheel.center", { count: files.length });
+  const centerSub = running.length ? t("status.running") : undefined;
   const pageLabel = pages.length > 1 ? ` ${t("sr.wheelPage", { page: pageIndex + 1, total: pages.length })}` : "";
 
   const limitLabel = (mb: number) => (mb === 0 ? t("big.off") : mb >= 1024 ? t("big.gb", { n: mb / 1024 }) : t("big.mb", { n: mb }));
@@ -539,10 +512,9 @@ export function AppShell() {
                       title={centerTitle}
                       subtitle={centerSub}
                       progress={progress}
-                      loading={engineLoading}
                       focusToken={focusToken}
                     />
-                    {wedges.length === 0 && !engineLoading ? <p className="mt-2 text-center font-semibold text-muted">{t("wheel.empty")}</p> : null}
+                    {wedges.length === 0 ? <p className="mt-2 text-center font-semibold text-muted">{t("wheel.empty")}</p> : null}
                   </>
                 ) : (
                   <div className="glass mx-auto grid aspect-square w-full max-w-md place-items-center rounded-full">
@@ -559,22 +531,6 @@ export function AppShell() {
                     </button>
                   </div>
                 )}
-
-                {engineFailed ? (
-                  <p className="mt-3 flex items-center justify-center gap-3 text-sm font-semibold text-(--danger)" role="alert">
-                    {t("status.engineFailed")}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEngineFailed(false);
-                        setRetry((n) => n + 1);
-                      }}
-                      className="min-h-11 rounded-full border border-border bg-surface px-4 text-fg"
-                    >
-                      {t("status.retry")}
-                    </button>
-                  </p>
-                ) : null}
 
                 <div role="group" aria-label={t("wheel.picker")} className="mx-auto mt-3 grid max-w-md grid-cols-3 gap-1.5 rounded-2xl bg-surface-2 p-1.5">
                   {WHEEL_ORDER.map((k) => (
@@ -647,13 +603,12 @@ export function AppShell() {
             {pwa.ready ? <span data-testid="offline-ready"> · {t("offline.ready")}</span> : null}
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            {pwa.ready && pwa.media === "missing" ? (
-              <button type="button" onClick={pwa.saveMedia} data-testid="save-media" className="min-h-11 rounded-full border border-border bg-surface px-4 font-semibold text-fg">
-                {t("offline.save")}
-              </button>
-            ) : null}
-            {pwa.media === "saving" ? <span>{t("offline.saving")}</span> : null}
-            {pwa.media === "saved" ? <span data-testid="media-saved">{t("offline.saved")}</span> : null}
+            <Link href="/privacy" prefetch={false} data-testid="app-privacy" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-fg hover:underline">
+              {t("legal.privacy")}
+            </Link>
+            <Link href="/terms" prefetch={false} data-testid="app-terms" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-fg hover:underline">
+              {t("legal.terms")}
+            </Link>
             <label className="flex items-center gap-2">
               <span>{t("big.limit")}</span>
               <select

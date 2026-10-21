@@ -14,6 +14,7 @@ import { pdfs } from "./sections/pdf.mjs";
 import { textTools } from "./sections/text.mjs";
 import { wheelUx } from "./sections/wheel-ux.mjs";
 import { media } from "./sections/media.mjs";
+import { legal } from "./sections/legal.mjs";
 import { offline } from "./sections/offline.mjs";
 import { privacy } from "./sections/privacy.mjs";
 import { quality } from "./sections/quality.mjs";
@@ -38,6 +39,7 @@ try {
   if (wants("wheel")) await wheelUx(ctx);
   if (wants("media")) await media(ctx);
   if (wants("offline")) await offline(ctx);
+  if (wants("legal")) await legal(ctx);
   if (wants("quality")) await quality(ctx);
   if (wants("privacy")) await privacy(ctx);
   check("no console errors / exceptions in the whole run", b.errors.length === 0, b.errors.slice(0, 4).join(" | "));

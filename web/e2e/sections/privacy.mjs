@@ -22,7 +22,7 @@ export async function privacy({ b, base }) {
     console.log(`   ${reqs.length} requests (${workerReqs} from workers):`, JSON.stringify(byType));
     check("every request of the run went to our own origin (static assets + WASM only)", foreign.length === 0 && reqs.length > 50, foreign.slice(0, 3).map((r) => r.url).join(" | ") || `${reqs.length} requests`);
     check("every request was a plain GET: no POST/PUT/beacon, no request body", nonGet.length === 0 && withBody.length === 0, nonGet.concat(withBody).slice(0, 3).map((r) => `${r.method} ${r.url}`).join(" | "));
-    check("requests from Web Workers were audited too (workers + ffmpeg/pdf.js workers)", workerReqs > 0, String(workerReqs));
+    check("requests from Web Workers were audited too (workers + the pdf.js worker)", workerReqs > 0, String(workerReqs));
     const xhrish = reqs.filter((r) => ["XHR", "Ping", "WebSocket", "EventSource", "Other"].includes(r.type) && !/\.(wasm|js|mjs|json|txt|bcmap|pfb|ttf|otf|png|svg|ico|webmanifest)(\?|$)/.test(r.url) && !/\/_next\/|\/vendor\/|\/icons\/|\/manifest/.test(r.url));
     check("no XHR / WebSocket / ping / beacon traffic other than static assets", xhrish.length === 0, xhrish.slice(0, 3).map((r) => `${r.type} ${r.url}`).join(" | "));
   });
@@ -31,14 +31,14 @@ export async function privacy({ b, base }) {
     await b.goto(`${base}/en/app`, 1500);
     for (const path of ["/en/app", "/ar/app"]) {
       const csp = await b.ev(`fetch(${JSON.stringify(path)}).then(r => r.headers.get('content-security-policy'))`);
-      check(`${path}: CSP restricts connect/img/media/form to own origin (connect-src 'self' blob: data:)`, /connect-src 'self' blob: data:/.test(csp) && /default-src 'self'/.test(csp) && /form-action 'none'/.test(csp) && !/https?:\/\//.test(csp), String(csp).slice(0, 80));
+      check(`${path}: CSP restricts connect/img/form to own origin (connect-src 'self' blob: data:)`, /connect-src 'self' blob: data:/.test(csp) && /default-src 'self'/.test(csp) && /form-action 'none'/.test(csp) && !/https?:\/\//.test(csp), String(csp).slice(0, 80));
     }
     const workerSrc = await b.ev(`(async () => {
       const w = [...performance.getEntriesByType('resource')].map(r => r.name).find((u) => /turbopack-worker|\\/chunks\\/.*\\.js/.test(u));
       return { u: w, csp: w ? (await fetch(w)).headers.get('content-security-policy') : null };
     })()`);
     check("Web Worker chunks are served with the same CSP (workers take their policy from their own response)", /connect-src 'self'/.test(workerSrc.csp ?? ""), JSON.stringify(workerSrc).slice(0, 120));
-    for (const u of ["/vendor/ffmpeg/worker.js", "/vendor/pdfjs/pdf.worker.min.mjs"]) {
+    for (const u of ["/vendor/pdfjs/pdf.worker.min.mjs"]) {
       const csp = await b.ev(`fetch(${JSON.stringify(u)}).then(r => r.headers.get('content-security-policy'))`);
       check(`${u} (engine worker) carries the CSP`, /connect-src 'self'/.test(csp ?? ""));
     }

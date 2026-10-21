@@ -34,3 +34,6 @@ tests/samples/large/
 
 # Helper programs fetched at build time and shipped in the installer (tools/fetch-engines.ps1)
 /tools/engines/
+
+# Claude Code agent worktrees
+/.claude/worktrees/

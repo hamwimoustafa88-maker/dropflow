@@ -56,7 +56,7 @@ describe("no code path uploads user data", () => {
     const allowed = [
       "src/app/[locale]/layout.tsx: https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}",
       "src/app/[locale]/layout.tsx: http://localhost:3000",
-      "src/engine/converters/media-engine.ts: http://localhost",
+      "src/components/LegalPage.tsx: https://github.com/hamwimoustafa88-maker/dropflow/issues", // a link the visitor may click, never fetched
       "src/engine/lib/strip-meta.ts: http://ns.adobe.com/xap", // the XMP packet signature we look FOR, not a request
     ];
     expect([...urls].filter((u) => !allowed.includes(u))).toEqual([]);
@@ -66,9 +66,7 @@ describe("no code path uploads user data", () => {
     const pdfjs = readFileSync(join(srcDir, "engine/lib/pdfjs-setup.ts"), "utf8");
     expect(pdfjs).toContain('PDFJS_BASE = "/vendor/pdfjs/"');
     expect(code(pdfjs)).not.toMatch(/https?:\/\//);
-    const engine = readFileSync(join(srcDir, "engine/converters/media-engine.ts"), "utf8");
-    expect(engine).toContain('const VENDOR = "/vendor/ffmpeg"');
-    expect(engine).not.toMatch(/unpkg|jsdelivr|cdnjs|cdn\./);
+    expect(code(pdfjs)).not.toMatch(/unpkg|jsdelivr|cdnjs|cdn\./);
     for (const f of files) expect(code(f.text)).not.toMatch(/unpkg\.com|jsdelivr|cdnjs|googleapis\.com\/(?!css)/);
   });
 
@@ -95,11 +93,18 @@ describe("no code path uploads user data", () => {
     expect(cfg).toContain('"/vendor/:path*"');
   });
 
-  it("no COOP/COEP headers are needed or sent (single-thread ffmpeg core)", () => {
+  it("no COOP/COEP headers are needed or sent (no SharedArrayBuffer is used)", () => {
     const cfg = readFileSync(join(root, "next.config.ts"), "utf8");
     expect(cfg).not.toMatch(/Cross-Origin-(Opener|Embedder)-Policy/);
     const vendor = readFileSync(join(root, "scripts/vendor.mjs"), "utf8");
-    expect(vendor).toContain("@ffmpeg/core/dist/esm/ffmpeg-core.wasm");
+    expect(vendor).toContain("pdfjs-dist/build/pdf.worker.min.mjs");
     expect(vendor).not.toContain("core-mt");
+  });
+
+  it("no GPL ffmpeg engine ships in the web app (proprietary licence, ADR-0010)", () => {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string> };
+    expect(Object.keys(pkg.dependencies).filter((d) => d.startsWith("@ffmpeg/"))).toEqual([]);
+    expect(readFileSync(join(root, "scripts/vendor.mjs"), "utf8")).not.toMatch(/ffmpeg/i);
+    expect(readFileSync(join(root, "scripts/sw.template.js"), "utf8")).not.toMatch(/ffmpeg/i);
   });
 });

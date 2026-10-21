@@ -1,5 +1,5 @@
 // Decides WHERE a job runs: "worker" converters go to the Web Worker pool, "main" converters (canvas/DOM work, or
-// engines that own a worker themselves such as ffmpeg.wasm and pdf.js) run on the UI thread. A multi-file job runs on
+// engines that own a worker themselves such as pdf.js) run on the UI thread. A multi-file job runs on
 // the main thread as soon as any of its files needs it.
 
 import { extensionOf } from "./names";

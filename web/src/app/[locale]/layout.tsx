@@ -54,8 +54,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  // The web app's strings (`app` namespace) ship only with /app (its own layout), never with the landing page.
-  const messages = Object.fromEntries(Object.entries(await getMessages()).filter(([key]) => key !== "app"));
+  // The web app's strings (`app` namespace) ship only with /app (its own layout); the long legal texts (`privacy`, `terms`)
+  // are rendered on the server and never sent to the browser at all.
+  const SERVER_ONLY = new Set(["app", "privacy", "terms"]);
+  const messages = Object.fromEntries(Object.entries(await getMessages()).filter(([key]) => !SERVER_ONLY.has(key)));
 
   return (
     <html

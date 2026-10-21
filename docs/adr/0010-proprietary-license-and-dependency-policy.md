@@ -32,3 +32,6 @@ text and a source offer; an LGPL build is the safer choice. Also in `docs/deferr
 GPL-compatible tricks (adapting code from File Converter or ShareX, GPL-only libraries) are off the table. The Phase 9 plan no longer has to
 "sell services instead of source". The repository must not be made public with a GPL `LICENSE`; with the proprietary `LICENSE`, a
 temporary public window shows the code but grants no rights.
+
+## Resolution 2026-10-21
+The known issue above is **resolved by option (c)**: `@ffmpeg/core` and `@ffmpeg/ffmpeg` are gone from the web app, so no GPL code is served by the site. FFmpeg now exists only as a separate program shipped in the Windows installer; see ADR-0012 for that decision and its licence note.

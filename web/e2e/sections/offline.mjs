@@ -47,17 +47,13 @@ export async function offline({ b, base, out, files }) {
       return { keys, shellCount: sc.length, vendorCount: vc.length, shellHas: (p) => 0, scope: reg.scope,
         pages: sc.map((r) => new URL(r.url).pathname).filter((p) => /\\/app$/.test(p)),
         hasPdfWorker: vc.some((r) => r.url.endsWith('/vendor/pdfjs/pdf.worker.min.mjs')),
-        hasFfmpegGlue: vc.some((r) => r.url.endsWith('/vendor/ffmpeg/worker.js')),
-        hasCoreWasm: vc.some((r) => r.url.endsWith('ffmpeg-core.wasm')),
+        anyFfmpeg: [...sc, ...vc].some((r) => /ffmpeg/i.test(r.url)),
         chunks: sc.filter((r) => r.url.includes('/_next/static/chunks/')).length };
     })()`);
     check("versioned caches exist (dropflow-shell-<hash>, dropflow-vendor-<hash>)", state.keys.some((k) => /^dropflow-shell-[0-9a-f]{16}$/.test(k)) && state.keys.some((k) => /^dropflow-vendor-[0-9a-f]{16}$/.test(k)), state.keys.join(","));
-    check("precached: both /app pages, all JS chunks, pdf.js worker, ffmpeg glue", state.pages.length === 2 && state.chunks >= 20 && state.hasPdfWorker && state.hasFfmpegGlue, JSON.stringify({ pages: state.pages, chunks: state.chunks, vendor: state.vendorCount }));
-    // (it may be in the vendor cache if media was already used in this profile: runtime-cached on first use. What
-    // matters is that the service worker never PRECACHES it, i.e. it is in none of the install lists.)
+    check("precached: both /app pages, all JS chunks, pdf.js worker; nothing ffmpeg", state.pages.length === 2 && state.chunks >= 20 && state.hasPdfWorker && !state.anyFfmpeg, JSON.stringify({ pages: state.pages, chunks: state.chunks, vendor: state.vendorCount }));
     const swSource = await b.ev("fetch('/sw.js').then(r => r.text())");
-    const lists = ["SHELL_URLS", "VENDOR_URLS", "OPTIONAL_URLS"].map((n) => swSource.slice(swSource.indexOf("const " + n), swSource.indexOf("];", swSource.indexOf("const " + n))));
-    check("the 31 MB ffmpeg core is NOT precached: in none of the install lists (lazy / opt-in)", lists.every((l) => l.length > 20 && !l.includes("ffmpeg-core.wasm")));
+    check("the service worker source mentions no ffmpeg / media core at all", !/ffmpeg|CACHE_MEDIA/i.test(swSource));
   });
 
   await section("PWA: OFFLINE reload + convert an image and render a PDF without any network", async () => {
@@ -96,7 +92,7 @@ export async function offline({ b, base, out, files }) {
     await sleep(500);
   });
 
-  await section("PWA: update flow cleans old caches; opt-in `Save media offline` makes audio/video work offline", async () => {
+  await section("PWA: update flow cleans old caches of other versions", async () => {
     await freshApp(b, base, "en");
     await b.ev(`(async () => { await caches.open('dropflow-shell-0000000000000000'); await caches.open('dropflow-vendor-ffffffffffffffff'); const r = await navigator.serviceWorker.getRegistration(); await r.unregister(); })()`);
     await b.goto(`${base}/en/app`, 2500);
@@ -105,27 +101,7 @@ export async function offline({ b, base, out, files }) {
     const keys = await b.ev("caches.keys()");
     check("on activate the worker deletes caches of other versions", !keys.includes("dropflow-shell-0000000000000000") && !keys.includes("dropflow-vendor-ffffffffffffffff") && keys.some((k) => k.startsWith("dropflow-shell-")), keys.join(","));
 
-    // make the state deterministic: forget the core if media was used earlier in this profile
-    await b.ev(`(async () => { for (const k of await caches.keys()) if (k.startsWith('dropflow-vendor-')) await (await caches.open(k)).delete('/vendor/ffmpeg/ffmpeg-core.wasm'); })()`);
-    await b.goto(`${base}/en/app`, 2000);
-    await b.waitFor("!!document.querySelector('[data-testid=save-media]')", 20000, "Save media offline button");
-    await b.click("[data-testid=save-media]");
-    await b.waitFor("!!document.querySelector('[data-testid=media-saved]')", 120000, "media saved");
-    const cached = await b.ev("caches.match('/vendor/ffmpeg/ffmpeg-core.wasm').then(r => !!r)");
-    check("`Save media offline` cached the ffmpeg core on demand", cached);
-
-    await whileOffline(b, async () => {
-    await b.ev("localStorage.clear()");
-    await b.send("Page.reload");
-    await sleep(2500);
-    await b.waitFor("!!document.querySelector('[data-testid=dropzone]')", 20000, "offline shell");
-    await addFiles(b, [files.wav]);
-    await b.waitFor("document.querySelector('[data-wheel=convert]') && !document.querySelector('[data-wheel=convert]').disabled", 120000, "offline media wheel");
-    await clickWedge(b, "convert:flac");
-    await waitResults(b, 1, 60000);
-    const flac = await downloadResult(b, dl, 0);
-    check("OFFLINE: WAV -> FLAC through ffmpeg.wasm after saving the core", ascii(flac.bytes, 0, 4) === "fLaC", `${flac.size} bytes`);
-    });
+    check("no `Save media offline` button any more (there is no media engine to save)", !(await b.ev("!!document.querySelector('[data-testid=save-media]')")));
   });
 
   await section("PWA: update flow - a new build installs next to the old one, `Update` activates it, old caches go", async () => {

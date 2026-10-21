@@ -73,8 +73,7 @@
       ],
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ]
     },
     {
@@ -107,8 +106,7 @@
       ],
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ]
     },
     {
@@ -133,7 +131,8 @@
       ],
       "engine": "libreoffice",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ]
     },
     {
@@ -381,8 +380,7 @@
       "ar": "تحرير الصور",
       "engine": "magick",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "tg": "image:EDIT"
@@ -395,8 +393,7 @@
       "ar": "التعليق على الصور",
       "engine": "dotnet",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "tg": "image:ANNOTATE"
@@ -409,8 +406,7 @@
       "ar": "إضافة خلفية",
       "engine": "magick",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "tg": "image:ADD BG"
@@ -423,8 +419,7 @@
       "ar": "إخفاء مناطق في الصور",
       "engine": "magick",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "tg": "image:REDACT"
@@ -437,8 +432,7 @@
       "ar": "إنشاء كولاج",
       "engine": "magick",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "multi": true,
@@ -452,8 +446,7 @@
       "ar": "توليد أيقونات ICO وFavicon",
       "engine": "magick",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4
     },
@@ -465,8 +458,7 @@
       "ar": "قراءة وإنشاء رموز QR",
       "engine": "zxing",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4
     },
@@ -490,8 +482,7 @@
       "ar": "إزالة الخلفية",
       "engine": "onnx",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 5
     },
@@ -503,8 +494,7 @@
       "ar": "استخراج النص (OCR)",
       "engine": "ocr",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 5
     },
@@ -516,8 +506,7 @@
       "ar": "ضغط الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:COMPRESS"
@@ -530,8 +519,7 @@
       "ar": "تعديل البيانات الوصفية",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:METADATA"
@@ -544,8 +532,7 @@
       "ar": "إزالة الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:MUTE"
@@ -558,8 +545,7 @@
       "ar": "قص الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:TRIM"
@@ -572,8 +558,7 @@
       "ar": "اقتصاص الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:CROP"
@@ -586,8 +571,7 @@
       "ar": "تغيير سرعة التشغيل",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:SPEED"
@@ -600,8 +584,7 @@
       "ar": "حفظ إطارات من الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:SNAPSHOT"
@@ -614,8 +597,7 @@
       "ar": "تقسيم الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:SPLIT"
@@ -628,8 +610,7 @@
       "ar": "دمج مقاطع الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "multi": true,
@@ -643,8 +624,7 @@
       "ar": "إخفاء مناطق في الفيديو",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "video:REDACT"
@@ -669,8 +649,7 @@
       "ar": "ضغط إلى حجم مستهدف",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3
     },
@@ -682,8 +661,7 @@
       "ar": "تحويل الكلام إلى نص",
       "engine": "whisper",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3
     },
@@ -707,8 +685,7 @@
       "ar": "ضغط الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:COMPRESS"
@@ -721,8 +698,7 @@
       "ar": "تعديل البيانات الوصفية",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:METADATA"
@@ -735,8 +711,7 @@
       "ar": "توحيد مستوى الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:NORMALIZE"
@@ -749,8 +724,7 @@
       "ar": "قص الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:TRIM"
@@ -763,8 +737,7 @@
       "ar": "تحويل قنوات الصوت",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:CHANNELS"
@@ -777,8 +750,7 @@
       "ar": "تصوير الصوت كفيديو موجي",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:VISUALIZE"
@@ -791,8 +763,7 @@
       "ar": "إخفاء مقاطع بصوت صفير",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "tg": "audio:BLEEP"
@@ -805,8 +776,7 @@
       "ar": "تحويل الكلام إلى نص",
       "engine": "whisper",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3
     },
@@ -818,8 +788,7 @@
       "ar": "دمج الملفات الصوتية",
       "engine": "ffmpeg",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 3,
       "multi": true
@@ -944,8 +913,7 @@
       "ar": "حماية PDF بكلمة مرور",
       "engine": "qpdf",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 2
     },
@@ -957,8 +925,7 @@
       "ar": "فتح قفل PDF (بكلمة مرور معروفة)",
       "engine": "qpdf",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 2
     },
@@ -996,8 +963,7 @@
       "ar": "إصلاح PDF",
       "engine": "qpdf",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 2
     },
@@ -1021,8 +987,7 @@
       "ar": "اقتصاص PDF",
       "engine": "pdfsharp",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4
     },
@@ -1034,8 +999,7 @@
       "ar": "توقيع PDF",
       "engine": "pdfsharp",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4
     },
@@ -1073,8 +1037,7 @@
       "ar": "جعل PDF قابلاً للبحث (OCR)",
       "engine": "ocr",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 5
     },
@@ -1115,8 +1078,7 @@
       "ar": "إعادة تسمية جماعية",
       "engine": "dotnet",
       "platforms": [
-        "windows",
-        "web"
+        "windows"
       ],
       "phase": 4,
       "multi": true

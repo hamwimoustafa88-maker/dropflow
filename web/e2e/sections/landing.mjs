@@ -24,11 +24,11 @@ export async function landing({ b, base }) {
       const bad = [];
       for (const u of srcs) {
         const t = await (await fetch(u)).text();
-        for (const m of ['PDFDocument', 'ffmpeg-core', 'pdfjs', 'fflate', 'OffscreenCanvas']) if (t.includes(m)) bad.push(m + ' in ' + u.split('/').pop());
+        for (const m of ['PDFDocument', 'pdfjs', 'fflate', 'OffscreenCanvas']) if (t.includes(m)) bad.push(m + ' in ' + u.split('/').pop());
       }
       return { n: srcs.length, bad };
     })()`);
-    check("landing JS contains no pdf-lib / pdf.js / ffmpeg / fflate / canvas code", leak.bad.length === 0 && leak.n > 3, JSON.stringify(leak));
+    check("landing JS contains no pdf-lib / pdf.js / fflate / canvas code", leak.bad.length === 0 && leak.n > 3, JSON.stringify(leak));
 
     await b.goto(`${base}/en`, 1200);
     await b.click('a[href="/en/app"]');

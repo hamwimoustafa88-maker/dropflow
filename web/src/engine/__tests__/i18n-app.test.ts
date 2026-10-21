@@ -2,9 +2,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_IMAGE_CAPS, setImageCaps, setMediaCaps } from "../caps";
+import { DEFAULT_IMAGE_CAPS, setImageCaps } from "../caps";
 import { opKey, choiceKey } from "../catalog-web";
-import { CORE_VERSION, buildMediaCaps } from "../lib/ffmpeg-probe";
 import { registry } from "../registry";
 import { HINT_TOOL_LABELS } from "../windows-hint";
 import { appMessages, type Tree } from "./messages-fixture";
@@ -20,7 +19,6 @@ function walk(dir: string): string[] {
 }
 const get = (t: Tree, path: string): string | Tree | undefined => path.split(".").reduce<string | Tree | undefined>((a, k) => (a && typeof a !== "string" ? a[k] : undefined), t);
 const leaves = (t: Tree, p = ""): string[] => Object.entries(t).flatMap(([k, v]) => (typeof v === "string" ? [`${p}${k}`] : leaves(v, `${p}${k}.`)));
-const fx = (n: string) => readFileSync(join(src, `engine/__tests__/fixtures/ffmpeg-${n}.txt`), "utf8");
 
 const LOCALES = ["en", "ar"] as const;
 
@@ -41,13 +39,12 @@ describe("UI messages (app namespace) are complete in Arabic and English", () =>
 
   it("every operation the registry can ever offer has a short label (ops.<id>)", () => {
     const ops = [...registry.implementedOperations].filter((o) => !o.startsWith("convert:"));
-    expect(ops.length).toBeGreaterThan(25);
+    expect(ops.length).toBeGreaterThan(15);
     for (const l of LOCALES) for (const op of ops) expect(get(appMessages[l], `ops.${opKey(op)}`), `${l} ops.${opKey(op)}`).toBeTypeOf("string");
   });
 
   it("every option key, word-like choice, placeholder and warning of every operation has a label", () => {
     setImageCaps({ encode: { png: true, jpg: true, webp: true, avif: true }, decodeAvif: true });
-    setMediaCaps(buildMediaCaps(CORE_VERSION, { encoders: fx("encoders"), decoders: fx("decoders"), muxers: fx("muxers"), demuxers: fx("demuxers"), filters: fx("filters") }));
     try {
       for (const c of registry.converters) {
         for (const op of c.operations) {
@@ -70,7 +67,6 @@ describe("UI messages (app namespace) are complete in Arabic and English", () =>
       }
     } finally {
       setImageCaps(DEFAULT_IMAGE_CAPS);
-      setMediaCaps(null);
     }
   });
 
@@ -81,7 +77,7 @@ describe("UI messages (app namespace) are complete in Arabic and English", () =>
       for (const m of text.matchAll(/new ConvertError\(\s*"(\w+)"/g)) codes.add(m[1]);
       for (const m of text.matchAll(/\bfail\(\s*"(\w+)"/g)) codes.add(m[1]);
     }
-    for (const c of ["noAudio", "decodeFailed", "outOfMemory", "encodeFailed", "emptyResult", "generic", "workerFailed", "unknown"]) codes.add(c);
+    for (const c of ["decodeFailed", "outOfMemory", "encodeFailed", "emptyResult", "generic", "workerFailed", "unknown"]) codes.add(c);
     codes.delete("unknown"); // mapped to `generic` in the UI
     expect(codes.size).toBeGreaterThan(25);
     const internal = new Set(["unsupported"]); // routing bugs; shown as the generic text if ever reached

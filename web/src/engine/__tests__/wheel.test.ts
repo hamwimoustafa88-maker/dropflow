@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_IMAGE_CAPS, setImageCaps, setMediaCaps } from "../caps";
-import { CORE_VERSION, buildMediaCaps } from "../lib/ffmpeg-probe";
+import { DEFAULT_IMAGE_CAPS, setImageCaps } from "../caps";
 import { registry } from "../registry";
 import {
   MAX_PER_PAGE,
@@ -15,14 +13,12 @@ import {
   type WheelSet,
 } from "../wheel";
 
-const fx = (name: string) => readFileSync(new URL(`./fixtures/ffmpeg-${name}.txt`, import.meta.url), "utf8");
 const NO_ACTIONS: ActionState = { hasResults: false, canShare: false, hasText: false };
 const f = (name: string, size = 1000) => ({ name, size });
 const ops = (w: readonly Wedge[]) => w.map((x) => x.operation);
 
 afterEach(() => {
   setImageCaps(DEFAULT_IMAGE_CAPS);
-  setMediaCaps(null);
 });
 
 describe("wheel builder with the real registry", () => {
@@ -68,26 +64,12 @@ describe("wheel builder with the real registry", () => {
     expect(ops(buildWheels([f("a.pdf"), f("b.pdf")], registry, NO_ACTIONS).tools)).toContain("pdf.merge");
   });
 
-  it("media wheels stay empty until ffmpeg is probed, then show exactly the probed targets", () => {
-    const before = buildWheels([f("song.wav")], registry, NO_ACTIONS);
-    expect(before.convert).toEqual([]);
-    expect(ops(before.tools)).not.toContain("aud.trim");
-    setMediaCaps(
-      buildMediaCaps(CORE_VERSION, {
-        encoders: fx("encoders"),
-        decoders: fx("decoders"),
-        muxers: fx("muxers"),
-        demuxers: fx("demuxers"),
-        filters: fx("filters"),
-      }),
-    );
-    const after = buildWheels([f("song.wav")], registry, NO_ACTIONS);
-    expect(ops(after.convert)).toEqual(expect.arrayContaining(["convert:mp3", "convert:flac", "convert:ogg", "convert:opus"]));
-    expect(ops(after.convert)).not.toContain("convert:wav");
-    expect(ops(after.tools)).toEqual(expect.arrayContaining(["aud.normalize", "aud.trim"]));
-    const video = buildWheels([f("clip.mp4")], registry, NO_ACTIONS);
-    expect(ops(video.convert)).toEqual(expect.arrayContaining(["convert:webm", "convert:gif", "convert:mp3"]));
-    expect(ops(video.tools)).toEqual(expect.arrayContaining(["vid.trim", "vid.mute", "vid.snapshot", "vid.speed", "vid.compress"]));
+  it("audio and video get no wheel in the browser (media tools are Windows-app only), only the generic tools", () => {
+    for (const name of ["song.wav", "song.mp3", "clip.mp4", "clip.webm"]) {
+      const w = buildWheels([f(name)], registry, NO_ACTIONS);
+      expect(w.convert, name).toEqual([]);
+      expect(ops(w.tools), name).toEqual(["arc.zip", "gen.hash", "gen.base64"]);
+    }
   });
 
   it("subtitles: srt converts to vtt/txt only", () => {

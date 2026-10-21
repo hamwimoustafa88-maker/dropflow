@@ -105,7 +105,10 @@
     "title": "Drop it. Done."
   },
   "footer": {
-    "license": "© 2026 DropFlow · All rights reserved"
+    "license": "© 2026 DropFlow · All rights reserved",
+    "legal": "Legal",
+    "privacy": "Privacy",
+    "terms": "Terms"
   },
   "app": {
     "meta": {
@@ -159,9 +162,6 @@
       "done": "Done",
       "failed": "Failed",
       "cancelled": "Cancelled",
-      "engine": "Loading engine…",
-      "engineFailed": "Engine failed",
-      "retry": "Retry",
       "added": "{count, plural, one {# file added} other {# files added}}"
     },
     "results": {
@@ -209,10 +209,7 @@
       "badge": "Offline",
       "ready": "Works offline",
       "update": "Update",
-      "updating": "Updating…",
-      "save": "Save media offline",
-      "saving": "Saving…",
-      "saved": "Media saved"
+      "updating": "Updating…"
     },
     "privacy": "Files stay on this device",
     "back": "Site",
@@ -228,14 +225,9 @@
       "stripFailed": "Removal failed",
       "corrupt": "Damaged file",
       "noCanvas": "Canvas unavailable",
-      "engineLoadFailed": "Engine failed to load",
-      "noAudio": "No audio track",
-      "invalidTime": "Invalid time",
-      "invalidSpeed": "Invalid speed",
       "tooLarge": "Too large for the browser",
       "encodeFailed": "Conversion failed",
       "outOfMemory": "Out of memory",
-      "noFrame": "No frame at that time",
       "unsupported": "Not supported",
       "noFiles": "No file",
       "invalidRange": "Bad page range: {spec}",
@@ -261,13 +253,6 @@
       "img_strip_gps": "No GPS",
       "img_metadata": "Info",
       "img_to_pdf": "To PDF",
-      "aud_normalize": "Normalize",
-      "aud_trim": "Trim",
-      "vid_trim": "Trim",
-      "vid_mute": "Mute",
-      "vid_snapshot": "Snapshot",
-      "vid_speed": "Speed",
-      "vid_compress": "Compress",
       "pdf_merge": "Merge",
       "pdf_split": "Split",
       "pdf_rotate": "Rotate",
@@ -367,6 +352,194 @@
     },
     "warn": {
       "textToImages": "Text becomes images"
+    },
+    "legal": {
+      "privacy": "Privacy",
+      "terms": "Terms"
     }
+  },
+  "legal": {
+    "home": "Home",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "effective": "Effective date",
+    "date": "21 October 2026",
+    "contactTitle": "Contact",
+    "contactText": "For questions, requests or problems, open an issue on the project's GitHub issues page. Please do not post private information or your files there.",
+    "rights": "© 2026 Moustafa Hamwi. All rights reserved."
+  },
+  "privacy": {
+    "meta": {
+      "title": "Privacy Policy · DropFlow",
+      "description": "Your files stay on your device. What DropFlow stores, what it sends, and to whom."
+    },
+    "title": "Privacy Policy",
+    "lead": "DropFlow converts and processes your files on your own device. This page explains in plain words what that means, and the few cases where the internet is involved.",
+    "sections": [
+      {
+        "h": "The short version",
+        "ul": [
+          "Your files are processed on your own device. Their contents are never uploaded to us or to anyone else.",
+          "No accounts. No ads. No analytics and no tracking.",
+          "The internet is used only for the few things listed below, and each one is started by you or described here."
+        ]
+      },
+      {
+        "h": "Who we are",
+        "p": [
+          "DropFlow is made by Moustafa Hamwi. In this policy, \"DropFlow\", \"we\" and \"us\" mean the DropFlow software (the Windows app and the web app on this website) and its owner."
+        ]
+      },
+      {
+        "h": "Your files",
+        "p": [
+          "In the Windows app the work is done by programs on your PC. In the browser it is done by the page itself, in Web Workers using WebAssembly. Either way, we do not receive your files, their names, or anything about what is inside them.",
+          "In the browser, files are held in memory only while the page is open. Closing or reloading the tab discards them. Results are offered to you as downloads to your own device."
+        ]
+      },
+      {
+        "h": "What we do not collect",
+        "ul": [
+          "No file contents, file names or file metadata.",
+          "No accounts, registration, email addresses or payment details.",
+          "No analytics, advertising, tracking pixels or fingerprinting. This website loads no analytics or advertising scripts and no third-party scripts at all, and it sets no cookies.",
+          "We do not sell or share personal information, because we do not collect any."
+        ]
+      },
+      {
+        "h": "This website and the web app",
+        "p": [
+          "To work offline and to remember one preference, the web app keeps a little data in your browser. It stays on your device and we cannot see it:"
+        ],
+        "ul": [
+          "Service worker and cache: copies of the app's own code, fonts, icons and PDF engine files, so the web app opens without a connection. Never your files.",
+          "Local storage: one setting, the file size above which the app warns you about large files."
+        ],
+        "p2": [
+          "To clear it, open your browser's site settings for this website and delete its stored data, or uninstall the web app if you installed it. This only removes the offline copies and that one setting; the app downloads what it needs again on your next visit.",
+          "As an extra safeguard, the web app page carries a browser-enforced security policy that only lets it connect to this website itself, not to any other site."
+        ]
+      },
+      {
+        "h": "Hosting and other services",
+        "ul": [
+          "Vercel hosts this website. Like any web host, it keeps standard request logs (for example IP address, time, the page requested and browser type) to deliver the site and keep it secure. We add no tracking of our own.",
+          "GitHub hosts the Windows app's downloads and update files, and the project's issues page. When you download from GitHub or the app checks it for updates, GitHub sees that request, including your IP address.",
+          "Hugging Face hosts the optional AI model files the Windows app can download (see below). When you agree to a download, Hugging Face sees that request."
+        ],
+        "p2": [
+          "These services have their own privacy policies, which apply to what they collect. We do not control them."
+        ]
+      },
+      {
+        "h": "The Windows app and the internet",
+        "p": [
+          "The Windows app works fully offline. It connects to the internet only in these cases:"
+        ],
+        "ul": [
+          "AI models (optional). Speech to text, background removal and face detection need a model file. DropFlow downloads one only after you agree, and first shows its name, size and source. The file is checked against a known SHA-256 fingerprint before it is used. Only the model request is made; nothing about your files is sent.",
+          "Update check. An installed copy asks GitHub Releases whether a newer version exists, and downloads it only when you choose to install it. The request carries nothing about you or your files.",
+          "Open from link. If you type or paste a web address, DropFlow downloads that one file with a plain GET request: no cookies, and nothing about your own files is sent.",
+          "Helper programs (optional). A few tools can use a helper program such as FFmpeg. DropFlow does not offer to install helpers unless you turn that on in Settings or press Install; the installation is done by Windows' winget, which downloads from the helper's publisher.",
+          "Send to phone. This starts a temporary web server on your local network, only while its window is open, so a phone on the same Wi-Fi can fetch the file. Only devices on your local network that have the link or QR code can reach it. Close the window to stop it."
+        ]
+      },
+      {
+        "h": "Data stored by the Windows app",
+        "p": [
+          "The Windows app stores its settings, a history of your recent conversions (the operation, file names and paths, and where the results were saved, never the file contents), a local log file and any AI models you downloaded in your Windows user profile, by default under %LocalAppData%\\DropFlow. This data stays on your PC. You can delete it at any time by deleting that folder."
+        ]
+      },
+      {
+        "h": "Children",
+        "p": [
+          "DropFlow is a general-purpose file tool and is not directed at children. We do not knowingly collect personal information from anyone, including children. There are no accounts and no data collection, so there is nothing to delete on our side."
+        ]
+      },
+      {
+        "h": "Changes to this policy",
+        "p": [
+          "If we change how DropFlow handles data, we will update this page and its effective date. Please check back from time to time."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "meta": {
+      "title": "Terms of Use · DropFlow",
+      "description": "The terms for using DropFlow: free to use, proprietary software, provided as is."
+    },
+    "title": "Terms of Use",
+    "lead": "These terms apply when you install or use DropFlow, the Windows app and the web app on this website. Please read them. If you do not agree, please do not use DropFlow.",
+    "sections": [
+      {
+        "h": "Ownership and licence",
+        "p": [
+          "DropFlow is proprietary software. © 2026 Moustafa Hamwi. All rights reserved. DropFlow is not open-source software.",
+          "You may use DropFlow free of charge for personal use and for your own internal business use. This licence is personal, non-exclusive and non-transferable."
+        ]
+      },
+      {
+        "h": "What you may not do",
+        "ul": [
+          "Copy, redistribute, host, mirror, resell, rent or sublicense DropFlow or any part of it.",
+          "Reverse engineer, decompile or disassemble it, except as far as the law allows despite this restriction.",
+          "Remove copyright or licence notices.",
+          "Use it to break the law or to infringe other people's rights."
+        ],
+        "p2": [
+          "Anything else needs the owner's written permission. You can ask through the contact link below."
+        ]
+      },
+      {
+        "h": "Third-party components",
+        "p": [
+          "DropFlow includes and uses third-party software and models. They keep their own licences, which apply to those components and not to DropFlow as a whole. Their names and licences are listed in the THIRD-PARTY-NOTICES file, which you can request through the contact link below. Nothing in these terms limits your rights under those licences."
+        ]
+      },
+      {
+        "h": "Your files",
+        "ul": [
+          "You are responsible for having the right to convert, edit or share the files you use with DropFlow.",
+          "DropFlow never overwrites your original files: results are written as new files. Even so, a conversion can fail or produce a result that differs from the original in quality, formatting or metadata. Check results before you rely on them, and keep your own backups.",
+          "Your files stay on your device, as described in the Privacy Policy."
+        ]
+      },
+      {
+        "h": "Limits of some tools",
+        "ul": [
+          "PDF sign adds a visible stamp to the page. It is not a legal or cryptographic digital signature. It does not prove who signed or whether the file changed afterwards, and it may not be accepted where a real digital signature is required.",
+          "PDF redact removes the text or regions you choose from the result. It can only find words that exist in the PDF's text layer; scanned pages need you to mark the regions yourself. Redacted pages become images, so their selectable text, links and form fields are lost. Always check the result before you share it.",
+          "PDF crop only changes the visible area. Content cropped away is still inside the file. Use redact when content must be removed.",
+          "AI features (speech to text, background removal, face detection, OCR) can make mistakes or miss things. Check their results."
+        ]
+      },
+      {
+        "h": "No warranty",
+        "p": [
+          "DropFlow is provided \"as is\" and \"as available\", without warranty of any kind, express or implied, including any warranty of fitness for a particular purpose, accuracy, non-infringement, or that it will be error-free or uninterrupted."
+        ]
+      },
+      {
+        "h": "Limitation of liability",
+        "p": [
+          "To the fullest extent the law allows, the owner is not liable for any indirect, incidental, special or consequential damages, or for loss of data, files, profits or business, arising from the use of, or inability to use, DropFlow. Because DropFlow is free of charge, the owner's total liability for any claim is limited to the amount you paid for it, which is zero.",
+          "Nothing in these terms excludes or limits liability that cannot be excluded or limited by law."
+        ]
+      },
+      {
+        "h": "Changes and ending",
+        "p": [
+          "We may change DropFlow and these terms from time to time. When the terms change we will update this page and its effective date. If you keep using DropFlow after a change, you accept the new terms.",
+          "You can stop using DropFlow at any time by uninstalling it or closing the page. The owner may end your licence if you break these terms."
+        ]
+      },
+      {
+        "h": "Governing law",
+        "p": [
+          "These terms are governed by the law of the place where the owner lives, without regard to its conflict-of-law rules. Disputes go to the competent courts there, except where mandatory consumer law gives you the right to bring a claim where you live."
+        ]
+      }
+    ]
   }
 }

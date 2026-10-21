@@ -19,3 +19,6 @@ served from our own origin, never from a CDN; the service worker is registered o
 (ADR-0010) this is a licence risk whose resolution is pending the owner's decision.
 Tools that cannot run in a browser (Office, OCR, Whisper, protect/unlock, 7z/RAR) are never offered; a hint tile points to the Windows app.
 The service worker's own requests are not covered by the network audit (only its source was scanned).
+
+## Update 2026-10-21
+The in-browser ffmpeg.wasm (GPL-2.0-or-later) was **removed** from the web app (owner: "find a simple solution"). Audio and video are no longer offered in the browser; they show the "available in the Windows app" tile. Privacy enforcement above is unchanged. See ADR-0010.

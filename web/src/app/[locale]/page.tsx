@@ -9,6 +9,7 @@ import { CategoryExplorer } from "@/components/CategoryExplorer";
 import { Features } from "@/components/Features";
 import { Marquee } from "@/components/Marquee";
 import { SoonButton, WebButton } from "@/components/SoonButton";
+import { Link } from "@/i18n/navigation";
 import { stats } from "@/lib/catalog";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -99,8 +100,16 @@ function Footer() {
   const t = useTranslations("footer");
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-8 text-sm text-muted sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-8 text-sm text-muted sm:px-6">
         <Logo />
+        <nav aria-label={t("legal")} className="flex flex-wrap items-center gap-x-5">
+          <Link href="/privacy" prefetch={false} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg" data-testid="footer-privacy">
+            {t("privacy")}
+          </Link>
+          <Link href="/terms" prefetch={false} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg" data-testid="footer-terms">
+            {t("terms")}
+          </Link>
+        </nav>
         <p>{t("license")}</p>
       </div>
     </footer>

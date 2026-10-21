@@ -115,12 +115,29 @@ public class ProgressParserTests
     }
 
     [Fact]
-    public void Blocks_do_not_leak_time_into_each_other()
+    public void A_block_without_a_time_keeps_the_last_known_time_so_progress_never_goes_backwards()
+    {
+        // FFmpeg 9 prints out_time=N/A in some blocks mid-run; reporting 0 there made the progress bar jump back.
+        var parser = new FfmpegProgressParser();
+        parser.Feed("out_time_us=5000000");
+        parser.Feed("progress=continue");
+
+        parser.Feed("out_time_us=N/A");
+        Assert.Equal(5_000_000, parser.Feed("progress=continue")!.OutTimeUs);
+        Assert.Equal(5_000_000, parser.Feed("progress=continue")!.OutTimeUs);
+
+        parser.Feed("out_time_us=7000000");
+        Assert.Equal(7_000_000, parser.Feed("progress=continue")!.OutTimeUs);
+    }
+
+    [Fact]
+    public void A_smaller_time_never_replaces_a_larger_one()
     {
         var parser = new FfmpegProgressParser();
         parser.Feed("out_time_us=5000000");
         parser.Feed("progress=continue");
-        Assert.Equal(0, parser.Feed("progress=continue")!.OutTimeUs);
+        parser.Feed("out_time_us=1000000");
+        Assert.Equal(5_000_000, parser.Feed("progress=continue")!.OutTimeUs);
     }
 
     [Fact]

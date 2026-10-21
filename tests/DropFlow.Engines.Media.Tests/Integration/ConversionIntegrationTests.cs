@@ -84,7 +84,8 @@ public class ConversionIntegrationTests
         Assert.Equal("gif", info.Video!.CodecName);
         Assert.False(info.HasAudio);
         Assert.Equal(480, info.Video.Width);
-        Assert.InRange(info.Video.FrameRate!.Value, 10, 16);
+        // GIF delays are whole hundredths of a second: 15 fps is stored as 6 cs = 16.67 fps
+        Assert.InRange(info.Video.FrameRate!.Value, 10, 17);
     }
 
     [EngineFact(EngineId.Ffmpeg)]

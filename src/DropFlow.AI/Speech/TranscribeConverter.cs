@@ -219,7 +219,7 @@ public sealed class TranscribeConverter : IConverter, IDisposable
             new ProcessOptions { Timeout = TimeSpan.FromHours(2), WorkingDirectory = work.Path }, ct).ConfigureAwait(false);
         if (run.Cancelled) throw new OperationCanceledException(ct);
         if (run.TimedOut) return new PreparedAudio(null, "ffmpeg took too long to extract the audio.");
-        if (!run.Success || !File.Exists(wav)) return new PreparedAudio(null, FfmpegAudio.ExplainFailure(run.LastMessage));
+        if (!run.Success || !File.Exists(wav)) return new PreparedAudio(null, FfmpegAudio.ExplainFailure(run.StdErr, run.LastMessage));
         return new PreparedAudio(wav, null);
     }
 

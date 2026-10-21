@@ -35,6 +35,7 @@ public static class CliParser
           dropflow recipe list [--json]
           dropflow recipe run <name> <files...> [--out <folder>] [--json]
           dropflow engines [--json]
+          dropflow models list | download <id> [--yes] | delete <id>     (AI models; nothing downloads without --yes)
           dropflow version
 
         Results are written next to each source (or into --out). Originals are never changed.

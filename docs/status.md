@@ -1,29 +1,30 @@
-# Status ledger — what is verified and what is not
+﻿# Status ledger — what is verified and what is not
 
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
 
-Last updated: 2026-10-21. Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
+Last updated: 2026-10-21 (second pass). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
-## Test totals (`dotnet test DropFlow.sln`)
+## Test totals (`dotnet test DropFlow.sln`, run on the dev PC with FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and four AI models present)
 
-| Project | Passed | Skipped | Skipped because |
-|---|---|---|---|
-| DropFlow.Core.Tests | 233 | 0 | |
-| DropFlow.Hooks.Tests | 16 | 0 | |
-| DropFlow.Overlay.Tests | 83 | 0 | |
-| DropFlow.Engines.Common.Tests | 23 | 0 | |
-| DropFlow.Engines.Images.Tests | 74 | 0 | |
-| DropFlow.Engines.Media.Tests | 659 | 52 | `[EngineFact(Ffmpeg)]` — no ffmpeg on PATH |
-| DropFlow.Engines.Pdf.Tests | 686 | 6 | qpdf (3) and LibreOffice (3) not installed |
-| DropFlow.Engines.Archive.Tests | 561 | 0 | real `7z.exe` and `Rar.exe` exist on this machine; LAN tests need a LAN address and a non-elevated session |
-| DropFlow.AI.Tests | 282 | 7 | Whisper/ONNX models and ffmpeg not present |
-| DropFlow.Engines.Web.Tests | 9 | 0 | real WebView2 runtime 155 |
-| DropFlow.App.Tests | 27 | 0 | |
-| DropFlow.Cli.Tests | 12 | 0 | |
-| **Total (.NET)** | **2,665** | **65** | |
-| Web (`web/`) | 834 Vitest + 206 headless-Edge checks | 0 | |
+| Project | Passed | Skipped |
+|---|---|---|
+| DropFlow.Core.Tests | 233 | 0 |
+| DropFlow.Hooks.Tests | 16 | 0 |
+| DropFlow.Overlay.Tests | 83 | 0 |
+| DropFlow.Engines.Common.Tests | 24 | 0 |
+| DropFlow.Engines.Images.Tests | 74 | 0 |
+| DropFlow.Engines.Media.Tests | 712 | 0 |
+| DropFlow.Engines.Pdf.Tests | 692 | 0 |
+| DropFlow.Engines.Archive.Tests | 561 | 0 |
+| DropFlow.AI.Tests | 293 | 0 |
+| DropFlow.Engines.Web.Tests | 18 | 0 |
+| DropFlow.App.Tests | 31 | 0 |
+| DropFlow.Cli.Tests | 18 | 0 |
+| **Total (.NET)** | **2,755** | **0** |
+| Web (`web/`) | 834 Vitest + 206 headless-Edge checks | 0 |
 
+On a machine without those programs and models the engine-dependent tests skip visibly (about 65 skips); nothing is a silent pass.
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
 
 ## What the catalog covers
@@ -52,7 +53,7 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Settings: shortcuts, watched folders, engines list | Verified (window renders, values validate) | duplicate shortcuts rejected |
 | Watched folders + recipes + clipboard shortcut | Core verified; end-to-end in the running app only partly exercised | |
 | Images engine (Magick.NET) | Verified | 74 tests on generated images; HEIC can be read but not written |
-| Media engine (FFmpeg) | Planner/arguments verified; real runs only on an **old FFmpeg 4.0 build** found inside another vendor's app | the Gyan FFmpeg 7+/8 build and a real ffprobe were never run; AV1/QSV/AMF unit-tested only |
+| Media engine (FFmpeg) | **Verified against real FFmpeg 9.0.2 (Gyan full build) with its ffprobe**: all 712 tests, none skipped | found and fixed two bugs only a modern FFmpeg shows: progress jumping back to 0 on `out_time=N/A`, and "no audio track" not recognised because the cause is not FFmpeg's last error line. AV1/QSV/AMF encoders depend on this PC's hardware and are mostly unit-tested |
 | DropFlow Encoder window | Settings, presets, plan preview verified (every preset round-trips through the controls; renders in ar/en) | no real encode was run through the window (no ffmpeg) |
 | Subtitles (SRT/VTT/ASS/TXT) | Verified | pure C#, real file tests incl. Arabic and windows-1256 |
 | PDF engine, managed tools | Verified | PDFsharp/PdfPig/PDFium round-trip tests incl. Arabic |
@@ -60,17 +61,20 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | PDF sign | Visible stamp only, **not** a cryptographic signature (the result says so) | |
 | PDF redact limits | Terms use the text layer only (scans need regions; no OCR); rasterized pages lose selectable text, links and form fields; peak memory on huge pages not measured | |
 | PDF crop | Non-destructive: cropped-away content is still in the file (use redact for privacy) | |
-| PDF via qpdf (protect/unlock/repair/compress) | **Unverified against the real tool** | argument builders + fake runner only |
-| Office conversions via LibreOffice (113 pairs) | **Unverified against the real tool** | filters and flags written from knowledge, fake runner only |
+| PDF via qpdf 12.4.2 (protect/unlock/repair/compress) | Verified against the real tool | the 3 qpdf integration tests pass; the locator now finds the versioned `Program Files\qpdf 12.4.2` folder |
+| Office conversions via LibreOffice (113 pairs) | **Partly verified** against the real program | 3 real tests pass (Arabic txt to PDF, DOCX to PDF/ODT, CSV to PDF and MD to EPUB); the other pairs rely on the same filters but were not each run |
+| Documents to PDF/PNG/JPG without LibreOffice | Verified | HTML, text, Markdown, Word, spreadsheets, CSV/JSON and EPUB print through the built-in WebView2 browser (ADR-0011); tests run with no engine installed. Fidelity is that of a web page, not of Word |
+| Helper-program install prompts | Off by default | `AppSettings.OfferEngineInstalls`; a missing program is explained and the Install buttons stay in Settings |
 | Word/PowerPoint/Excel opening the produced DOCX/PPTX/XLSX | **Unverified** | files pass OpenXml validation, never opened in Office |
 | HTML -> PDF (built-in WebView2) | Verified | 9 tests: A4/Letter/landscape sizes read back with PdfPig, Arabic path, no overwrite, network blocked unless allowed |
 | Archives (zip/tar/gz/7z/rar-read), hash, Base64, batch rename, QR, ICO/favicons | Verified | 526 tests incl. zip-slip and zip-bomb cases, real 7-Zip and WinRAR files |
 | Send to phone (QR) | Window verified; server (Kestrel, no administrator rights needed) verified: bind, serve and download through the PC's own LAN address, token/traversal/limits/stop | **Unverified:** a real phone, the first-time Windows Firewall prompt (cancelling it silently blocks phones; this PC has inbound Block rules for `testhost.exe` created that way), Wi-Fi AP isolation, VPNs, IPv6-only networks |
-| Speech to text (Whisper) | Plumbing verified; **real inference never run** | no model downloaded (needs the owner's consent) |
+| Speech to text (Whisper) | **Real inference run** with `ggml-tiny`: it transcribed spoken English into SRT/TXT/JSON | Arabic accuracy and larger models were not measured |
 | OCR | Windows OCR (en-US, ar-SA) and Tesseract (English) verified for real | Arabic via Tesseract needs `ara.traineddata` (not installed) |
-| Background removal, face redaction | Pipeline verified with hand-written ONNX models | the real models were never run; quality and recall unmeasured |
-| Model downloads | Verified against a local test server (resume, hash mismatch, cancel) | the real Hugging Face URLs answered a 1-byte Range request but no model was downloaded |
-| Installer / updates (Velopack), CI, release workflow, winget manifests | Written, never run successfully | `vpk pack` was never run and no release exists. The first CI run (2026-10-21, after the push) **did not start any job**: GitHub reported "recent account payments have failed or your spending limit needs to be increased" for all three jobs. That is an account/billing matter, not a code failure; fix the billing, or make the repository public (Actions are free there), then re-run. `docs/release.md` and the workflows are therefore untested on GitHub |
+| Background removal, face redaction | **Real models run**: `u2netp`, `birefnet-lite`, `ultraface-rfb-320` (all 293 AI tests, none skipped) | cut-out quality and face recall on real photos are not measured |
+| Model downloads | Verified: against a local test server (resume, hash mismatch, cancel) **and** from the real pinned Hugging Face URLs through `dropflow models download <id> --yes` (SHA-256 checked) | |
+| `dropflow models` (CLI) | Verified | list / download / delete; nothing downloads without `--yes` (6 tests). The CLI now targets Windows and also carries the AI tools |
+| Installer / updates (Velopack), CI, release workflow, winget manifests | CI ran once on GitHub (repo public for a few minutes, then private again); installer never built | The private repo cannot run Actions (account billing: "recent account payments have failed"). The first run found 3 real problems, all fixed: `src/DropFlow.AI/Models` was never committed (a bare `models/` ignore rule matched it), the web lockfile lacked Linux entries (`npm ci`), and the Vercel build failed in `build-sw.mjs`. A second run after the fixes is still to be confirmed. `vpk pack` was never run and no release exists |
 | Web app (in-browser, `/app`, `web/`) | Verified in headless Edge | 206 browser checks run by its author (real file inputs, synthesized drags with Shift/Ctrl/Alt, real downloads re-parsed, offline reload), 834 Vitest tests (169 run the real ffmpeg core in Node); lint, production build, tests and `npm audit --omit=dev` (0) re-run here. No-upload proof: static scan finds no fetch/XHR/beacon/WebSocket in app code, and the `/app` CSP only allows self/blob/data |
 | Web app gaps | **Unverified** | a real OS drag from Explorer with Alt/Shift/Ctrl; Firefox, Safari, phones; folder drop and AVIF/SVG/GIF/ICO inputs in e2e; files over ~500 MB; PWA install prompt; the service worker's own requests are not network-audited; `public/sw.js` is generated after `next build` and is assumed to be collected by Vercel. HEIC/TIFF input, GIF output, Office, OCR, Whisper, protect/unlock/sign/redact are not offered in the browser (a hint tile points to the Windows app) |
 | Vercel deployment | **Not linked** | connector got 403 on the owner's scope; import the repo with Root Directory `web` |
@@ -104,3 +108,4 @@ outside the sandbox; it remains an open risk until `docs/phase0-checklist.md` is
 - Say yes or no to downloading: a modern FFmpeg, qpdf, LibreOffice (via the in-app installer, which asks first) and the AI models.
 - Decide when the repository becomes public (the release workflow and the landing page buttons depend on it).
 - Grant the Vercel connector access or import the project in the dashboard.
+

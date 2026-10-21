@@ -21,8 +21,12 @@ public static class FfmpegAudio
         outputWav,
     ];
 
-    /// <summary>Turns ffmpeg's last error line into a sentence the user can act on.</summary>
-    public static string ExplainFailure(string? ffmpegMessage)
+    /// <summary>
+    /// Turns ffmpeg's error output into a sentence the user can act on. Pass the whole error text as <paramref name="ffmpegMessage"/>
+    /// (the cause is often not the last line: FFmpeg 9 ends with "Error opening output files" after "Stream map '' matches no streams")
+    /// and, optionally, the last line for the generic fallback message.
+    /// </summary>
+    public static string ExplainFailure(string? ffmpegMessage, string? lastLine = null)
     {
         var m = ffmpegMessage ?? "";
         if (m.Contains("matches no streams", StringComparison.OrdinalIgnoreCase)
@@ -34,6 +38,7 @@ public static class FfmpegAudio
             return "The file is damaged or is not a valid media file.";
         if (m.Contains("No such file", StringComparison.OrdinalIgnoreCase) || m.Contains("Permission denied", StringComparison.OrdinalIgnoreCase))
             return "ffmpeg could not open the file: " + m;
-        return string.IsNullOrWhiteSpace(m) ? "ffmpeg failed to extract the audio." : "ffmpeg failed to extract the audio: " + m;
+        var detail = string.IsNullOrWhiteSpace(lastLine) ? m.Trim() : lastLine.Trim();
+        return detail.Length == 0 ? "ffmpeg failed to extract the audio." : "ffmpeg failed to extract the audio: " + detail;
     }
 }

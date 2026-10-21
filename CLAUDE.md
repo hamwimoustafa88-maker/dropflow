@@ -100,6 +100,13 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Real-engine verification round (owner: "you may download what you need"): FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice and four
+  AI models (Whisper tiny, u2netp, birefnet-lite, ultraface) installed/downloaded on the dev PC; full solution now 2,755 .NET tests, 0 skipped.
+  Real FFmpeg exposed two bugs, both fixed with tests: progress fell back to 0 on `out_time=N/A`, and "no audio track" was missed because
+  the cause is not the last stderr line. qpdf is found in versioned `Program Files\qpdf x.y.z`. New `dropflow models list|download|delete`
+  (download only with `--yes`); the CLI now targets Windows and carries the AI tools. First CI run (repo public for minutes, then private
+  again) found three packaging bugs (git-ignored `AI/Models`, web lockfile, Vercel `build-sw.mjs`), all fixed; a second run is still due.
+  — src/DropFlow.Engines.Media/Ffmpeg, src/DropFlow.AI/Speech, src/DropFlow.Cli/**, src/DropFlow.Engines.Common/EngineLocator.cs, docs/status.md, docs/deferred.md
 - 2026-10-21 — Owner feedback after running the app (Shift works; converting a document to an image offered a 350 MB LibreOffice
   download — "I don't want anything external downloaded"; "the project is NOT open source"; "you may download what you need";
   "make the repo public only temporarily to get past the GitHub billing block, I want it private"; Vercel is linked): (1) licence is now

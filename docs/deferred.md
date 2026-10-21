@@ -1,4 +1,4 @@
-# Deferred work — what is postponed, why, and how to resume
+﻿# Deferred work — what is postponed, why, and how to resume
 
 Everything that can be built and verified on the development machine has been. What is listed here is **postponed on purpose**:
 it needs a decision, an account, a download the owner has not approved, hardware, or a real person at the keyboard.
@@ -9,8 +9,8 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 | # | Item | Why it is waiting | How to resume |
 |---|---|---|---|
 | A1 | **Phase 0 drag test** (`docs/phase0-checklist.md`, rows 1-17) | Needs a real person on a real desktop; the shell used for development ignores injected mouse/keyboard input, and the owner postponed running it outside the sandbox. This is the biggest open risk: drag detection in Explorer, the browser and other apps. | Tell Claude "run the drag test now" (it moves the mouse for about a minute), or run the checklist by hand and paste the spike's *Copy log* for any failure. Then write `docs/adr/0010-input-capture.md` with the four decisions the checklist asks for. |
-| A2 | **Engines**: modern FFmpeg (Gyan.FFmpeg), qpdf, LibreOffice | We never download binaries without the owner's say-so. The app asks the user itself before installing (winget). | Approve, or install from Settings > Engines. Then run `dotnet test`: the 52 FFmpeg, 6 qpdf/LibreOffice tests stop skipping, and the real flags can be checked (qpdf and LibreOffice flags were written from knowledge and have never run). |
-| A3 | **AI models** (Whisper, background removal, face detection) and `ara.traineddata` for Tesseract | Large third-party downloads need consent. The app asks with name, size, source and licence (ADR-0006). | Approve, or press Download in Settings > AI models. Then the 7 skipped AI tests can run and real transcription, cut-out and face-redaction quality can be measured (never measured so far). |
+| A2 | **Engines** (FFmpeg, qpdf, LibreOffice) | **Done on the dev PC (2026-10-21, owner granted full permission):** FFmpeg 9.0.2, qpdf 12.4.2 and LibreOffice installed, Media/Pdf suites run with 0 skips. | Remaining: end users get no helper programs unless they install them (Settings > Engines; install prompts are off by default). Decide whether to bundle engines in the installer (licence review needed, ADR-0010). |
+| A3 | **AI models** and `ara.traineddata` | **Models done on the dev PC:** Whisper tiny, u2netp, birefnet-lite and ultraface downloaded with `dropflow models download <id> --yes` (SHA-256 verified); all 293 AI tests pass with real inference. | Still open: `ara.traineddata` for Tesseract Arabic, larger Whisper models, and measuring cut-out / face-redaction / Arabic transcription quality on real files. |
 | A4 | **GitHub Actions** | The first run (2026-10-21) started no job: "recent account payments have failed or your spending limit needs to be increased". Account billing is the owner's. | Fix Billing & plans, or make the repository public (free Actions); then `gh run rerun` the latest run and fix whatever it finds. |
 | A5 | **First release** (installer, GitHub Release, winget) | Needs: the repo public (or a decision to release privately), the Velopack packer (`dotnet tool install -g vpk`, a download), and ideally a code-signing certificate (unsigned builds trigger SmartScreen). | Follow `docs/release.md`. Measure the installer size (it now bundles ASP.NET Core for the phone-share server) and check the native libraries land in `publish/app`. |
 | A6 | **Vercel** | The connector got 403 on the owner's personal scope; no CLI login on this machine. | Grant the connector access, or import the repo in the Vercel dashboard with Root Directory `web`. On the first deployment confirm that `public/sw.js` (generated after `next build`) is served. |
@@ -33,7 +33,7 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 |---|---|---|---|
 | C1 | `pdf -> pdfa` | No trustworthy engine: Ghostscript is AGPL and not in winget; qpdf cannot convert to PDF/A; LibreOffice only does it from documents. | Decide an engine (for example Ghostscript as an external AGPL process the user installs) and add a validator (veraPDF) to the tests. |
 | C2 | `heic -> pdf` | No way to create a HEIC test file here, so it is not claimed. | Add a HEIC fixture and a decoder check, then register it. |
-| C3 | CLI: speech to text, OCR, background removal, HTML to PDF | They need a model download or the Windows UI thread. | Add `dropflow models list/download` (with the same consent text), retarget the CLI to `net10.0-windows10.0.19041.0`, and give HTML to PDF its own STA thread. |
+| C3 | CLI: speech to text, OCR, background removal, HTML to PDF | **Mostly done:** the CLI targets Windows, carries the AI tools and has `dropflow models list/download/delete` (download needs `--yes`). | HTML to PDF still needs its own STA thread in the CLI. |
 | C4 | Browser: HEIC/TIFF input, GIF output, Office, OCR, Whisper, protect/unlock/sign/redact | No licence-clean browser decoder/encoder or library justified (ADR-0009). | A hint tile points to the Windows app; revisit per tool. |
 | C5 | `Availability.NeedsModel` on `IConverter` | Today the consent dialog appears after the options dialog (ADR-0006). | Add the member and let the runner ask before the options. |
 | C6 | Option kinds: file picker (sign picture path), multi-line text (redact regions/terms), multi-select (protect permissions) | The generic options form only has text, number, choice, bool, password, folder, range. | Add the kinds to `ToolOptionKind` and the dialog. |
@@ -74,3 +74,4 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
 - "Sign PDF" is a visible signature, not a cryptographic one.
 - Wi-Fi sharing is IPv4 only and listens on every adapter (the token is the protection).
 - `pdf.watermark` and `pdf.page-numbers` misplace on pages whose MediaBox does not start at 0,0 (a PDFsharp quirk; `pdf.sign` compensates).
+

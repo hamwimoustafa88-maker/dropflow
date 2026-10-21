@@ -34,6 +34,7 @@ internal sealed record FfmpegProgress(
 internal sealed class FfmpegProgressParser
 {
     private long _outTimeUs;
+    private long _lastTimeUs;
     private bool _haveTime;
     private double? _speed;
     private long? _frame;
@@ -78,7 +79,9 @@ internal sealed class FfmpegProgressParser
                 _size = long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sz) ? sz : null;
                 break;
             case "progress":
-                var snapshot = new FfmpegProgress(_outTimeUs, _speed, _frame, _fps, _bitrate, _size, value == "end");
+                // Progress only moves forward: a block with no usable time (out_time=N/A) or an older one keeps the last known time.
+                if (_haveTime) _lastTimeUs = Math.Max(_lastTimeUs, _outTimeUs);
+                var snapshot = new FfmpegProgress(_lastTimeUs, _speed, _frame, _fps, _bitrate, _size, value == "end");
                 _haveTime = false;
                 _outTimeUs = 0;
                 return snapshot;

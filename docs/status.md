@@ -46,7 +46,7 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Core (catalog, registry, queue, wheel model, runner, settings, history, recipes, watch, CLI logic) | Verified | Core tests |
 | Drag + key-tap state machine | Verified | Hooks tests |
 | Real mouse/keyboard hooks installing | Verified (installs, logs) | app log "input hooks installed" |
-| Drag in Explorer / browser / other apps raising the wheel | **Unverified** | Phase 0 manual checklist (`docs/phase0-checklist.md`) never run; needs a human dragging files |
+| Drag in Explorer / browser / other apps raising the wheel | **Reported working by the owner (2026-10-21, manual drag test on their PC)** | not witnessed by this tooling and no per-app/per-monitor detail recorded; Windows 11, multi-monitor and DPI above 100 % remain untested |
 | Windows 11, multi-monitor, per-monitor DPI above 100 % | **Unverified** | needs hardware |
 | Wheel window as OLE drop target, non-activating | Built; exercised by scripted mouse automation on this PC only | |
 | Tray app, settings, history + undo, toasts, single instance, Explorer verbs, Send To | Verified by launching the real app and driving it | screenshots; context-menu verbs batching tested in Core |
@@ -79,7 +79,7 @@ pm ci, which rejects a Windows-made lockfile on Linux, so CI uses
 pm install) was **green on all three jobs**. One WebView2 test (Never_overwrites_an_earlier_output) failed once on the GitHub runner with no message and passed on the next run; it now reports which run failed, so treat it as a possible flake and look at that message if it recurs. `vpk pack` was never run and no release exists |
 | Web app (in-browser, `/app`, `web/`) | Verified in headless Edge | 206 browser checks run by its author (real file inputs, synthesized drags with Shift/Ctrl/Alt, real downloads re-parsed, offline reload), 834 Vitest tests (169 run the real ffmpeg core in Node); lint, production build, tests and `npm audit --omit=dev` (0) re-run here. No-upload proof: static scan finds no fetch/XHR/beacon/WebSocket in app code, and the `/app` CSP only allows self/blob/data |
 | Web app gaps | **Unverified** | a real OS drag from Explorer with Alt/Shift/Ctrl; Firefox, Safari, phones; folder drop and AVIF/SVG/GIF/ICO inputs in e2e; files over ~500 MB; PWA install prompt; the service worker's own requests are not network-audited; `public/sw.js` is generated after `next build` and is assumed to be collected by Vercel. HEIC/TIFF input, GIF output, Office, OCR, Whisper, protect/unlock/sign/redact are not offered in the browser (a hint tile points to the Windows app) |
-| Vercel deployment | **Not linked** | connector got 403 on the owner's scope; import the repo with Root Directory `web` |
+| Vercel deployment | **Live and checked from outside** (https://dropflow.scouthub.dev, project `moustafa-hamwis-projects/dropflow`) | `/en`, `/ar`, `/en/app`, `/ar/app` answer 200; `sw.js` and the manifest are served; `/app` sends the strict CSP; landing copy has no "open source"/GPL, shows "100% local" and the all-rights-reserved footer, `noindex` is set. Not checked: Vercel build settings, custom-domain DNS, a real PWA install |
 | Accounts / payments | Deferred on purpose | ADR-0005, Phase 9 |
 
 ## End-to-end acceptance run (2026-10-21, real `dropflow` CLI, real files, no engines installed)
@@ -109,6 +109,6 @@ outside the sandbox; it remains an open risk until `docs/phase0-checklist.md` is
 - Run `docs/phase0-checklist.md` by hand (the drag-detection risk is still open).
 - Say yes or no to downloading: a modern FFmpeg, qpdf, LibreOffice (via the in-app installer, which asks first) and the AI models.
 - Decide when the repository becomes public (the release workflow and the landing page buttons depend on it).
-- Grant the Vercel connector access or import the project in the dashboard.
+- (Done) Vercel is linked; the owner may still want the connector granted so deployments can be inspected from here (it returned 403).
 
 

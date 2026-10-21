@@ -6,12 +6,11 @@ License: **proprietary, all rights reserved — NOT open source** (owner's decis
 public only briefly for tooling). Never write "open source" or "GPL" in product copy. Audience: Arabic + English users.
 
 **Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
-(`docs/phase0-checklist.md`) was our own rule and has **not been run** (needs a human dragging files; Windows 11 and
-multi-monitor/DPI untested) — the input-capture risk stays open and is tracked in `docs/status.md`, which is the honest
+(`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
+multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
 are inert "Soon" badges until a release exists. GitHub: private repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch
-`main`). Vercel: NOT linked — the connector gets 403 on the owner's personal scope (`moustafa-hamwis-projects`); the owner must grant
-access or import the repo in the dashboard with Root Directory `web`. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
+`main`). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
 installed (new terminals may need a restart to see it on PATH). The dev machine has no modern FFmpeg, qpdf or LibreOffice (only 7-Zip,
 WinRAR's Rar.exe, Tesseract English, and an old FFmpeg 4.0 inside another vendor's app that one test run used); we do not download
 binaries or models without the owner's say-so; engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`.
@@ -100,6 +99,9 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-21 — Owner confirmed Vercel is live (https://dropflow.scouthub.dev) and that the Phase 0 drag test passed. Checked the live site from
+  outside: /en, /ar, /en/app, /ar/app = 200, sw.js + manifest served, strict CSP on /app, noindex, no "open source"/GPL in copy.
+  Docs updated (status ledger, deferred A1/A6). — docs/status.md, docs/deferred.md, CLAUDE.md
 - 2026-10-21 — Real-engine verification round (owner: "you may download what you need"): FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice and four
   AI models (Whisper tiny, u2netp, birefnet-lite, ultraface) installed/downloaded on the dev PC; full solution now 2,755 .NET tests, 0 skipped.
   Real FFmpeg exposed two bugs, both fixed with tests: progress fell back to 0 on `out_time=N/A`, and "no audio track" was missed because
@@ -191,4 +193,5 @@ After every change to the project (code, docs, decisions, dependencies), before 
   GPL-3.0-or-later; added iLovePDF-parity PDF suite (Phase 2), Media Studio with Encoder + Whisper (Phase 3), landing
   page with Phase 1, in-browser web app (Phase 6); deferred accounts/payments to Phase 9; drag keys Shift/Ctrl/Alt.
 - 2026-10-19 — Initial concept plan written (docs/archive/first-plan.md), based on tangerineformac.com.
+
 

@@ -107,6 +107,20 @@ public interface IInteractiveTool : IConverter
     Task OpenAsync(string operation, IReadOnlyList<string> files);
 }
 
+/// <summary>
+/// A dedicated visual editor (with a live preview) that fills an ordinary converter's options for the chosen files — Edit photo,
+/// Annotate, Crop, Redact, Add background, QR creator, Metadata. The runner asks it instead of the generic options form and then queues
+/// the job as usual, so the converter, history and undo are unchanged. The generic form stays the fallback (no editor, CLI, recipes).
+/// </summary>
+public interface IOptionsEditor
+{
+    /// <summary>True when there is an editor for this operation and these files.</summary>
+    bool CanEdit(string operation, IReadOnlyList<string> files);
+
+    /// <summary>Shows the editor. Returns the options to run with, or null when the user closed it. Called on the app's UI thread context.</summary>
+    Task<IReadOnlyDictionary<string, object?>?> EditAsync(string operation, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options);
+}
+
 /// <summary>Tells the core which external engines are installed.</summary>
 public interface IEngineProvider
 {

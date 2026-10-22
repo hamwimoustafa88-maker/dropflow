@@ -1,4 +1,4 @@
-using DropFlow.Core.Catalog;
+﻿using DropFlow.Core.Catalog;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
 using DropFlow.Core.Registry;
@@ -35,7 +35,8 @@ public sealed class OperationRunner(
     IEngineInstallService installer,
     IUserPrompts prompts,
     Func<EngineId, int> approxSizeMb,
-    Func<string, string> toolTitle)
+    Func<string, string> toolTitle,
+    IOptionsEditor? editors = null)
 {
     public async Task<BatchHandle?> RunAsync(WheelSelection selection, CancellationToken cancellationToken = default)
     {
@@ -57,9 +58,15 @@ public sealed class OperationRunner(
         }
 
         // Options first, so the choice can decide whether an engine is needed at all (PDF "extreme" compression needs none).
+        // A visual editor, when there is one for this tool, replaces the generic form.
         IReadOnlyDictionary<string, object?>? values = null;
         var options = converter.OptionsFor(op);
-        if (options.Count > 0)
+        if (editors is not null && editors.CanEdit(op, selection.Files))
+        {
+            values = await editors.EditAsync(op, selection.Files, options).ConfigureAwait(false);
+            if (values is null) return null;      // closed
+        }
+        else if (options.Count > 0)
         {
             values = await prompts.AskOptionsAsync(op, toolTitle(op), options).ConfigureAwait(false);
             if (values is null) return null;      // cancelled

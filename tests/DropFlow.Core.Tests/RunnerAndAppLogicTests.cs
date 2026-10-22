@@ -1,4 +1,4 @@
-using DropFlow.Core.App;
+﻿using DropFlow.Core.App;
 using DropFlow.Core.Catalog;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
@@ -167,6 +167,66 @@ public class OperationRunnerTests
 
         Assert.Equal(["options pdf.compress 'Title:pdf.compress' 1", "confirm Qpdf 100MB"], prompts.Log);
         Assert.Equal([EngineId.Qpdf], installer.Installed);
+    }
+
+    private sealed class Editor(IReadOnlyDictionary<string, object?>? answer, string handles = "img.compress") : IOptionsEditor
+    {
+        public List<string> Log { get; } = [];
+        public bool CanEdit(string operation, IReadOnlyList<string> files) => operation == handles;
+        public Task<IReadOnlyDictionary<string, object?>?> EditAsync(string operation, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
+        {
+            Log.Add($"edit {operation} {string.Join("|", files)} {options.Count}");
+            return Task.FromResult(answer);
+        }
+    }
+
+    private static OperationRunner WithEditor(IConverter converter, IOptionsEditor editor, out Prompts prompts, out JobQueue queue)
+    {
+        var registry = new ToolRegistry().Register(converter);
+        queue = new JobQueue(registry, Catalog);
+        prompts = new Prompts();
+        return new OperationRunner(registry, queue, new MutableEngines(), new Installer(), prompts, _ => 100, op => op, editor);
+    }
+
+    [Fact]
+    public async Task A_visual_editor_fills_the_options_instead_of_the_generic_form()
+    {
+        ConversionJob? seen = null;
+        var converter = new FakeConverter(["img.compress"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
+            options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
+        var editor = new Editor(new Dictionary<string, object?> { ["quality"] = 42 });
+        var runner = WithEditor(converter, editor, out var prompts, out _);
+
+        var batch = await runner.RunAsync(Sel("img.compress", @"C:\a.png", @"C:\b.png"));
+        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal([@"edit img.compress C:\a.png|C:\b.png 1"], editor.Log);
+        Assert.Empty(prompts.Log);
+        Assert.Equal(42, seen!.GetInt("quality"));
+    }
+
+    [Fact]
+    public async Task Closing_the_editor_starts_nothing()
+    {
+        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
+        var runner = WithEditor(converter, new Editor(null), out var prompts, out var queue);
+
+        Assert.Null(await runner.RunAsync(Sel("img.compress", @"C:\a.png")));
+        Assert.Empty(queue.Batches);
+        Assert.Empty(prompts.Log);
+    }
+
+    [Fact]
+    public async Task Without_a_matching_editor_the_generic_form_is_still_used()
+    {
+        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
+        var editor = new Editor(new Dictionary<string, object?>(), handles: "img.edit");
+        var runner = WithEditor(converter, editor, out var prompts, out _);
+
+        await runner.RunAsync(Sel("img.compress", @"C:\a.png"));
+
+        Assert.Empty(editor.Log);
+        Assert.Single(prompts.Log, l => l.StartsWith("options"));
     }
 
     private sealed class WindowTool(EngineId engine = EngineId.None) : IInteractiveTool
@@ -415,7 +475,7 @@ public class SingleInstanceTests
         primary.StartListening();
 
         using var secondary = SingleInstance.Acquire(name);
-        var sent = new[] { "--open", @"C:\صور العائلة\a b.png", "x\"y" };
+        var sent = new[] { "--open", @"C:\ØµÙˆØ± Ø§Ù„Ø¹Ø§Ø¦Ù„Ø©\a b.png", "x\"y" };
         Assert.True(secondary.Forward(sent, TimeSpan.FromSeconds(5)));
 
         Assert.Equal(sent, await received.Task.WaitAsync(TimeSpan.FromSeconds(5)));

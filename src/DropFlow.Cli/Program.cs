@@ -25,9 +25,12 @@ public static class Program
             return await ModelsCommand.RunAsync(args.Skip(1).ToList(), models, Console.Out, Console.Error, cts.Token);
 
         var engines = new EngineLocator(dataDir);
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+        if (args.Length > 0 && args[0].Equals("doctor", StringComparison.OrdinalIgnoreCase))
+            return await DoctorCommand.RunAsync(args.Skip(1).ToList(), engines, models, version, dataDir, Console.Out, cts.Token);
+
         var registry = new ToolRegistry().Register(Modules.Create(engines, models));
         var recipes = BuiltInRecipes.Available(registry).Concat(new RecipeStore(Path.Combine(dataDir, "recipes.json")).Load()).ToList();
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
 
         var runner = new CliRunner(registry, ToolCatalog.LoadEmbedded(), engines, recipes, new PermanentDelete(), Console.Out, Console.Error, version);
         return await runner.RunAsync(args, cts.Token);

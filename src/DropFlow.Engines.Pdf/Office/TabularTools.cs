@@ -5,6 +5,9 @@ namespace DropFlow.Engines.Pdf.Office;
 /// <summary>csv, tsv, xlsx and json converted to each other and to HTML tables, without any engine.</summary>
 internal static class TabularTools
 {
+    /// <summary>Characters Windows forbids in file names (macOS and Linux forbid only '/'); used everywhere so outputs copy across systems.</summary>
+    private static readonly char[] WindowsUnsafe = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
     public static readonly string[] Inputs = ["csv", "tsv", "xlsx", "json"];
     public static readonly string[] Targets = ["csv", "tsv", "xlsx", "json", "html"];
 
@@ -62,7 +65,7 @@ internal static class TabularTools
                     var stem = Path.GetFileNameWithoutExtension(nameSource);
                     foreach (var sheet in sheets)
                     {
-                        var safe = string.Concat(sheet.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+                        var safe = string.Concat(sheet.Name.Select(c => c < ' ' || WindowsUnsafe.Contains(c) ? '_' : c));   // the same names on every OS, valid on Windows too
                         var path = ctx.ReserveInFolder(output, $"{stem} - {safe}.{target}");
                         File.WriteAllText(path, Tabular.ToDelimited(sheet, target), TextFile.Utf8WithBom);
                     }

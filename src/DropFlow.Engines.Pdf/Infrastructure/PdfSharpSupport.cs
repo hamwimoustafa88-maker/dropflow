@@ -11,8 +11,9 @@ internal static class PdfSharpSupport
     private static bool _fontsConfigured;
 
     /// <summary>
-    /// PDFsharp (core build) needs a font source before it can draw text. On Windows it can read the installed fonts, which is all
-    /// DropFlow needs (watermarks and page numbers use Arial/Segoe UI that ship with Windows). Safe to call repeatedly.
+    /// PDFsharp (core build) needs a font source before it can draw text. On Windows it reads the installed fonts, which is all
+    /// DropFlow needs (watermarks and page numbers use Arial/Segoe UI that ship with Windows). On macOS and Linux the
+    /// <see cref="SystemFontResolver"/> finds installed TrueType fonts and stands in for the Windows families. Safe to call repeatedly.
     /// </summary>
     public static void EnsureFonts()
     {
@@ -20,6 +21,7 @@ internal static class PdfSharpSupport
         {
             if (_fontsConfigured) return;
             if (OperatingSystem.IsWindows()) GlobalFontSettings.UseWindowsFontsUnderWindows = true;
+            else if (GlobalFontSettings.FontResolver is null) GlobalFontSettings.FontResolver = new SystemFontResolver();
             _fontsConfigured = true;
         }
     }

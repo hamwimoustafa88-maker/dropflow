@@ -569,14 +569,33 @@ public class SharingTests : IDisposable
         Assert.Equal(1, server.CompletedDownloads);
     }
 
-    [MacOsUnverifiedFact("on the CI Mac the server never noticed the abandoned download, so the file was not handed back; Linux and Windows do")]
+    [Fact]
     public async Task A_cut_off_single_download_can_be_retried_but_a_finished_one_cannot()
     {
         var data = Kit.Noise(40_000_000, 3);
         var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false });
 
-        // start the download and abandon it after a few bytes
-        using (var abandoned = await _http.GetAsync(server.FileUrl(0, loopback: true), HttpCompletionOption.ResponseHeadersRead))
+        // Start the download and abandon it after a few bytes. This client has a tiny receive buffer: on a fast machine the kernel's loopback
+        // buffers can swallow all 40 MB, and the server (which counts a file as delivered when its last byte went out) would then rightly
+        // consider it delivered. With a 4 KB window only a few MB can be in flight, so the transfer is still running when the client leaves.
+        using var narrow = new HttpClient(new SocketsHttpHandler
+        {
+            ConnectCallback = async (context, ct) =>
+            {
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true, ReceiveBufferSize = 4096 };
+                try
+                {
+                    await socket.ConnectAsync(context.DnsEndPoint, ct);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            },
+        });
+        using (var abandoned = await narrow.GetAsync(server.FileUrl(0, loopback: true), HttpCompletionOption.ResponseHeadersRead))
         await using (var stream = await abandoned.Content.ReadAsStreamAsync())
         {
             await stream.ReadExactlyAsync(new byte[4096]);

@@ -48,8 +48,13 @@ public sealed class LowLevelInputHook : IDisposable
             ready.Set();
             if (failure is not null) return;
 
-            while (GetMessage(out _, 0, 0, 0) > 0) { /* the loop only keeps the hooks alive */ }
+            // The loop keeps the hooks alive and delivers the poll timer (a thread timer: WM_TIMER arrives here with hwnd 0).
+            while (GetMessage(out var msg, 0, 0, 0) > 0)
+            {
+                if (msg.message == WM_TIMER && msg.hwnd == 0 && msg.wParam == _pollTimer) Poll();
+            }
 
+            StopPolling();
             UnhookWindowsHookEx(_mouseHook);
             UnhookWindowsHookEx(_keyboardHook);
         })
@@ -73,9 +78,15 @@ public sealed class LowLevelInputHook : IDisposable
                 {
                     switch ((int)wParam)
                     {
-                        case WM_LBUTTONDOWN: _detector.OnMouseDown(data.pt.X, data.pt.Y); break;
+                        case WM_LBUTTONDOWN:
+                            _detector.OnMouseDown(data.pt.X, data.pt.Y, IsKeyDown);
+                            StartPolling();
+                            break;
                         case WM_MOUSEMOVE: _detector.OnMouseMove(data.pt.X, data.pt.Y); break;
-                        case WM_LBUTTONUP: _detector.OnMouseUp(data.pt.X, data.pt.Y); break;
+                        case WM_LBUTTONUP:
+                            _detector.OnMouseUp(data.pt.X, data.pt.Y);
+                            StopPolling();
+                            break;
                     }
                 }
             }
@@ -104,6 +115,51 @@ public sealed class LowLevelInputHook : IDisposable
         }
         // The spike observes only; it never swallows keys. Whether Alt/Shift taps disturb Explorer is a Phase 0 finding.
         return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+    }
+
+    // ------------------------------------------------------------------ polling while the button is down
+
+    /// <summary>
+    /// While the left button is down the real state is read every <see cref="PollInterval"/>: the button (a release the hook missed ends the drag,
+    /// after two readings in a row so one odd reading cannot cut a drag short) and the cursor (movement that bypassed the hook, as in remote
+    /// desktop and pen sessions, still counts). On by default.
+    /// </summary>
+    public bool PollWhileButtonDown { get; set; } = true;
+
+    public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(20);
+
+    private nuint _pollTimer;
+    private int _upReadings;
+
+    private static bool IsKeyDown(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
+
+    private void StartPolling()
+    {
+        _upReadings = 0;
+        if (!PollWhileButtonDown || _pollTimer != 0) return;
+        _pollTimer = SetTimer(0, 0, (uint)PollInterval.TotalMilliseconds, 0);
+    }
+
+    private void StopPolling()
+    {
+        if (_pollTimer == 0) return;
+        KillTimer(0, _pollTimer);
+        _pollTimer = 0;
+    }
+
+    private void Poll()
+    {
+        try
+        {
+            if (!_detector.IsButtonDown) { StopPolling(); return; }
+            // GetAsyncKeyState reads the physical button, so with swapped buttons the primary one is VK_RBUTTON.
+            var down = IsKeyDown(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON);
+            _upReadings = down ? 0 : _upReadings + 1;
+            if (!GetCursorPos(out var p)) return;
+            _detector.OnPoll(down || _upReadings < 2, p.X, p.Y);
+            if (!_detector.IsButtonDown) StopPolling();
+        }
+        catch { /* never let an exception escape the hook thread's loop */ }
     }
 
     public void Dispose()

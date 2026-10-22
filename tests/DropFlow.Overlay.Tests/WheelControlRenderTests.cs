@@ -247,6 +247,36 @@ public class WheelControlRenderTests
     }
 
     [Fact]
+    public void The_whole_wheel_square_is_one_stable_drop_target()
+    {
+        // During an OLE drag WPF re-targets the drag every time the element under the pointer changes. If the petals, the gaps between them,
+        // the hub and the corners alternated with the window background as the hit element, each switch would be a DragLeave/DragEnter pair
+        // (and a moment of "no drop"). The control therefore answers for its whole square, drawn or not.
+        var hits = Sta.Run(() =>
+        {
+            var host = new System.Windows.Controls.Grid { Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) };
+            var wheel = new WheelControl();
+            wheel.SetItems(Six, false);
+            host.Children.Add(wheel);
+            var size = wheel.Width;
+            host.Measure(new Size(size, size));
+            host.Arrange(new Rect(0, 0, size, size));
+            host.UpdateLayout();
+
+            var c = size / 2;
+            var probes = new[]
+            {
+                new Point(c, c),                                            // hub
+                new Point(c + (WheelControl.Inner + WheelControl.Outer) / 2, c), // on a petal
+                new Point(c, c - WheelControl.Inner - 1),                   // near a gap between petals
+                new Point(2, 2),                                            // corner, nothing drawn
+            };
+            return probes.Select(p => VisualTreeHelper.HitTest(host, p)?.VisualHit is WheelControl).ToList();
+        });
+        Assert.All(hits, Assert.True);
+    }
+
+    [Fact]
     public void Engine_and_option_marks_appear_in_labels_without_breaking_the_render()
     {
         var items = new WheelItem[] { new("m", "MP4", WheelItemState.NeedsEngine), new("p", "Protect", NeedsOptions: true), new("x", "A very long operation name indeed") };

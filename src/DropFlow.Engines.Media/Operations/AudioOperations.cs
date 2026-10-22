@@ -291,8 +291,10 @@ internal sealed class AudioTrimSilenceOperation : AudioToolBase
 }
 
 /// <summary>
-/// <b>aud.channels</b> — convert between mono and stereo. Option: <c>channels</c> (mono | stereo, default mono). Mono to stereo duplicates the signal at full level;
-/// stereo to mono averages left and right; surround files are down-mixed. A file that already has the wanted layout fails with a message.
+/// <b>aud.channels</b> — convert between mono and stereo. Options: <c>channels</c> (mono | stereo, default mono), <c>leftGain</c> and <c>rightGain</c>
+/// (dB, -30..12, default 0). Mono to stereo duplicates the signal at full level; stereo to mono averages left and right; surround files are down-mixed.
+/// The side gains weight each source side going into a mono mix, or set the level of each output side for stereo, so stereo to stereo with a gain
+/// is a balance change. A file that already has the wanted layout (and no gain to apply) fails with a message.
 /// Output: <c>name (mono).ext</c> or <c>name (stereo).ext</c>.
 /// </summary>
 internal sealed class AudioChannelsOperation : AudioToolBase
@@ -302,15 +304,19 @@ internal sealed class AudioChannelsOperation : AudioToolBase
     public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
     [
         new("channels", ToolOptionKind.Choice, "mono", Choices: ["mono", "stereo"]),
+        new("leftGain", ToolOptionKind.Number, 0, Min: -30, Max: 12),
+        new("rightGain", ToolOptionKind.Number, 0, Min: -30, Max: 12),
     ];
 
     public override async Task<IReadOnlyList<string>> ExecuteAsync(MediaContext ctx)
     {
         var target = ctx.Choice("channels", "mono", ["mono", "stereo"]);
+        var leftGain = ctx.Number("leftGain", 0, -30, 12);
+        var rightGain = ctx.Number("rightGain", 0, -30, 12);
         var info = await ctx.ProbeAsync(ctx.Input).ConfigureAwait(false);
         var source = info.Audio?.Channels ?? throw new MediaFailure("The file has no audio stream.");
 
-        var filter = AudioToolArgs.ChannelsFilter(target, source);
+        var filter = AudioToolArgs.ChannelsFilter(target, source, leftGain, rightGain);
         if (filter is null) throw new MediaFailure($"The file is already {target}.");
 
         var output = ctx.NewFile(ctx.InputExtension, target);

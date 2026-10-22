@@ -76,3 +76,9 @@ Some options are lists a future visual editor fills. They are plain `Text` optio
 ## Registering in the app
 The app composes `Module.Create(engines)` results into one `ToolRegistry`; the wheel then shows exactly the operations that have
 a converter, in catalog order. Nothing else needs wiring.
+
+A tool may also get a **dedicated editor** (a timeline, boxes drawn on the picture) instead of the generic options form: implement
+`IOptionsEditor` (`src/DropFlow.Core/Runner/OperationRunner.cs`) in the app and add it to the `CompositeOptionsEditor` in `AppHost`.
+The editor only returns option values (and, for multi-file tools, a new order of the selected files); the job still runs through the
+queue with the converter, so every value an editor produces must also be accepted from the CLI and recipes. The media editors live in
+`src/DropFlow.App/Views/Editors/Media/` (`MediaEditors` lists which tools have one).

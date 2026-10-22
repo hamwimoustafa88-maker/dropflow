@@ -685,6 +685,106 @@ public class VideoSplitTests
         var result = await h.Run("vid.split", h.Video("film.mp4", seconds: 300), MediaHarness.Opts(("points", "60")));
         Assert.Equal(Path.Combine(h.Dir, "film (clips 2)"), result.Outputs.Single());
     }
+
+    /// <summary>Makes the fake segment muxer write one file per given start time, plus the CSV list FFmpeg writes with <c>-segment_list</c>.</summary>
+    private static void FakeSegments(MediaHarness h, params double[] starts)
+    {
+        h.Runner.OnFfmpeg = (call, options, _) =>
+        {
+            if (call.After("-f") != "segment") return Task.FromResult<ProcessResult?>(null);
+            var pattern = call.Output;
+            var csv = new System.Text.StringBuilder();
+            for (var i = 0; i < starts.Length; i++)
+            {
+                var file = pattern.Replace("%03d", (i + 1).ToString("000"), StringComparison.Ordinal);
+                File.WriteAllText(file, $"clip {i + 1}");
+                var end = i + 1 < starts.Length ? starts[i + 1] : 300;
+                csv.Append(Path.GetFileName(file)).Append(',').Append(starts[i].ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture))
+                   .Append(',').Append(end.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+            }
+            File.WriteAllText(call.After("-segment_list")!, csv.ToString());
+            return Task.FromResult<ProcessResult?>(new ProcessResult(0, "", "", TimeSpan.Zero, false, false));
+        };
+    }
+
+    [Fact]
+    public async Task Removed_clips_are_left_out_and_the_others_keep_their_planned_numbers()
+    {
+        using var h = new MediaHarness();
+        FakeSegments(h, 0, 61.2, 120.4);   // stream copy starts each clip on the next keyframe
+        var result = await h.Run("vid.split", h.Video("film.mp4", seconds: 300), MediaHarness.Opts(("points", "60,120"), ("remove", "2")));
+
+        Assert.True(result.Success, result.Error);
+        var folder = Path.Combine(h.Dir, "film (clips)");
+        Assert.Equal([folder], result.Outputs);
+        Assert.Equal(["film part 001.mp4", "film part 003.mp4"], Directory.GetFiles(folder).Select(Path.GetFileName).Order());
+        Assert.Equal("clip 3", File.ReadAllText(Path.Combine(folder, "film part 003.mp4")));
+        Assert.True(Args.HasPair(h.Runner.Calls.Single().Args, "-segment_list_type", "csv"));
+        Assert.Equal(["film (clips)", Path.Combine("film (clips)", "film part 001.mp4"), Path.Combine("film (clips)", "film part 003.mp4"), "film.mp4"], h.Tree());
+    }
+
+    [Fact]
+    public async Task Join_the_rest_concatenates_the_kept_clips_by_stream_copy_into_one_file()
+    {
+        using var h = new MediaHarness();
+        FakeSegments(h, 0, 60, 120);
+        string? list = null;
+        var segmenter = h.Runner.OnFfmpeg!;
+        h.Runner.OnFfmpeg = async (call, options, ct) =>
+        {
+            if (call.After("-f") == "concat") list = File.ReadAllText(call.After("-i")!);
+            return await segmenter(call, options, ct);
+        };
+
+        var result = await h.Run("vid.split", h.Video("film.mkv", seconds: 300), MediaHarness.Opts(("points", "60,120"), ("remove", "2"), ("output", "join")));
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(Path.Combine(h.Dir, "film (edited).mkv"), result.Outputs.Single());
+        Assert.Equal(2, h.Runner.Calls.Count);
+        var join = h.Runner.Calls[1].Args;
+        Assert.True(Args.HasPair(join, "-c", "copy"));
+        Assert.DoesNotContain("-movflags", join); // mkv
+        Assert.Contains("clip001.mkv", list);
+        Assert.DoesNotContain("clip002.mkv", list);
+        Assert.Contains("clip003.mkv", list);
+        Assert.True(list!.IndexOf("clip001", StringComparison.Ordinal) < list.IndexOf("clip003", StringComparison.Ordinal));
+        Assert.Equal(["film (edited).mkv", "film.mkv"], h.Tree());   // the scratch clips are gone
+    }
+
+    [Fact]
+    public async Task Equal_length_clips_can_be_removed_too()
+    {
+        using var h = new MediaHarness();
+        FakeSegments(h, 0, 100, 200);
+        var result = await h.Run("vid.split", h.Video("film.mp4", seconds: 300), MediaHarness.Opts(("segment", 100), ("remove", "1, 3")));
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(["film part 002.mp4"], Directory.GetFiles(result.Outputs.Single()).Select(Path.GetFileName));
+    }
+
+    [Theory]
+    [InlineData("", "join")]       // nothing to leave out, so "join the rest" would rebuild the original
+    [InlineData("1,2,3", "clips")] // every clip removed
+    [InlineData("4", "clips")]     // there are only three clips
+    [InlineData("0", "clips")]     // clips are numbered from 1
+    [InlineData("two", "clips")]   // not a number
+    public async Task Impossible_removals_fail_before_anything_runs(string remove, string output)
+    {
+        using var h = new MediaHarness();
+        var result = await h.Run("vid.split", h.Video("film.mp4", seconds: 300), MediaHarness.Opts(("points", "60,120"), ("remove", remove), ("output", output)));
+        Assert.False(result.Success);
+        Assert.Empty(h.Runner.Calls);
+        Assert.Single(h.Tree());
+    }
+
+    [Fact]
+    public async Task Clip_numbers_typed_with_arabic_digits_are_understood()
+    {
+        using var h = new MediaHarness();
+        FakeSegments(h, 0, 60, 120);
+        var result = await h.Run("vid.split", h.Video("film.mp4", seconds: 300), MediaHarness.Opts(("points", "60,120"), ("remove", "٢")));
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(2, Directory.GetFiles(result.Outputs.Single()).Length);
+    }
 }
 
 public class VideoJoinTests

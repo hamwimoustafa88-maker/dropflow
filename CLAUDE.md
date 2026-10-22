@@ -35,12 +35,12 @@ when a program is missing.
 | DropFlow.sln | Desktop solution |
 | src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder`, `OutputPathResolver`, settings, history (no UI, no engines) |
 | src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator`, winget-based `EngineInstaller` |
-| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL) |
+| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window and `MediaPreview` (stills, waveform, loudness, listening renders) for the editors; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL) |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
 | src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, `ModelManager` (resumable, SHA-256 verified; downloads only after the app asks the user) (net10.0-windows10.0.19041.0) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
 | src/DropFlow.Overlay | `WheelWindow` (non-activating topmost OLE drop target), `WheelControl`/`WheelGeometry`, option form, floating shelf |
-| src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker |
+| src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker. `Views/Editors/Media`: dedicated media editors (`MediaEditors` = `IOptionsEditor`; `MediaSession` player, `MediaTimeline`) |
 | src/DropFlow.Cli | `dropflow` CLI (assembly name `dropflow`): list / convert / recipe / models / doctor commands over the same Core |
 | src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel |
 | installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md) |
@@ -109,6 +109,15 @@ After every change to the project (code, docs, decisions, dependencies), before 
   (`ShellDragProbe`: SysDragImage / hidden OLE capture / files already on the wheel; button state and cursor polled while the button is down;
   `AppSettings.RequireFileDrag` escape hatch), wheel hit-testing stable over its whole square, `dropflow doctor`. Real input still untested.
   — catalog/*, src/DropFlow.{Engines.Media,Engines.Images,Hooks,Overlay,Cli,Core}, src/DropFlow.App/Services/AppHost.cs, docs/status.md, docs/writing-a-converter.md
+- 2026-10-22 — Media editors (owner: dedicated windows with a real timeline instead of typed start/end text): `IOptionsEditor` in Core
+  (the runner asks it before the generic form; it may reorder files, never add; `CompositeOptionsEditor` so other editor families plug in),
+  `MediaEditors` + windows for trim, split (cuts, 2-50 equal clips, Delete drops a clip, save clips or join the rest), speed (live preview),
+  crop (box over the picture, aspect presets), save frames, redact over time (boxes with their own ranges; multi-box `boxes` JSON option,
+  refused rather than dropped while `vid.redact` is single-box), bleep (lane, A/B preview), normalize (LUFS/peak/LRA measured on open),
+  channels (side gains, solo preview), join/merge order. Media engine: `MediaPreview` (frames, thumbnail strip, waveform peaks, loudness,
+  bleep/solo/playable renders), `vid.split` options `remove`/`output`, `aud.channels` options `leftGain`/`rightGain`; `ProcessRunner`
+  copies binary stdout. Verified with STA tests against real FFmpeg (rendered en/ar PNGs looked at, editor values run through the real tools).
+  — src/DropFlow.App/Views/Editors/Media, src/DropFlow.Engines.Media/Preview, src/DropFlow.Core/Runner, src/DropFlow.Engines.Common, docs/status.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

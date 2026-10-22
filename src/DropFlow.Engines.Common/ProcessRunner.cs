@@ -17,6 +17,12 @@ public sealed record ProcessOptions
 
     public IReadOnlyDictionary<string, string>? Environment { get; init; }
 
+    /// <summary>
+    /// When set, stdout is binary data (a PNG piped by ffmpeg, raw samples): its bytes are copied into this stream unchanged instead of
+    /// being read as text lines, so <see cref="ProcessResult.StdOut"/> stays empty and <see cref="OnOutputLine"/> is not called.
+    /// </summary>
+    public Stream? StandardOutput { get; init; }
+
     /// <summary>Max characters kept for <see cref="ProcessResult.StdOut"/>/<see cref="ProcessResult.StdErr"/> (the tail is kept).</summary>
     public int MaxCapturedChars { get; init; } = 200_000;
 }
@@ -52,7 +58,7 @@ public static class ProcessRunner
             RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
+            StandardOutputEncoding = options.StandardOutput is null ? Encoding.UTF8 : null,
             StandardErrorEncoding = Encoding.UTF8,
             WorkingDirectory = options.WorkingDirectory ?? "",
         };
@@ -79,18 +85,23 @@ public static class ProcessRunner
         };
 
         process.Start();
-        process.BeginOutputReadLine();
+        var binary = options.StandardOutput;
+        if (binary is null) process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         process.StandardInput.Close(); // engines must never wait for interactive input
 
         using var timeoutCts = options.Timeout is { } t ? new CancellationTokenSource(t) : new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
+        // Binary stdout is drained concurrently: a full pipe would otherwise stall the process forever.
+        var copy = binary is null ? Task.CompletedTask : process.StandardOutput.BaseStream.CopyToAsync(binary, linked.Token);
+
         var timedOut = false;
         var cancelled = false;
         try
         {
             await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+            await copy.ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -98,6 +109,8 @@ public static class ProcessRunner
             cancelled = cancellationToken.IsCancellationRequested;
             Kill(process);
             await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            try { await copy.ConfigureAwait(false); }
+            catch (Exception ex) when (ex is OperationCanceledException or IOException) { /* the pipe closed with the process */ }
         }
 
         // Flush the asynchronous output readers.

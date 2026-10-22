@@ -6,6 +6,8 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://dropflow.s
 
 // The installer lives on the GitHub release page (latest release); the page lists the Setup file and the checksums.
 export const RELEASES_URL = "https://github.com/hamwimoustafa88-maker/dropflow/releases/latest";
+/** GitHub's stable "file of the latest release" address: `<this>/<asset file name>` downloads that file directly. */
+export const RELEASE_DOWNLOAD_URL = "https://github.com/hamwimoustafa88-maker/dropflow/releases/latest/download";
 export const REPO_URL = "https://github.com/hamwimoustafa88-maker/dropflow";
 export const CONTRIBUTING_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/CONTRIBUTING.md";
 export const LICENSE_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/LICENSE";

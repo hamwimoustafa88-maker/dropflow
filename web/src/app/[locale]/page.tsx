@@ -11,7 +11,7 @@ import { About } from "@/components/About";
 import { Developers } from "@/components/Developers";
 import { Faq, faqItems, type FaqItem } from "@/components/Faq";
 import { Marquee } from "@/components/Marquee";
-import { WindowsButton, WebButton } from "@/components/DownloadButtons";
+import { Downloads } from "@/components/DownloadButtons";
 import { Link } from "@/i18n/navigation";
 import { exploreCategories, stats } from "@/lib/catalog";
 import type { Locale } from "@/i18n/routing";
@@ -26,8 +26,9 @@ export function generateStaticParams() {
 
 function Hero() {
   const t = useTranslations("hero");
+  // overflow-x-clip (not hidden): an opened download list may extend below the hero.
   return (
-    <section id="top" className="relative overflow-hidden">
+    <section id="top" className="relative overflow-x-clip">
       <div aria-hidden="true" className="bg-grid absolute inset-0" />
       <div aria-hidden="true" className="hero-glow absolute inset-0" />
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-8 lg:pb-28 lg:pt-24">
@@ -42,9 +43,8 @@ function Hero() {
             <span className="block">{t("titleC")}</span>
           </h1>
           <p className="mt-6 text-xl text-muted sm:text-2xl">{t("subtitle")}</p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <WindowsButton primary />
-            <WebButton />
+          <div className="mt-9">
+            <Downloads id="download" note />
           </div>
         </div>
         <WheelDemo />
@@ -90,13 +90,12 @@ function Formats() {
 function Cta() {
   const t = useTranslations("cta");
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-x-clip">
       <div aria-hidden="true" className="hero-glow absolute inset-0 opacity-70" />
       <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 lg:py-32">
         <h2 className="reveal text-gradient text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
-        <div className="mt-10 flex flex-wrap justify-center gap-3">
-          <WindowsButton primary />
-          <WebButton />
+        <div className="mt-10">
+          <Downloads center />
         </div>
       </div>
     </section>

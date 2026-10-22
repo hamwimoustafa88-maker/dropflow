@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
+import { operatingSystems } from "./downloads";
 import { GPL_URL, RELEASES_URL, REPO_URL, SITE_URL } from "./site";
 
 // Search metadata shared by every page: canonical + hreflang (ar, en, x-default -> Arabic), Open Graph and Twitter card.
@@ -71,7 +72,7 @@ export function softwareJsonLd(locale: string, description: string, faq: { q: st
         name: "DropFlow",
         url: `${SITE_URL}/${locale}`,
         description,
-        operatingSystem: "Windows 10, Windows 11, Web",
+        operatingSystem: operatingSystems(),
         applicationCategory: "UtilitiesApplication",
         offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
         isAccessibleForFree: true,

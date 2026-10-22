@@ -20,8 +20,6 @@
   },
   "common": {
     "soon": "Soon",
-    "windows": "Windows",
-    "web": "Web",
     "skip": "Skip to content",
     "language": "Language",
     "mainNav": "Main navigation",
@@ -38,6 +36,32 @@
     "titleB": "Tap.",
     "titleC": "Drop.",
     "subtitle": "Convert any file. Offline."
+  },
+  "download": {
+    "label": "Download DropFlow",
+    "platforms": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "web": "Web"
+    },
+    "assets": {
+      "installer": "Installer",
+      "portable": "Portable",
+      "cli": "Command line",
+      "appleSilicon": "Apple silicon",
+      "intel": "Intel",
+      "deb": "Ubuntu / Debian",
+      "rpm": "Fedora / openSUSE",
+      "appImage": "Any distro",
+      "apk": "Android app"
+    },
+    "more": "More {platform} downloads",
+    "menu": "{platform} downloads",
+    "yours": "(your system)",
+    "soon": "Soon",
+    "note": "Not signed yet. macOS: right-click → Open · Windows: More info → Run anyway · Android: allow this source."
   },
   "demo": {
     "label": "Demo",
@@ -120,14 +144,36 @@
   },
   "developers": {
     "eyebrow": "Open source · for developers",
-    "title": "Build it with us.",
+    "title": "Download from GitHub.",
     "points": {
       "license": "GPL-3.0 · free software",
       "stack": "C# · .NET 10 · Next.js · TypeScript",
       "issues": "Good first issues welcome"
     },
     "repo": "View on GitHub",
-    "contribute": "Contribute"
+    "contribute": "Contribute",
+    "releases": "Releases",
+    "checksums": "SHA-256 checksums",
+    "steps": {
+      "clone": "Clone",
+      "needs": "You need",
+      "run": "Build and run"
+    },
+    "needs": {
+      "dotnet": ".NET 10 SDK",
+      "node": "Node 20+",
+      "android": "JDK 17+ · Android SDK (Android)"
+    },
+    "targets": {
+      "windows": "Windows app",
+      "desktop": "macOS · Linux app",
+      "cli": "Command line (CLI)",
+      "web": "Web app",
+      "android": "Android",
+      "engines": "Engines: FFmpeg, qpdf, Tesseract"
+    },
+    "copyLabel": "Copy: {label}",
+    "copied": "Copied"
   },
   "faq": {
     "title": "FAQ",
@@ -154,7 +200,7 @@
       },
       {
         "q": "Is there a Mac version?",
-        "a": "Not yet. It is planned."
+        "a": "Yes, new: macOS, Linux and Android builds are on the download buttons. They are less tested than Windows."
       }
     ]
   },

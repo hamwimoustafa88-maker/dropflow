@@ -64,6 +64,7 @@ describe("no code path uploads user data", () => {
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/releases/latest", // the Windows download link, clicked by the visitor, never fetched
+      "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/releases/latest/download", // base of the direct download links (src/lib/downloads.ts), clicked by the visitor, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/CONTRIBUTING.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/LICENSE", // a link the visitor may click, never fetched

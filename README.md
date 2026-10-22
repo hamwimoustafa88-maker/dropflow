@@ -94,7 +94,7 @@ Counts come from [`catalog/tools.json`](catalog/tools.json), the single source o
 | **PDF** (18 tools) | merge, split, organize, rotate, compress, watermark, page numbers, crop, visible signature, true redaction, compare, protect / unlock (with a password you know), repair, PDF/A-2b, PDF → Word, PowerPoint, Excel, images, text, EPUB |
 | **Documents** | Word, spreadsheets, slides, Markdown, HTML, EPUB, CSV/JSON → PDF and images, through a built-in browser engine (no LibreOffice needed) |
 | **Video** (14) and **audio** (9) | convert, compress (also to a target size), trim, crop, split, join, speed, mute, normalize, bleep, waveform video, burn-in subtitles, and **DropFlow Encoder** (H.264 / H.265 / AV1, GPU encoders, presets) |
-| **Local AI** | speech to text with Whisper (Arabic included), OCR (Tesseract + Windows OCR, English and Arabic), background removal, automatic face/text redaction; models download only after you agree |
+| **Local AI** | speech to text with Whisper (Arabic included), OCR (Tesseract + Windows OCR, English and Arabic), background removal, automatic face/text redaction, English and Arabic translation of text, subtitles, PDFs and pictures (Opus-MT); models download only after you agree |
 | **Archives and utilities** | extract ZIP / TAR / GZ / 7z / RAR safely, create ZIP, hashes, Base64, batch rename |
 | **Actions** | copy, move, share, copy path, terminal, floating shelf, send to a phone on the same Wi-Fi (QR code) |
 

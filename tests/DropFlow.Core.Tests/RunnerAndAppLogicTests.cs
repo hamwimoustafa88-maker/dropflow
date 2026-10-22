@@ -50,16 +50,58 @@ public class OperationRunnerTests
     }
 
     /// <summary>A dedicated editor window for one operation (a trim timeline, say) that answers with option values.</summary>
-    private sealed class Editor(string operation, IReadOnlyDictionary<string, object?>? answer, Prompts? log = null) : IOptionsEditor
+    private sealed class Editor(string operation, IReadOnlyDictionary<string, object?>? answer, Prompts? log = null, IReadOnlyList<string>? order = null) : IOptionsEditor
     {
         public List<string> Opened { get; } = [];
         public bool CanEdit(string op, IReadOnlyList<string> files) => op == operation;
-        public Task<IReadOnlyDictionary<string, object?>?> EditAsync(string op, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
+        public Task<OptionsEdit?> EditAsync(string op, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
         {
             Opened.Add($"{op} '{title}' {string.Join("|", files)} {options.Count}");
             log?.Log.Add("editor " + op);
-            return Task.FromResult(answer);
+            return Task.FromResult(answer is null ? null : new OptionsEdit(answer, order));
         }
+    }
+
+    [Fact]
+    public async Task An_editor_may_reorder_the_files_of_a_multi_file_tool()
+    {
+        ConversionJob? seen = null;
+        var converter = new FakeConverter(["vid.join"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
+            options: [new ToolOption("mode", ToolOptionKind.Choice, "auto", ["auto", "copy", "reencode"])]);
+        var editor = new Editor("vid.join", new Dictionary<string, object?> { ["mode"] = "auto" }, order: [@"C:\b.mp4", @"C:\a.mp4"]);
+        var (runner, _, _, _, _, _) = Rig(converter, editor: editor);
+
+        var batch = await runner.RunAsync(Sel("vid.join", @"C:\a.mp4", @"C:\b.mp4"));
+        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal([@"C:\b.mp4", @"C:\a.mp4"], seen!.Inputs);
+    }
+
+    [Fact]
+    public async Task An_editor_can_never_slip_in_a_file_that_was_not_selected()
+    {
+        var converter = new FakeConverter(["vid.join"], options: [new ToolOption("mode", ToolOptionKind.Text, "auto")]);
+        var editor = new Editor("vid.join", new Dictionary<string, object?>(), order: [@"C:\a.mp4", @"C:\secret.mp4"]);
+        var (runner, prompts, _, _, queue, _) = Rig(converter, editor: editor);
+
+        Assert.Null(await runner.RunAsync(Sel("vid.join", @"C:\a.mp4", @"C:\b.mp4")));
+        Assert.Empty(queue.Batches);
+        Assert.Contains(prompts.Log, l => l.StartsWith("error"));
+    }
+
+    [Fact]
+    public async Task A_composite_editor_asks_the_first_editor_that_handles_the_tool()
+    {
+        var trim = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "1" });
+        var crop = new Editor("img.crop", new Dictionary<string, object?>());
+        var both = new CompositeOptionsEditor(crop, trim);
+
+        Assert.True(both.CanEdit("vid.trim", [@"C:\a.mp4"]));
+        Assert.False(both.CanEdit("pdf.merge", [@"C:\a.pdf"]));
+        var edit = await both.EditAsync("vid.trim", "T", [@"C:\a.mp4"], []);
+        Assert.Equal("1", edit!.Values["start"]);
+        Assert.Single(trim.Opened);
+        Assert.Empty(crop.Opened);
     }
 
     [Fact]

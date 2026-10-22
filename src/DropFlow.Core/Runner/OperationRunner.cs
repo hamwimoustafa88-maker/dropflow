@@ -37,7 +37,22 @@ public interface IOptionsEditor
     /// Opens the editor and returns the chosen option values, or null when the user closed it without running.
     /// <paramref name="options"/> is what the converter declares, so the editor can check which keys it supports.
     /// </summary>
-    Task<IReadOnlyDictionary<string, object?>?> EditAsync(string operation, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options);
+    Task<OptionsEdit?> EditAsync(string operation, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options);
+}
+
+/// <summary>
+/// What an <see cref="IOptionsEditor"/> decided. <paramref name="Files"/> is set when the editor changed the order of the files (join, merge);
+/// it may only reorder or leave out files of the selection, never add new ones.
+/// </summary>
+public sealed record OptionsEdit(IReadOnlyDictionary<string, object?> Values, IReadOnlyList<string>? Files = null);
+
+/// <summary>Several editors (media timelines, image canvases...) behind one <see cref="IOptionsEditor"/>: the first that can edit wins.</summary>
+public sealed class CompositeOptionsEditor(params IOptionsEditor[] editors) : IOptionsEditor
+{
+    public bool CanEdit(string operation, IReadOnlyList<string> files) => editors.Any(e => e.CanEdit(operation, files));
+
+    public Task<OptionsEdit?> EditAsync(string operation, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options) =>
+        editors.First(e => e.CanEdit(operation, files)).EditAsync(operation, title, files, options);
 }
 
 /// <summary>
@@ -76,14 +91,26 @@ public sealed class OperationRunner(
 
         // Options first, so the choice can decide whether an engine is needed at all (PDF "extreme" compression needs none).
         IReadOnlyDictionary<string, object?>? values = null;
+        var files = selection.Files;
         var options = converter.OptionsFor(op);
 
         // A dedicated editor previews the file with the engine (thumbnails, waveform), so the engine must exist before it opens.
         if (editors is not null && editors.CanEdit(op, selection.Files))
         {
             if (!await EnsureEngineAsync(converter.EngineFor(op), cancellationToken).ConfigureAwait(false)) return null;
-            values = await editors.EditAsync(op, toolTitle(op), selection.Files, options).ConfigureAwait(false);
-            if (values is null) return null;      // closed without running
+            var edit = await editors.EditAsync(op, toolTitle(op), selection.Files, options).ConfigureAwait(false);
+            if (edit is null) return null;      // closed without running
+            values = edit.Values;
+            if (edit.Files is { Count: > 0 } reordered)
+            {
+                var allowed = new HashSet<string>(selection.Files, StringComparer.OrdinalIgnoreCase);
+                if (!reordered.All(allowed.Contains))
+                {
+                    await prompts.ShowErrorAsync("The editor returned a file that was not selected.").ConfigureAwait(false);
+                    return null;
+                }
+                files = reordered;
+            }
         }
         else if (options.Count > 0)
         {
@@ -93,7 +120,7 @@ public sealed class OperationRunner(
 
         if (!await EnsureEngineAsync(converter.EngineFor(op, values ?? ConversionJob.NoOptions), cancellationToken).ConfigureAwait(false)) return null;
 
-        return queue.Enqueue(new ConversionJob(selection.Files, op, values));
+        return queue.Enqueue(new ConversionJob(files, op, values));
     }
 
     /// <summary>True when the engine is not needed or is installed (after asking the user and installing it).</summary>

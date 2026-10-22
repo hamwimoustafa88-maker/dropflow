@@ -68,6 +68,10 @@ jobs:
             $b = [IO.File]::ReadAllBytes($path); $pe = [BitConverter]::ToInt32($b, 0x3C)
             '{0:X4}' -f [BitConverter]::ToUInt16($b, $pe + 4)
           }
+          # Native packages also carry copies for other processors under runtimes\<rid>\ (Whisper.net: win-x64, win-x86). An ARM64
+          # process never loads them, so they only add size: remove every runtimes folder that is not for win-arm64.
+          Get-ChildItem publish/app-arm64/runtimes -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne 'win-arm64' } | ForEach-Object { "removing $($_.FullName)"; Remove-Item $_.FullName -Recurse -Force }
           $natives = Get-ChildItem publish/app-arm64 -Recurse -File -Include pdfium.dll, libSkiaSharp.dll, onnxruntime.dll, Magick.Native-Q8-arm64.dll, whisper.dll
           if (-not $natives) { throw "No native libraries found in the publish folder." }
           $bad = @()

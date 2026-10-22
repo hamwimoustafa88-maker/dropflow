@@ -123,7 +123,7 @@ public sealed class PdfOcrConverter : IConverter
             IReadOnlyList<string> pages;
             try
             {
-                var render = new Progress<double>(p => progress.Report(new JobProgress(0.02 + p * 0.38, "Rendering pages")));
+                var render = new InlineProgress<double>(p => progress.Report(new JobProgress(0.02 + p * 0.38, "Rendering pages")));
                 pages = await Rasterizer.RenderPagesAsync(input, work.Path, dpi, render, cancellationToken).ConfigureAwait(false);
             }
             catch (PdfRenderException ex)

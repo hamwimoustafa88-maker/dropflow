@@ -125,7 +125,7 @@ public sealed class TranscribeConverter : IConverter, IDisposable
             TranscriptionResult result;
             try
             {
-                var inner = new Progress<double>(p => progress.Report(new JobProgress(0.12 + p * 0.8, "Transcribing")));
+                var inner = new InlineProgress<double>(p => progress.Report(new JobProgress(0.12 + p * 0.8, "Transcribing")));
                 result = await _transcriber.TranscribeAsync(modelPath, samples, new TranscribeSettings(language, translate && language != "en"), inner, cancellationToken).ConfigureAwait(false);
             }
             catch (SpeechEngineException ex)

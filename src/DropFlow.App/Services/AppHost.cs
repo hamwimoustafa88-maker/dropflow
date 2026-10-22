@@ -409,7 +409,7 @@ internal sealed class AppHost : IDisposable
             op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op,
             // Dedicated editors (images, then timelines/boxes for media) instead of the generic form.
             new CompositeOptionsEditor(
-                new Views.Editors.Image.ImageEditors(host.Kit, host._redact),
+                new ImageEditors(host.Kit, host._redact),
                 new Views.Editors.Media.MediaEditors(host._ui, host.Kit, host.Engines,
                     msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; })));
     }

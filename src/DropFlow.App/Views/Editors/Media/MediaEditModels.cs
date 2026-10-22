@@ -511,18 +511,27 @@ internal sealed class MediaRedactModel(double duration, int frameWidth, int fram
 
     /// <summary>
     /// The multi-box option for <c>vid.redact</c> (key <c>boxes</c>): a JSON list such as
-    /// <c>[{"x":0.1,"y":0.2,"w":0.3,"h":0.1,"start":2.5,"end":7}]</c>. x, y, w, h are fractions (0..1) of the displayed picture;
-    /// start and end are seconds of the original file, and a missing (null) start or end means from the beginning or to the end.
+    /// <c>[{"x":192,"y":216,"w":576,"h":108,"start":2.5,"end":7}]</c>. x, y, w, h are whole pixels of the video frame (the same
+    /// space the converter reads); start and end are seconds of the original file, and a missing (null) start or end means from the beginning or to the end.
     /// </summary>
     public string BoxesJson()
     {
-        var items = _boxes.Select(b => new Dictionary<string, object?>
+        var items = _boxes.Select(b => PixelsOf(b)).Select((p, i) => new Dictionary<string, object?>
         {
-            ["x"] = Math.Round(b.X, 5), ["y"] = Math.Round(b.Y, 5), ["w"] = Math.Round(b.W, 5), ["h"] = Math.Round(b.H, 5),
-            ["start"] = b.Start is { } s ? Math.Round(s, 3) : null,
-            ["end"] = b.End is { } e ? Math.Round(e, 3) : null,
+            ["x"] = p.X, ["y"] = p.Y, ["w"] = p.W, ["h"] = p.H,
+            ["start"] = _boxes[i].Start is { } s ? Math.Round(s, 3) : null,
+            ["end"] = _boxes[i].End is { } e ? Math.Round(e, 3) : null,
         });
         return JsonSerializer.Serialize(items);
+    }
+
+    /// <summary>A box as whole frame pixels, kept inside the frame and at least 2 px wide (the converter refuses empty areas).</summary>
+    private (int X, int Y, int W, int H) PixelsOf(RedactBox b)
+    {
+        var p = ToPixels(b);
+        var x = Math.Clamp((int)Math.Floor(p.X), 0, Math.Max(0, FrameWidth - 2));
+        var y = Math.Clamp((int)Math.Floor(p.Y), 0, Math.Max(0, FrameHeight - 2));
+        return (x, y, Math.Max(2, Math.Min((int)Math.Ceiling(p.W), FrameWidth - x)), Math.Max(2, Math.Min((int)Math.Ceiling(p.H), FrameHeight - y)));
     }
 
     /// <summary>
@@ -542,7 +551,7 @@ internal sealed class MediaRedactModel(double duration, int frameWidth, int fram
             ["color"] = color,
         };
         if (supportsBoxes) o["boxes"] = BoxesJson();
-        if (_boxes.Count == 1)
+        if (!supportsBoxes)   // the single-box converter reads the pixel fields; with `boxes` they would draw the same area twice
         {
             var b = _boxes[0];
             var p = ToPixels(b);

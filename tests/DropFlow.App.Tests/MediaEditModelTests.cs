@@ -251,7 +251,7 @@ public class MediaCropModelTests
 public class MediaRedactModelTests
 {
     [Fact]
-    public void Boxes_become_a_json_list_of_fractions_and_seconds()
+    public void Boxes_become_a_json_list_of_frame_pixels_and_seconds_without_the_single_box_fields()
     {
         var m = new MediaRedactModel(60, 1920, 1080);
         m.Add(new PixelBox(192, 108, 384, 216));
@@ -264,8 +264,13 @@ public class MediaRedactModelTests
         using var doc = JsonDocument.Parse((string)options!["boxes"]!);
         var boxes = doc.RootElement.EnumerateArray().ToList();
         Assert.Equal(2, boxes.Count);
-        Assert.Equal(0.1, boxes[0].GetProperty("x").GetDouble(), 5);
-        Assert.Equal(0.2, boxes[0].GetProperty("w").GetDouble(), 5);
+        Assert.Equal(192, boxes[0].GetProperty("x").GetInt32());
+        Assert.Equal(108, boxes[0].GetProperty("y").GetInt32());
+        Assert.Equal(384, boxes[0].GetProperty("w").GetInt32());
+        Assert.Equal(216, boxes[0].GetProperty("h").GetInt32());
+        // The converter adds the single-box fields to the list, so sending both would hide the same area twice.
+        Assert.False(options.ContainsKey("x"));
+        Assert.False(options.ContainsKey("start"));
         Assert.Equal(JsonValueKind.Null, boxes[0].GetProperty("start").ValueKind);   // whole video
         Assert.Equal(2.5, boxes[1].GetProperty("start").GetDouble());
         Assert.Equal(7, boxes[1].GetProperty("end").GetDouble());

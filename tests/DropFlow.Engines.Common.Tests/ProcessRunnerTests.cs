@@ -125,7 +125,7 @@ public class ProcessRunnerTests
     {
         using var sink = new MemoryStream();
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(400));
-        var r = await ProcessRunner.RunAsync(Cmd, ["/c", "ping -n 20 127.0.0.1"], new ProcessOptions { StandardOutput = sink }, cts.Token);
+        var r = await RunShell("ping -n 20 127.0.0.1", "sleep 20", new ProcessOptions { StandardOutput = sink }, cts.Token);
         Assert.True(r.Cancelled);
     }
 

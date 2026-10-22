@@ -182,3 +182,91 @@ jobs:
           gh release edit ${{ github.ref_name }} --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---- The other platforms --------------------------------------------------------------------------------------------------------------
+  # Each platform builds in its own reusable workflow and never blocks the Windows release above: if one fails, the release still ships and
+  # the final job names what is missing. Download links on the website need every file below to exist (web/src/lib/downloads.ts).
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.v.outputs.value }}
+    steps:
+      - id: v
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  win-arm64:
+    needs: version
+    uses: ./.github/workflows/build-win-arm64.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+
+  macos:
+    needs: version
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+
+  linux:
+    needs: version
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+
+  android:
+    needs: version
+    uses: ./.github/workflows/build-android.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+    secrets: inherit
+
+  attach-other-platforms:
+    # Runs once the Windows release exists, whatever happened to the other builds.
+    needs: [windows, win-arm64, macos, linux, android]
+    if: ${{ always() && needs.windows.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.win-arm64.result == 'success' }}
+        with: { name: win-arm64-release, path: dl/win-arm64 }
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.macos.result == 'success' }}
+        with: { name: dropflow-macos, path: dl/macos }
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.linux.result == 'success' }}
+        with: { name: dropflow-linux, path: dl/linux }
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.android.result == 'success' }}
+        with: { name: DropFlow-android.apk, path: dl/android }
+
+      - name: Attach the files and extend the checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          mkdir -p out
+          # The ARM64 installer plus its own update feed (channel win-arm64); the x64 feed was published by the windows job.
+          [ -d dl/win-arm64 ] && find dl/win-arm64 -type f -exec cp {} out/ \;
+          [ -d dl/macos ]     && find dl/macos -type f \( -name '*.dmg' \) -exec cp {} out/ \;
+          [ -d dl/linux ]     && find dl/linux -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -exec cp {} out/ \;
+          [ -d dl/android ]   && find dl/android -type f -name '*.apk' -exec cp {} out/ \;
+          ls -la out
+          gh release download "$TAG" --pattern SHA256SUMS.txt --dir out/sums --clobber
+          ( cd out && for f in *; do
+              case "$f" in *.json|RELEASES*|SHA256SUMS*|*.nupkg) continue;; esac
+              [ -f "$f" ] && echo "$(sha256sum "$f" | cut -d' ' -f1)  $f"
+            done ) >> out/sums/SHA256SUMS.txt
+          find out -maxdepth 1 -type f -print0 | xargs -0 gh release upload "$TAG" --clobber
+          gh release upload "$TAG" out/sums/SHA256SUMS.txt --clobber
+
+      - name: Say what is missing
+        run: |
+          missing=""
+          [ "${{ needs.win-arm64.result }}" = success ] || missing="$missing win-arm64"
+          [ "${{ needs.macos.result }}" = success ]     || missing="$missing macos"
+          [ "${{ needs.linux.result }}" = success ]     || missing="$missing linux"
+          [ "${{ needs.android.result }}" = success ]   || missing="$missing android"
+          if [ -n "$missing" ]; then
+            echo "::error::The release was published without:$missing. Their download buttons on the website would be dead links; set the matching *_RELEASED flag to false in web/src/lib/downloads.ts before deploying."
+            exit 1
+          fi

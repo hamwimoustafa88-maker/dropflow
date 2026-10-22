@@ -112,6 +112,15 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — v0.2 integration (owner: "apply every idea from Adawat to Windows, Mac, Linux and Android; per-platform downloads on the landing page; GitHub section for developers; better README"):
+  seven parallel branches merged on `integrate/v0.2` (not yet on main): Windows engines (vid.rotate, aud.trim-silence, many-box redact, strict target size,
+  lossless JPEG rotate, drag robustness, `dropflow doctor`), image editors + welcome guide + `--snapshot-window`, media timeline editors, cross-platform
+  engines (PDFtoImage, Unix EngineLocator, Windows ARM64 workflow), Avalonia macOS/Linux app, native Android app, landing downloads + developer section +
+  README. Integration fixes: both editor families share one `CompositeOptionsEditor`; the redact editor now sends frame pixels (the converter reads
+  pixels, the editor had sent fractions) and no longer sends the single-box fields next to `boxes` (they would hide the same area twice);
+  `AppSettings.RequireFileDrag` is OFF by default until the SysDragImage check is tried with real input; `release.yml` builds win-arm64, macOS, Linux and
+  Android in reusable workflows and `attach-other-platforms` uploads their files (a failed platform never blocks the Windows release). macOS, Android and
+  real drags remain unverified (docs/status.md). — .github/workflows/release.yml, src/DropFlow.App/{Services/AppHost.cs,Views/Editors/Media}, src/DropFlow.Core/Settings, docs/*
 - 2026-10-22 — Media/images/drag round (owner: more tools and a sturdier drag): `vid.rotate` (lossless, `-display_rotation` + stream copy, checked
   with ffprobe on the bundled FFmpeg 9), `img.rotate` + lossless JPEG turns in `img.edit` (EXIF orientation only, byte-identical picture data),
   `aud.trim-silence` (catalog `alsoIn: ["video"]`, new field; video cut by stream copy to stay in sync), `vid.redact` many boxes with their own

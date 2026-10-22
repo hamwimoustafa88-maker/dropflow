@@ -48,6 +48,12 @@ public sealed record PhoneShareOptions
     /// <summary>The link stops working this long after <see cref="PhoneShareServer.Start"/>. Null: until stopped.</summary>
     public TimeSpan? Lifetime { get; init; }
 
+    /// <summary>
+    /// A download is given up when the client accepts no bytes for this long (a phone that left the Wi-Fi sends no reset, so without this the
+    /// server would keep the file reserved until TCP itself gives up, minutes later). Its claim is released so the file can be fetched again.
+    /// </summary>
+    public TimeSpan StallTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
     /// <summary>Stop listening when the lifetime ends or every file was downloaded (single-download mode). Default true.</summary>
     public bool StopWhenFinished { get; init; } = true;
 
@@ -542,7 +548,19 @@ public sealed class PhoneShareServer : IDisposable
                 {
                     var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), token).ConfigureAwait(false);
                     if (read == 0) break; // the file shrank while sending: the client sees a short body and retries
-                    await response.Body.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
+                    // Each write gets its own stall timer: a client that stopped reading (no reset arrives when a phone drops off the network)
+                    // would otherwise block this write, and keep the file claimed, until TCP gives up.
+                    using var write = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    write.CancelAfter(_options.StallTimeout);
+                    try
+                    {
+                        await response.Body.WriteAsync(buffer.AsMemory(0, read), write.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (write.IsCancellationRequested && !token.IsCancellationRequested)
+                    {
+                        context.Abort();   // reset the connection: the client sees a short body and can retry
+                        return;
+                    }
                     remaining -= read;
                 }
 

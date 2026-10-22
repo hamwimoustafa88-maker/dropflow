@@ -173,5 +173,3 @@ outside the sandbox; it remains an open risk until `docs/phase0-checklist.md` is
 - Say yes or no to downloading: a modern FFmpeg, qpdf, LibreOffice (via the in-app installer, which asks first) and the AI models.
 - Decide when the repository becomes public (the release workflow and the landing page buttons depend on it).
 - (Done) Vercel is linked; the owner may still want the connector granted so deployments can be inspected from here (it returned 403).
-
-

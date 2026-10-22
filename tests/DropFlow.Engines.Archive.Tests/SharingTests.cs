@@ -569,11 +569,45 @@ public class SharingTests : IDisposable
         Assert.Equal(1, server.CompletedDownloads);
     }
 
-    [MacOsUnverifiedFact("on the CI Mac the abandoned download is still not handed back even with a 4 KB client window; passes on Linux x64/arm64 and Windows (x64, ARM64). Cause unknown without a Mac")]
+    [Fact]
+    public async Task A_client_that_stops_reading_does_not_keep_a_single_download_reserved()
+    {
+        // A phone that drops off the Wi-Fi sends no reset: the server only learns the client is gone because no bytes are accepted any more.
+        var data = Kit.Noise(40_000_000, 4);
+        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(2) });
+        var started = new TaskCompletionSource();
+        server.DownloadStarted += (_, _) => started.TrySetResult();
+
+        using var raw = new Socket(SocketType.Stream, ProtocolType.Tcp) { ReceiveBufferSize = 4096 };
+        var uri = server.FileUrl(0, loopback: true);
+        await raw.ConnectAsync(IPAddress.Loopback, uri.Port);
+        const string CrLf = "\r\n";
+        var request = $"GET {uri.PathAndQuery} HTTP/1.1{CrLf}Host: {uri.Authority}{CrLf}{CrLf}";
+        await raw.SendAsync(Encoding.ASCII.GetBytes(request));
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(20));   // the server has claimed the file; this client now reads nothing and stays connected
+
+        using (var busy = await _http.GetAsync(server.FileUrl(0, loopback: true)))
+            Assert.Equal(HttpStatusCode.Gone, busy.StatusCode);
+
+        HttpStatusCode status = HttpStatusCode.Gone;
+        byte[] body = [];
+        for (var attempt = 0; attempt < 400 && status != HttpStatusCode.OK; attempt++)
+        {
+            await Task.Delay(50);
+            using var retry = await _http.GetAsync(server.FileUrl(0, loopback: true));
+            status = retry.StatusCode;
+            if (status == HttpStatusCode.OK) body = await retry.Content.ReadAsByteArrayAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal(Kit.Hash(data), Kit.Hash(body));
+    }
+
+    [Fact]
     public async Task A_cut_off_single_download_can_be_retried_but_a_finished_one_cannot()
     {
         var data = Kit.Noise(40_000_000, 3);
-        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false });
+        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(2) });
 
         // Start the download and abandon it after a few bytes. This client has a tiny receive buffer: on a fast machine the kernel's loopback
         // buffers can swallow all 40 MB, and the server (which counts a file as delivered when its last byte went out) would then rightly

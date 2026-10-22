@@ -1,0 +1,59 @@
+name: Attach release assets
+
+# Uploads the files a Release run built for the other platforms (Windows ARM64, macOS, Linux, Android) to an existing release,
+# without rebuilding. Use it when the "attach-other-platforms" job of release.yml failed or was skipped:
+#   gh workflow run attach-release-assets.yml -f tag=v0.2.0 -f run_id=<id of that Release run>
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.2.0
+        required: true
+        type: string
+      run_id:
+        description: Id of the Release workflow run that produced the artifacts
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { name: win-arm64-release, path: dl/win-arm64, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { name: dropflow-macos, path: dl/macos, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { name: dropflow-linux, path: dl/linux, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { name: DropFlow-android.apk, path: dl/android, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
+
+      - name: Attach the files and extend the checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -e
+          mkdir -p out
+          [ -d dl/win-arm64 ] && find dl/win-arm64 -type f -exec cp {} out/ \;
+          [ -d dl/macos ]     && find dl/macos -type f -name '*.dmg' -exec cp {} out/ \;
+          [ -d dl/linux ]     && find dl/linux -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -exec cp {} out/ \;
+          [ -d dl/android ]   && find dl/android -type f -name '*.apk' -exec cp {} out/ \;
+          ls -la out
+          gh release download "$TAG" --pattern SHA256SUMS.txt --dir out/sums --clobber
+          # Do not add a line twice if this ran before.
+          ( cd out && for f in *; do
+              case "$f" in *.json|RELEASES*|SHA256SUMS*|*.nupkg) continue;; esac
+              [ -f "$f" ] && ! grep -q "  $f\$" sums/SHA256SUMS.txt && echo "$(sha256sum "$f" | cut -d' ' -f1)  $f"
+            done || true ) >> out/sums/SHA256SUMS.txt
+          find out -maxdepth 1 -type f -print0 | xargs -0 gh release upload "$TAG" --clobber
+          gh release upload "$TAG" out/sums/SHA256SUMS.txt --clobber

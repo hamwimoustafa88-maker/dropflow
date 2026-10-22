@@ -241,6 +241,7 @@ jobs:
       - name: Attach the files and extend the checksums
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}   # this job has no checkout, so gh must be told which repository
           TAG: ${{ github.ref_name }}
         run: |
           set -e

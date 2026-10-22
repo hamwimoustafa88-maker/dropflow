@@ -28,8 +28,10 @@ internal sealed class ProcessMediaToolRunner(IEngineProvider engines) : IMediaTo
         {
             if (engines.Locate(EngineId.Ffprobe) is { } probe) return probe;
             if (FfmpegPath is not { } ffmpeg) return null;
-            var sibling = Path.Combine(Path.GetDirectoryName(ffmpeg) ?? "", "ffprobe.exe");
-            return File.Exists(sibling) ? sibling : null;
+            // ffprobe.exe on Windows, ffprobe on macOS/Linux
+            return EngineInfo.ExecutableNames(EngineId.Ffprobe)
+                .Select(name => Path.Combine(Path.GetDirectoryName(ffmpeg) ?? "", name))
+                .FirstOrDefault(File.Exists);
         }
     }
 

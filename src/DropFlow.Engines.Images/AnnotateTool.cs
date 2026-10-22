@@ -84,13 +84,13 @@ internal sealed class AnnotateTool() : ImageTool("img.annotate")
                 break;
             case "text":
                 if (string.IsNullOrEmpty(it.Text)) break;
-                new Drawables().FontPointSize(it.Size).StrokeColor(MagickColors.Transparent).FillColor(color)
+                TextDrawables().FontPointSize(it.Size).StrokeColor(MagickColors.Transparent).FillColor(color)
                     .TextAlignment(TextAlignment.Left).Text(it.X, it.Y + it.Size, it.Text).Draw(image);
                 break;
             case "number":
                 var r = Math.Max(it.Size, 16) / 1.6;
                 new Drawables().StrokeColor(MagickColors.White).StrokeWidth(2).FillColor(color).Circle(it.X, it.Y, it.X + r, it.Y).Draw(image);
-                new Drawables().FontPointSize(r * 1.3).StrokeColor(MagickColors.Transparent).FillColor(MagickColors.White)
+                TextDrawables().FontPointSize(r * 1.3).StrokeColor(MagickColors.Transparent).FillColor(MagickColors.White)
                     .TextAlignment(TextAlignment.Center).Text(it.X, it.Y + r * 0.45, it.N.ToString()).Draw(image);
                 break;
             case "image":
@@ -103,6 +103,17 @@ internal sealed class AnnotateTool() : ImageTool("img.annotate")
             default:
                 throw new ArgumentException($"Unknown annotation type '{it.Type}'.");
         }
+    }
+
+    /// <summary>
+    /// Drawables for text. Magick.NET finds a default font by itself on Windows only, so elsewhere an installed TrueType file is named
+    /// explicitly (Arial on macOS, DejaVu Sans or similar on Linux).
+    /// </summary>
+    private static Drawables TextDrawables()
+    {
+        var drawables = new Drawables();
+        if (!OperatingSystem.IsWindows() && DropFlow.Engines.Common.FontFiles.DefaultSans() is { } font) drawables.Font(font);
+        return drawables;
     }
 
     private static PointD[] ArrowHead(AnnotationItem it, double stroke)

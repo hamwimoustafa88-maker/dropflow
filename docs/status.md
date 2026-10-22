@@ -3,35 +3,37 @@
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
 
-Last updated: 2026-10-21 (third pass: bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
+Last updated: 2026-10-22 (lossless rotation, trim silence, multi-box redaction, strict target size, drag robustness, `dropflow doctor`; earlier: bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
 ## Test totals (`dotnet test DropFlow.sln`, dev PC with FFmpeg, qpdf, LibreOffice, Tesseract and four AI models present)
 
 | Project | Passed | Skipped |
 |---|---|---|
-| DropFlow.Core.Tests | 326 | 0 |
-| DropFlow.Hooks.Tests | 16 | 0 |
-| DropFlow.Overlay.Tests | 83 | 0 |
+| DropFlow.Core.Tests | 354 | 0 |
+| DropFlow.Hooks.Tests | 28 | 0 |
+| DropFlow.Overlay.Tests | 98 | 0 |
 | DropFlow.Engines.Common.Tests | 26 | 0 |
-| DropFlow.Engines.Images.Tests | 74 | 0 |
-| DropFlow.Engines.Media.Tests | 712 | 0 |
+| DropFlow.Engines.Images.Tests | 157 | 0 |
+| DropFlow.Engines.Media.Tests | 774 | 0 |
 | DropFlow.Engines.Pdf.Tests | 713 | 1 (optional veraPDF check, needs `DROPFLOW_VERAPDF`) |
 | DropFlow.Engines.Archive.Tests | 561 | 0 |
-| DropFlow.AI.Tests | 293 | 0 |
+| DropFlow.AI.Tests | 290 | 3 (the u2netp, birefnet-lite and ultraface models are no longer in this PC's data folder since it moved to `DropFlow Data`) |
 | DropFlow.Engines.Web.Tests | 18 | 0 |
-| DropFlow.App.Tests | 45 | 0 |
-| DropFlow.Cli.Tests | 18 | 0 |
-| **Total (.NET)** | **2,885** | **1** |
+| DropFlow.App.Tests | 52 | 0 |
+| DropFlow.Cli.Tests | 35 | 0 |
+| **Total (.NET, 2026-10-22)** | **3,106** | **4** |
 | Web (`web/`) | 489 Vitest + 230 headless-Edge checks | 0 |
 
 The Media, PDF and AI suites were also run with the **bundled** FFmpeg 9.0.2 essentials, qpdf 12.4.2 and Tesseract 5.4 first on PATH (the exact builds the installer ships): 712 + 692 + 293 passed, 0 skipped.
+On 2026-10-22 the Media suite was run with the bundled FFmpeg essentials first on PATH: 772 of 774 passed, the 2 failures were wrong assumptions in the new tests themselves (fixed, then those integration tests passed with the bundled build); the full solution above ran with the full build.
 
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
 
 ## What the catalog covers
 
-`node catalog/build.mjs`: 428 conversions, 63 tools, 7 actions; every Tangerine tool and format target is covered by the catalog.
-`RegistryCoverageTests` computes what has a converter: **all 63 Windows tools and all 419 conversions** (a test pins that there are no gaps):
+`node catalog/build.mjs`: 428 conversions, 66 tools, 7 actions; every Tangerine tool and format target is covered by the catalog.
+`RegistryCoverageTests` computes what has a converter: **all 66 Windows tools and all 419 conversions** (a test pins that there are no gaps).
+New on 2026-10-22: `vid.rotate`, `img.rotate` and `aud.trim-silence` (the first tool with `"alsoIn": ["video"]`: it is also offered on the video wheel).
 
 `pdf -> pdfa` (PDF/A-2b, built in-process, **veraPDF 1.30.3 says PASS**; pages become images, so text is not selectable) and `heic -> pdf`
 (real HEVC fixture, BSD-3 licensed) were the last two gaps; both are closed and need no external program.
@@ -43,7 +45,9 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Catalog + Tangerine parity | Verified | `node catalog/build.mjs` |
 | Landing page (ar/en, dark/light, mobile) | Verified | headless-Edge checks, screenshots; CTAs are inert "Soon" badges until a release exists |
 | Core (catalog, registry, queue, wheel model, runner, settings, history, recipes, watch, CLI logic) | Verified | Core tests |
-| Drag + key-tap state machine | Verified | Hooks tests |
+| Drag + key-tap state machine | Verified | Hooks tests (28), each rule mutation-checked |
+| Drag robustness (2026-10-22): only real file drags open the wheel (a visible `SysDragImage` window, an OLE drag holding the mouse with a hidden window, or the wheel already got the files over OLE); the real button state ends a drag whose button-up the hook missed; `GetCursorPos` polling (20 ms, only while the button is down) counts movement that bypasses the hook; only a modifier pressed during the drag taps | **Rules verified as pure logic; the Win32 side is unverified** | `DragDetector` tests cover every rule. Not run with real input (this shell cannot inject it): whether `SysDragImage` is visible over every target app, the hidden-capture heuristic for OLE drags, remote desktop and pens. Escape hatch: `"RequireFileDrag": false` in settings.json (no Settings checkbox yet; label `settings.dragCheck` exists); every rejected tap is logged with what the checks saw |
+| Wheel as a drop target | Hit-testing fixed | the wheel control answers for its whole square, so petals, gaps, hub and corners never alternate with the window background as the drag target (Overlay test) |
 | Real mouse/keyboard hooks installing | Verified (installs, logs) | app log "input hooks installed" |
 | Drag in Explorer / browser / other apps raising the wheel | **Reported working by the owner (2026-10-21, manual drag test on their PC)** | not witnessed by this tooling and no per-app/per-monitor detail recorded; Windows 11, multi-monitor and DPI above 100 % remain untested |
 | Windows 11, multi-monitor, per-monitor DPI above 100 % | **Unverified** | needs hardware |
@@ -53,6 +57,13 @@ Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebView
 | Watched folders + recipes + clipboard shortcut | Core verified; end-to-end in the running app only partly exercised | |
 | Images engine (Magick.NET) | Verified | 74 tests on generated images; HEIC can be read but not written |
 | Media engine (FFmpeg) | **Verified against real FFmpeg 9.0.2 (Gyan full build) with its ffprobe**: all 712 tests, none skipped | found and fixed two bugs only a modern FFmpeg shows: progress jumping back to 0 on `out_time=N/A`, and "no audio track" not recognised because the cause is not FFmpeg's last error line. AV1/QSV/AMF encoders depend on this PC's hardware and are mostly unit-tested |
+| Lossless video rotation (`vid.rotate`) | **Verified with the bundled FFmpeg 9.0.2 essentials and the full build** | `-display_rotation` input option + stream copy; ffprobe reads the new rotation back for MP4, MKV, MOV (and WebM, M4V by hand); the video packets hash identically before and after; AVI/WMV/FLV are not offered (they cannot store a rotation). Players that ignore the display matrix (some old ones) show the picture unturned |
+| Trim silence (`aud.trim-silence`, audio and the sound of videos) | Verified against real FFmpeg | audio: `silenceremove` + `areverse` (start, end or both, 0.1 s kept), files over 10 min are measured and cut with `atrim` instead (memory); video: measured with `silencedetect`, then cut by stream copy so picture and sound stay in sync (the start snaps to a keyframe, so a little leading silence can remain); nothing to trim = no file and a translated note |
+| Video redact: many boxes, each with its own time range | Verified against real FFmpeg | `boxes` option (compact text or the editor's JSON, documented in writing-a-converter.md); blur now pixelates (1/16, nearest-neighbour) before blurring, measured: the box loses over 75 % of its pixel-to-pixel detail; tags such as title and location are not carried over. The visual editor that fills `boxes` does not exist yet |
+| Target size never ends above the target | Verified (fake FFmpeg for the loop, real FFmpeg for a reachable target) | up to 3 corrections at (target / actual) x 0.95; still too big = a clear failure and no file (before: delivered slightly over the limit with a note). Also fixed: a second correction scaled from the wrong base bitrate |
+| Images: lossless JPEG rotation (`img.rotate`, `img.edit` when only turning/mirroring) | Verified | only the EXIF orientation changes (patched in place, or a minimal EXIF block is added); all 8 starting orientations x 7 operations match a real pixel rotation, and the compressed picture data is byte-identical. A JPEG whose EXIF block lacks the tag is re-encoded instead. Viewers that ignore EXIF orientation show it unturned |
+| Images: compress never keeps a bigger file; target search | Verified | applies to BMP to PNG too; translated note `note.img.alreadySmall`; target size = 7-step quality search, then shrink by 0.8, at most 8 rounds |
+| `dropflow doctor` | Verified on this PC | version, Windows and architecture, every helper program with path and version (LibreOffice read from the file, never started), the 13 FFmpeg encoders that matter, models, WebView2 Runtime version (registry). A listed GPU encoder may still fail without the hardware |
 | DropFlow Encoder window | Settings, presets, plan preview verified (every preset round-trips through the controls; renders in ar/en) | no real encode was run through the window (no ffmpeg) |
 | Subtitles (SRT/VTT/ASS/TXT) | Verified | pure C#, real file tests incl. Arabic and windows-1256 |
 | PDF engine, managed tools | Verified | PDFsharp/PdfPig/PDFium round-trip tests incl. Arabic |
@@ -111,7 +122,9 @@ outside the sandbox; it remains an open risk until `docs/phase0-checklist.md` is
 
 ## Things that need the owner
 
-- Run `docs/phase0-checklist.md` by hand (the drag-detection risk is still open).
+- Run `docs/phase0-checklist.md` by hand (the drag-detection risk is still open). Since 2026-10-22 the wheel only opens for real file drags:
+  also try a drag from Explorer, the desktop and a browser download, plus Shift+drag text selection in an editor (must NOT open the wheel). If
+  the wheel never opens, set `"RequireFileDrag": false` in `%LOCALAPPDATA%\DropFlow Data\settings.json` and send the log lines "tap ignored".
 - Say yes or no to downloading: a modern FFmpeg, qpdf, LibreOffice (via the in-app installer, which asks first) and the AI models.
 - Decide when the repository becomes public (the release workflow and the landing page buttons depend on it).
 - (Done) Vercel is linked; the owner may still want the connector granted so deployments can be inspected from here (it returned 403).

@@ -38,10 +38,10 @@ when a program is missing.
 | src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL) |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
 | src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, `ModelManager` (resumable, SHA-256 verified; downloads only after the app asks the user) (net10.0-windows10.0.19041.0) |
-| src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine) and `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread) |
+| src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
 | src/DropFlow.Overlay | `WheelWindow` (non-activating topmost OLE drop target), `WheelControl`/`WheelGeometry`, option form, floating shelf |
 | src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker |
-| src/DropFlow.Cli | `dropflow` CLI (assembly name `dropflow`): list / convert / recipe commands over the same Core |
+| src/DropFlow.Cli | `dropflow` CLI (assembly name `dropflow`): list / convert / recipe / models / doctor commands over the same Core |
 | src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel |
 | installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md) |
 | src/DropFlow.* (planned) | Encoder window, Shell — created as their phases start |
@@ -101,6 +101,14 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — Media/images/drag round (owner: more tools and a sturdier drag): `vid.rotate` (lossless, `-display_rotation` + stream copy, checked
+  with ffprobe on the bundled FFmpeg 9), `img.rotate` + lossless JPEG turns in `img.edit` (EXIF orientation only, byte-identical picture data),
+  `aud.trim-silence` (catalog `alsoIn: ["video"]`, new field; video cut by stream copy to stay in sync), `vid.redact` many boxes with their own
+  times (`boxes` text/JSON, pixelate-then-blur, metadata stripped), target size never ends above the target (3 corrections, else a clear error),
+  image compress never keeps a bigger file + 7-step/8-round target search, translatable notes (`NoteText`, `note.*` keys), drag robustness
+  (`ShellDragProbe`: SysDragImage / hidden OLE capture / files already on the wheel; button state and cursor polled while the button is down;
+  `AppSettings.RequireFileDrag` escape hatch), wheel hit-testing stable over its whole square, `dropflow doctor`. Real input still untested.
+  — catalog/*, src/DropFlow.{Engines.Media,Engines.Images,Hooks,Overlay,Cli,Core}, src/DropFlow.App/Services/AppHost.cs, docs/status.md, docs/writing-a-converter.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

@@ -47,6 +47,22 @@ public static class PdfModule
 7. Unicode paths and paths with spaces must work (Arabic file names are a core use case). Test with one.
 8. All user-visible strings are resource keys, not literals; converters return messages for logs only (English is fine there).
 
+## Notes the user sees
+A successful run can carry a `ConversionResult.Note` ("already as small as it gets", "nothing to trim"). Converters stay free of UI text, so a
+note meant for the user is a **resource key** starting with `note.`, optionally followed by `|`-separated arguments for `{0}`, `{1}`…:
+build it with `NoteText.Key("note.img.targetNotReached", 412)` and add the key to `strings.en.json` and `strings.ar.json`. The app and the CLI
+translate it with `NoteText.Localize`; any other note text is shown as it is. Media operations set `MediaContext.Note`.
+
+## A tool for more than one category
+A catalog tool belongs to one `cat`, but `"alsoIn": ["video"]` offers it on other categories' wheels too (`aud.trim-silence` trims the sound of
+a video). The converter's `Supports` must then accept those inputs as well, and nothing else.
+
+## Option formats filled by an editor
+Some options are lists a future visual editor fills. They are plain `Text` options so the generic form, recipes and the CLI can set them too.
+- `vid.redact` → `boxes`: compact text `x,y,w,h@start-end; …` (pixels of the picture as displayed; `@start-end` is optional, either side may be
+  empty, times in seconds or mm:ss), or JSON `[{"x":100,"y":50,"w":300,"h":200,"start":5,"end":"0:12"}]` (`start`/`end` optional, number of
+  seconds or a time string). At most 64 boxes. The single-box options `x`/`y`/`w`/`h`/`start`/`end` still work and add one more box.
+
 ## Tests (TDD)
 - Put tests in `tests/<Project>.Tests`. Write the failing test first.
 - Use `DropFlow.TestSupport`: `Samples.Png/Wav/Pdf/Srt` generate valid sample files in code; `TempDir` for scratch space.

@@ -116,12 +116,17 @@ public static class BackgroundComposer
 
         if (shadow)
         {
-            using var shade = new MagickImage(MagickColors.Black, image.Width, image.Height);
-            shade.Alpha(AlphaAction.Set);
-            shade.Composite(image, CompositeOperator.CopyAlpha);   // silhouette of the picture
-            shade.Evaluate(Channels.Alpha, EvaluateOperator.Multiply, 0.45);
-            shade.Blur(0, Math.Max(1, Math.Min(cw, ch) / 60.0));
-            canvas.Composite(shade, x + (int)(cw / 120), y + (int)(ch / 70), CompositeOperator.Over);
+            // the silhouette sits in a larger transparent frame so the blur can spread past the picture's edges
+            var sigma = Math.Max(1, Math.Min(cw, ch) / 60.0);
+            var margin = (int)Math.Ceiling(sigma * 3);
+            using var silhouette = new MagickImage(MagickColors.Black, image.Width, image.Height);
+            silhouette.Alpha(AlphaAction.Set);
+            silhouette.Composite(image, CompositeOperator.CopyAlpha);
+            silhouette.Evaluate(Channels.Alpha, EvaluateOperator.Multiply, 0.45);
+            using var shade = new MagickImage(MagickColors.Transparent, image.Width + 2 * (uint)margin, image.Height + 2 * (uint)margin);
+            shade.Composite(silhouette, margin, margin, CompositeOperator.Over);
+            shade.Blur(0, sigma);
+            canvas.Composite(shade, x - margin + (int)(cw / 120), y - margin + (int)(ch / 70), CompositeOperator.Over);
         }
         canvas.Composite(image, x, y, CompositeOperator.Over);
         return canvas;
@@ -171,6 +176,20 @@ internal sealed class RedactTool() : ImageTool("img.redact")
         var style = job.GetString("style", "solid");
         var color = ImageIo.Color(job.GetString("color"), "#000000");
 
+        RedactRenderer.Apply(image, regions, style ?? "solid", color);
+
+        image.Strip();   // no EXIF thumbnail that still shows the covered area
+        var ext = ImageIo.EditedExtension(input);
+        return [ImageIo.Save(image, ImageIo.OutputFor(input, ext, "redacted", job.OutputDirectory), ext, 95)];
+    }
+}
+
+/// <summary>Covers rectangles of a picture (shared by <c>img.redact</c> and the redact editor's preview; sizes are relative to each box).</summary>
+public static class RedactRenderer
+{
+    /// <param name="style">solid | blur | pixelate.</param>
+    public static void Apply(MagickImage image, IEnumerable<(int X, int Y, int W, int H)> regions, string style, IMagickColor<byte> color)
+    {
         foreach (var (rx, ry, rw, rh) in regions)
         {
             var x = Math.Clamp(rx, 0, (int)image.Width - 1);
@@ -206,9 +225,8 @@ internal sealed class RedactTool() : ImageTool("img.redact")
                     break;
             }
         }
-
-        image.Strip();   // no EXIF thumbnail that still shows the covered area
-        var ext = ImageIo.EditedExtension(input);
-        return [ImageIo.Save(image, ImageIo.OutputFor(input, ext, "redacted", job.OutputDirectory), ext, 95)];
     }
+
+    /// <summary>The colour for <paramref name="text"/> ("#rrggbb"), black when empty or invalid.</summary>
+    public static MagickColor ColorOf(string? text) => ImageIo.Color(text, "#000000");
 }

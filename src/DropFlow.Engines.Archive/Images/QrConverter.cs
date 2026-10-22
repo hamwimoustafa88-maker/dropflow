@@ -40,9 +40,11 @@ public sealed class QrConverter : IConverter
         new("eyes", ToolOptionKind.Choice, "square", EyeChoices),
         new("color", ToolOptionKind.Text, "#000000"),
         new("color2", ToolOptionKind.Text, ""),
+        new("angle", ToolOptionKind.Number, 45d, null, 0, 360),
         new("eyeColor", ToolOptionKind.Text, ""),
         new("background", ToolOptionKind.Text, "#ffffff"),
         new("logo", ToolOptionKind.Text, ""),
+        new("plate", ToolOptionKind.Bool, true),
         new("format", ToolOptionKind.Choice, "png", FormatChoices),
     ];
 
@@ -156,9 +158,11 @@ public sealed class QrConverter : IConverter
             Eyes: Enum.Parse<QrEyeShape>(eyes, ignoreCase: true),
             Foreground: (job.GetString("color") ?? "").Trim() is { Length: > 0 } color ? color : "#000000",
             Foreground2: Blank(job.GetString("color2")),
+            GradientAngle: job.GetDouble("angle", 45),
             EyeColor: Blank(job.GetString("eyeColor")),
             Background: (job.GetString("background") ?? "").Trim() is { Length: > 0 } background ? background : "#ffffff",
-            LogoPath: logo);
+            LogoPath: logo,
+            LogoPlate: job.GetBool("plate", true));
         var design = new QrDesign(text, style, level, size, quiet);
 
         // Everything is rendered before anything is written, so a failure leaves no half result behind.

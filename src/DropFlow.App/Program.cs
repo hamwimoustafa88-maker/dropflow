@@ -17,6 +17,13 @@ public static class Program
             .OnBeforeUninstallFastCallback(_ => SystemIntegration.RemoveAll(Environment.ProcessPath ?? "DropFlow.exe"))
             .Run();
 
+        // Developer snapshot mode renders one window to a PNG and exits; it never touches the running instance.
+        if (Snapshots.IsSnapshot(args))
+        {
+            AttachConsole(-1);
+            return Snapshots.Run(args);
+        }
+
         // DropFlow never runs elevated (CLAUDE.md). An installer or console started "as administrator" would start us elevated, and an
         // elevated instance cannot be reached by normal launches (the next double-click then silently did nothing). Restart unelevated.
         if (args.Length == 0 && Elevation.IsElevated() && Elevation.RelaunchUnelevated(Environment.ProcessPath)) return 0;
@@ -36,6 +43,9 @@ public static class Program
         var app = new DropFlowApp(command, instance);
         return app.Run();
     }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern bool AttachConsole(int processId);
 
     /// <summary>The running DropFlow could not be reached (elevated or hung): say so instead of exiting silently.</summary>
     private static void ExplainUnreachableInstance()

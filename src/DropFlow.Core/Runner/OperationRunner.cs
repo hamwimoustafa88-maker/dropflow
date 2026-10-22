@@ -1,4 +1,4 @@
-﻿using DropFlow.Core.Catalog;
+using DropFlow.Core.Catalog;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
 using DropFlow.Core.Registry;

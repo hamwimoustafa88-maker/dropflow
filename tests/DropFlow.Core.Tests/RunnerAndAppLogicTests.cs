@@ -1,4 +1,4 @@
-﻿using DropFlow.Core.App;
+using DropFlow.Core.App;
 using DropFlow.Core.Catalog;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
@@ -475,7 +475,7 @@ public class SingleInstanceTests
         primary.StartListening();
 
         using var secondary = SingleInstance.Acquire(name);
-        var sent = new[] { "--open", @"C:\ØµÙˆØ± Ø§Ù„Ø¹Ø§Ø¦Ù„Ø©\a b.png", "x\"y" };
+        var sent = new[] { "--open", @"C:\صور العائلة\a b.png", "x\"y" };
         Assert.True(secondary.Forward(sent, TimeSpan.FromSeconds(5)));
 
         Assert.Equal(sent, await received.Task.WaitAsync(TimeSpan.FromSeconds(5)));

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using DropFlow.Core.Operations;
 using ImageMagick;
 using ImageMagick.Drawing;
@@ -6,9 +6,9 @@ using ImageMagick.Drawing;
 namespace DropFlow.Engines.Images;
 
 /// <summary>
-/// <c>img.background</c> â€” place the picture on a solid colour, gradient or another image.
-/// Options: <c>background</c> "#rrggbb" | "gradient:#a:#b" | "image:C:\path.jpg" Â· <c>aspect</c> original|1:1|4:3|3:2|16:9|9:16|4:5 Â·
-/// <c>padding</c> % of the picture (0-40) Â· <c>radius</c> % of the shorter side (0-50) Â· <c>shadow</c> bool.
+/// <c>img.background</c> — place the picture on a solid colour, gradient or another image.
+/// Options: <c>background</c> "#rrggbb" | "gradient:#a:#b[:angle]" | "blur" (the picture itself, blurred) | "image:C:\path.jpg" · <c>aspect</c> original|1:1|4:3|3:2|16:9|9:16|4:5|3:4 ·
+/// <c>padding</c> % of the picture (0-40) · <c>radius</c> % of the shorter side (0-50) · <c>shadow</c> bool.
 /// </summary>
 internal sealed class BackgroundTool() : ImageTool("img.background")
 {
@@ -129,8 +129,8 @@ public static class BackgroundComposer
 }
 
 /// <summary>
-/// <c>img.redact</c> â€” cover private areas for good. Options: <c>regions</c> "x,y,w,h;x,y,w,h" (pixels) Â·
-/// <c>style</c> solid|blur|pixelate Â· <c>color</c> (solid). The result has ALL metadata removed, because an EXIF thumbnail would
+/// <c>img.redact</c> — cover private areas for good. Options: <c>regions</c> "x,y,w,h;x,y,w,h" (pixels) ·
+/// <c>style</c> solid|blur|pixelate · <c>color</c> (solid). The result has ALL metadata removed, because an EXIF thumbnail would
 /// otherwise still show the redacted area.
 /// </summary>
 internal sealed class RedactTool() : ImageTool("img.redact")

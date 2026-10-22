@@ -1,4 +1,4 @@
-﻿using DropFlow.Core.Operations;
+using DropFlow.Core.Operations;
 using DropFlow.Engines.Images;
 using DropFlow.TestSupport;
 using ImageMagick;
@@ -239,7 +239,7 @@ public class PhotoEditorTests
     public async Task The_converter_writes_an_edited_copy_for_a_new_adjustment()
     {
         using var dir = new TempDir();
-        var png = Samples.Png(dir.Combine("ØµÙˆØ±Ø©.png"), 40, 30);
+        var png = Samples.Png(dir.Combine("صورة.png"), 40, 30);
         var tool = ImagesModule.Create(new FormatConverterTests.NoEngines()).Single(c => c.Operations.Contains("img.edit"));
         var r = await tool.RunAsync(new ConversionJob([png], "img.edit", new Dictionary<string, object?> { ["vignette"] = 60d }), new Progress<JobProgress>(), default);
         Assert.True(r.Success, r.Error);

@@ -42,6 +42,37 @@ Debian's colord). DropFlow takes it from Magick.NET at run time (`ColorProfiles.
 | Tesseract OCR | 5.4.0 (UB Mannheim Windows build) - https://github.com/UB-Mannheim/tesseract | Apache-2.0 (its bundled libraries: see `engines\Tesseract\doc`) | OCR fallback and searchable PDFs |
 | Tesseract language data `eng`, `ara`, `osd` (tessdata_fast) | https://github.com/tesseract-ocr/tessdata_fast | Apache-2.0 | English and Arabic text recognition |
 
+## macOS and Linux app (`src/DropFlow.Desktop`, added 2026-10-22; Avalonia approved by the owner)
+
+| Component | Version | License | Used for |
+|---|---|---|---|
+| Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent | 12.1.3 | MIT | Cross-platform UI: wheel, tray / menu-bar icon, windows, drag and drop |
+| Transitive: Avalonia.Native, Avalonia.X11, Avalonia.FreeDesktop (+ .AtSpi), Avalonia.Skia, Avalonia.HarfBuzz, Avalonia.Remote.Protocol, MicroCom.Runtime | 12.1.3 / 0.11.6 | MIT | macOS and X11 backends, rendering, text shaping |
+| Transitive: Tmds.DBus.Protocol | 0.94.1 | MIT | The Linux tray icon (StatusNotifierItem over D-Bus), pulled by Avalonia.FreeDesktop |
+| Transitive: SkiaSharp (+ native assets) | 3.119.4 | MIT (Skia: BSD-3-Clause) | Drawing |
+| Transitive: HarfBuzzSharp (+ native assets) | 8.3.1.3 | MIT (HarfBuzz: Old MIT) | Arabic text shaping |
+| Transitive, build time only: Avalonia.BuildServices | 11.3.2 | MIT | Avalonia's build statistics task. **Turned off** in DropFlow (`UsedAvaloniaProducts` cleared, `AVALONIA_TELEMETRY_OPTOUT=1` in CI); never shipped |
+
+PDFiumCore ships Windows and Linux natives but none for macOS, so PDF page rendering is missing in the Mac app until a macOS PDFium
+build is added (docs/desktop-mac-linux.md). The AI and Web engine projects target Windows only and are not in the Mac/Linux app yet.
+
+### Programs inside the macOS app (`Contents/Resources/engines`) and the Linux AppImage (`usr/lib/dropflow/engines`)
+
+| Program | Version / source | License | Notes |
+|---|---|---|---|
+| FFmpeg + ffprobe (Martin Riedl's static release builds) | 9.0.2 - https://ffmpeg.martin-riedl.de (build script https://git.martin-riedl.de/ffmpeg/build-script), source https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz | **GPL-3.0** (`--enable-gpl --enable-version3`, no non-free parts; includes x264, x265, libvpx, libaom, dav1d, SVT-AV1, rav1e, lame, opus, vorbis, OpenSSL 3 …) | Pinned URLs + SHA-256 in `installer/unix/fetch-ffmpeg.sh`; shipped unmodified as separate programs with `LICENSE-GPL-3.0.txt` and `FFMPEG-SOURCE-OFFER.txt`. The .deb/.rpm use the distribution's FFmpeg instead |
+| AppImage type2-runtime | 20251108 - https://github.com/AppImage/type2-runtime | MIT | The small loader at the start of every `.AppImage` file (pinned + SHA-256 checked) |
+
+qpdf and Tesseract have no pinned, redistributable macOS build: the Mac app shows the Homebrew command instead. The Linux packages
+*recommend* `qpdf`, `tesseract-ocr` + Arabic data from the distribution.
+
+### Build tools for the macOS/Linux packages (not shipped)
+
+| Tool | Version | License |
+|---|---|---|
+| nfpm | 2.47.0 (pinned + SHA-256) | MIT |
+| squashfs-tools (`mksquashfs`), `hdiutil`, `codesign`, `sips`, `iconutil` | system | GPL-2.0 / Apple tools |
+
 ## Optional external programs (not shipped; used only if the user installs them)
 
 | Program | License | How DropFlow uses it |

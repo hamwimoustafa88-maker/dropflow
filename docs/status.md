@@ -104,6 +104,19 @@ pm install) was **green on all three jobs**. One WebView2 test (Never_overwrites
 | External audit (Kashef, kashef.scouthub.dev) | **Security 91 → 92 (A-), site readiness 77 → 94** after the fixes (2026-10-21) | left: CSP `script-src` still allows `unsafe-inline` (static Next.js pages need nonces/hashes for that), mobile LCP 4.2 s, about 56 KiB unused framework JS; DNSSEC and DMARC belong to the scouthub.dev domain, not to this repo |
 | Accounts / payments | Deferred on purpose | ADR-0005, Phase 9 |
 
+## macOS and Linux app (`src/DropFlow.Desktop`, 2026-10-22) — details in [desktop-mac-linux.md](desktop-mac-linux.md)
+
+| Piece | Verified | Not verified |
+|---|---|---|
+| Pure logic (drag decisions, GNOME line protocol, session detection, Unix-socket single instance, XDG/macOS folders, engine search, install hints, login items, file-manager entries, trash, runner, strings ar/en) | **169 tests pass on Windows and on Linux** (Docker, .NET 10 SDK image) | on macOS (the CI workflow runs them there) |
+| Builds | `dotnet publish` for linux-x64, osx-arm64 from Windows; linux-x64 + linux-arm64 in Docker | osx-x64 and the .app/DMG (needs a Mac: `build-macos.yml`) |
+| Linux packages | built in Docker with nfpm: `.deb` amd64/arm64, `.rpm` x86_64/aarch64, AppImages; metadata and contents inspected, `.deb` installed with `dpkg`, app started from `/usr/bin`, AppImage run with extract-and-run, bundled FFmpeg 9.0.2 runs | install on a real Ubuntu/Fedora desktop with dependency resolution; arm64 binaries never executed |
+| Windows (wheel, options, settings, welcome, toast, "+ Add") | rendered under Xvfb in English and Arabic (RTL) and looked at | on a real desktop with a compositor |
+| Start-up | under Xvfb: app starts, X11 watcher starts, a second launch forwards `--wheel FILE` over the socket, `--quit` stops it | tray icon (needs a StatusNotifier host) |
+| Drag detection | — | **everything**: no real drag on X11, GNOME Wayland (extension) or macOS (drag pasteboard); the wheel as a drop target from Finder/Nautilus/Dolphin |
+| macOS specifics | — | **nothing ran on a Mac**: NSWindow level/collection behaviour, `orderFrontRegardless`, Cocoa placement, SMAppService/LaunchAgent, `~/.Trash` undo, Gatekeeper first-launch steps, bundled FFmpeg under quarantine |
+| Missing on macOS/Linux | | AI tools, HTML → PDF, the Encoder window, share and send-to-phone actions; PDF page rendering on macOS (PDFiumCore has no macOS natives) |
+
 ## End-to-end acceptance run (2026-10-21, real `dropflow` CLI, real files, no engines installed)
 
 A script generated a PNG, an Arabic SRT, a hand-written one-page text PDF and a folder, then ran 26 commands through the real registry:

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later. installer/macos/build-macos.sh replaces __VERSION__. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>dev.scouthub.dropflow</string>
+  <key>CFBundleName</key>
+  <string>DropFlow</string>
+  <key>CFBundleDisplayName</key>
+  <string>DropFlow</string>
+  <key>CFBundleExecutable</key>
+  <string>dropflow-desktop</string>
+  <key>CFBundleIconFile</key>
+  <string>dropflow</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSION__</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>ar</string>
+  </array>
+  <key>CFBundleAllowMixedLocalizations</key>
+  <true/>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.utilities</string>
+  <!-- A menu-bar app: no Dock icon and no menu bar of its own. -->
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>© 2026 ScoutHub and contributors. Free software under GPL-3.0-or-later.</string>
+</dict>
+</plist>

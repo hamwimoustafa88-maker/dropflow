@@ -1,0 +1,52 @@
+{
+  "tray.welcome": "How to use DropFlow",
+  "tray.tooltip.paused": "DropFlow is paused",
+
+  "welcome.title": "Welcome to DropFlow",
+  "welcome.drag.mac": "Drag a file in Finder and, while still holding the mouse button, tap ⇧ Shift to convert, ⌘ Command for tools or ⌃ Control for actions. Drop the file on a slice of the wheel.",
+  "welcome.drag.linux": "Drag a file and, while still holding the mouse button, tap Shift to convert, Ctrl for tools or Alt for actions. Drop the file on a slice of the wheel.",
+  "welcome.gnome.signout": "On GNOME, DropFlow uses its small Shell extension to see the keys during a drag. It is installed: sign out and back in once to turn it on.",
+  "welcome.gnome.error": "The DropFlow Shell extension could not be turned on. Open the Extensions app and turn on “DropFlow drag helper”.",
+  "welcome.click": "On this desktop no app can watch drags. Right-click files in your file manager and choose “Open with DropFlow” to get the same wheel.",
+  "welcome.clickAlso": "You can also right-click files in your file manager and choose “Open with DropFlow”.",
+  "welcome.mac.gatekeeper": "DropFlow is free and is not notarized by Apple. If macOS blocks it, right-click the app and choose Open, or go to System Settings → Privacy & Security and click Open Anyway. You only need to do this once.",
+  "welcome.mac.menubar": "DropFlow lives in the menu bar, at the top right of the screen.",
+  "welcome.linux.tray": "DropFlow lives in the system tray. On GNOME the tray icon needs the “AppIndicator and KStatusNotifierItem” extension.",
+  "welcome.privacy": "Everything happens on this computer. Nothing is uploaded.",
+  "welcome.ok": "Got it",
+
+  "settings.output": "Save results",
+  "settings.output.BesideSource": "Next to the original",
+  "settings.output.Downloads": "In Downloads",
+  "settings.output.Desktop": "On the Desktop",
+  "settings.output.hint": "Originals are never changed or replaced.",
+  "settings.login": "Start DropFlow when I sign in",
+  "settings.fileManagers": "Add “Open with DropFlow” to the file manager’s right-click menu",
+  "settings.extension": "GNOME Shell extension",
+  "settings.extension.Active": "On",
+  "settings.extension.NeedsSignOut": "Installed: sign out and back in once to turn it on",
+  "settings.extension.Disabled": "Off",
+  "settings.extension.Error": "Error: check it in the Extensions app",
+  "settings.extension.Missing": "Not installed",
+  "settings.extension.NotNeeded": "Not needed on this desktop",
+  "settings.extension.install": "Install and turn on",
+  "settings.engines.unix": "Helper programs",
+  "settings.engines.unixHint": "DropFlow never installs programs by itself. To add one, copy its command and run it in a terminal.",
+  "settings.engine.bundled": "Included",
+  "settings.engine.copy": "Copy command",
+  "settings.engine.copied": "Command copied",
+  "settings.engine.noCommand": "Install it with your system’s package manager.",
+  "settings.general": "General",
+  "settings.pausedNote": "While paused, drags are not watched.",
+
+  "engine.missing.unix": "{0} is needed for this. Install it with: {1}",
+  "engine.missing.unixPlain": "{0} is needed for this. Install it with your system’s package manager, then try again.",
+  "run.notSupported": "“{0}” is not available in this version of DropFlow yet.",
+
+  "fm.title": "Open with DropFlow",
+
+  "history.clear": "Clear history",
+  "history.when": "{0:g}",
+
+  "shelf.dragOut": "Drag files out of the shelf to use them anywhere."
+}

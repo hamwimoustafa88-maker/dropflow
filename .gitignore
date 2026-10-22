@@ -51,3 +51,5 @@ tests/samples/large/
 /android/captures/
 *.jks
 *.keystore
+# macOS / Linux desktop packages (installer/macos/build-macos.sh, installer/linux/build-linux.sh)
+/build/

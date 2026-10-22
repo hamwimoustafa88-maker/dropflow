@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DropFlow for macOS and Linux (Avalonia). It reuses DropFlow.Core and the portable engine projects; the Windows app
+    (src/DropFlow.App, WPF) is separate. The AI and Web engine projects target net10.0-windows and are therefore not
+    referenced here yet (speech to text, OCR, background removal and HTML to PDF are Windows-only until they are portable).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>dropflow-desktop</AssemblyName>
+    <RootNamespace>DropFlow.Desktop</RootNamespace>
+    <Version>0.1.2</Version>
+    <ApplicationIcon />
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <!-- Avalonia's compiled bindings are not used (the UI is built in code), so no XAML compiler step is needed. -->
+    <EnableAvaloniaXamlCompilation>false</EnableAvaloniaXamlCompilation>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Avalonia's packages add a build-time usage-statistics task (Avalonia.BuildServices). DropFlow's builds do not report anything:
+         clearing this property turns the task off (CI also sets AVALONIA_TELEMETRY_OPTOUT=1). The shipped app never had it. -->
+    <UsedAvaloniaProducts></UsedAvaloniaProducts>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.Desktop.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Images\DropFlow.Engines.Images.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Media\DropFlow.Engines.Media.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Archive\DropFlow.Engines.Archive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Owner-approved (MIT). Avalonia.Desktop brings the macOS (Avalonia.Native) and Linux (X11, FreeDesktop/DBus tray) backends. -->
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pure, WPF-free logic shared with the Windows overlay: compiled in rather than duplicated. -->
+    <Compile Include="..\DropFlow.Overlay\WheelGeometry.cs" Link="Shared\WheelGeometry.cs" />
+    <Compile Include="..\DropFlow.Overlay\WheelItem.cs" Link="Shared\WheelItem.cs" />
+    <Compile Include="..\DropFlow.Overlay\OptionForm.cs" Link="Shared\OptionForm.cs" />
+    <Compile Include="..\DropFlow.Overlay\Shelf.cs" Link="Shared\Shelf.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\desktop.en.json" LogicalName="DropFlow.Desktop.desktop.en.json" WithCulture="false" />
+    <EmbeddedResource Include="Resources\desktop.ar.json" LogicalName="DropFlow.Desktop.desktop.ar.json" WithCulture="false" />
+    <EmbeddedResource Include="Assets\dropflow-192.png" LogicalName="DropFlow.Desktop.icon-192.png" />
+    <EmbeddedResource Include="Assets\dropflow-512.png" LogicalName="DropFlow.Desktop.icon-512.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The GNOME Shell extension ships next to the app; the app copies it to the user's extensions folder on GNOME Wayland. -->
+    <Content Include="..\..\linux\gnome-extension\dropflow@scouthub.dev\**\*" LinkBase="gnome-extension\dropflow@scouthub.dev" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

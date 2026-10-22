@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English UI text. Tool names that exist in catalog/tools.json come from the catalog (ar + en), not from here.
+     Every key here must also exist in values-ar/strings.xml (checked by StringsTest). -->
+<resources>
+    <string name="app_name" translatable="false">DropFlow</string>
+    <string name="share_label">DropFlow</string>
+
+    <!-- Wheel -->
+    <string name="tab_convert">Convert</string>
+    <string name="tab_tools">Tools</string>
+    <string name="tab_actions">Actions</string>
+    <string name="hub_switch">Tap to switch</string>
+    <string name="hub_more">More</string>
+    <string name="wheel_hint">Tap a petal, or slide your finger to it and lift</string>
+    <string name="wheel_preparing">Preparing your files…</string>
+    <string name="wheel_nothing">DropFlow has nothing for these files yet.</string>
+    <plurals name="files_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <string name="wheel_page">Page %1$d of %2$d</string>
+
+    <!-- Buttons -->
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="start">Start</string>
+    <string name="open">Open</string>
+    <string name="share">Share</string>
+    <string name="copy_text">Copy text</string>
+    <string name="copied">Copied</string>
+    <string name="back">Back</string>
+    <string name="keep_in_background">Keep working in the background</string>
+
+    <!-- Options and editors -->
+    <string name="editor_trim_title">Choose the part to keep</string>
+    <string name="editor_frame_title">Choose the frame to save</string>
+    <string name="editor_start">Start %s</string>
+    <string name="editor_end">End %s</string>
+    <string name="editor_length">Length %s</string>
+    <string name="editor_at">At %s</string>
+
+    <!-- Progress and results -->
+    <string name="working">Working on this phone…</string>
+    <string name="result_done">Done</string>
+    <plurals name="result_saved">
+        <item quantity="one">%1$d file saved in %2$s</item>
+        <item quantity="other">%1$d files saved in %2$s</item>
+    </plurals>
+    <string name="result_nothing">Nothing was produced.</string>
+    <string name="result_failed">That did not work</string>
+    <string name="result_cancelled">Cancelled</string>
+    <string name="result_gone">This result is no longer available.</string>
+    <string name="result_text">Text found</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_work">Work in progress</string>
+    <string name="notif_channel_done">Finished work</string>
+    <string name="notif_working">Working on your files, on this phone only</string>
+    <plurals name="notif_queued">
+        <item quantity="one">%d more waiting</item>
+        <item quantity="other">%d more waiting</item>
+    </plurals>
+    <string name="notif_done_title">Done: %s</string>
+    <string name="notif_failed_title">Failed: %s</string>
+
+    <!-- Actions -->
+    <string name="share_chooser">Share with</string>
+    <string name="open_chooser">Open with</string>
+    <string name="no_app_to_open">No app on this phone can open this file.</string>
+    <plurals name="copy_done">
+        <item quantity="one">Copied %d file</item>
+        <item quantity="other">Copied %d files</item>
+    </plurals>
+    <string name="copy_failed">Could not copy to that folder.</string>
+
+    <!-- Home screen -->
+    <string name="home_tagline">Share. Tap. Done.</string>
+    <string name="home_body">Share files to DropFlow from any app (Gallery, Files, WhatsApp…) and a wheel appears: convert, compress, trim, merge, zip, and more.</string>
+    <string name="home_pick">Choose files</string>
+    <string name="home_create_qr">Create a QR code</string>
+    <string name="home_qr_hint">Text or link for the QR code</string>
+    <string name="home_language">Language</string>
+    <string name="lang_system">System</string>
+    <string name="lang_en" translatable="false">English</string>
+    <string name="lang_ar" translatable="false">العربية</string>
+    <string name="home_privacy_title" formatted="false">100% on this phone</string>
+    <string name="home_privacy">Your files never leave this phone. DropFlow for Android does not even have the internet permission.</string>
+    <string name="home_where_title">Where results go</string>
+    <string name="home_where">Pictures/DropFlow, Movies/DropFlow, Music/DropFlow and Download/DropFlow. Originals are never changed.</string>
+    <string name="home_about">Version %1$s · free software under GPL-3.0-or-later · ScoutHub</string>
+
+    <!-- Wheel entries that the catalog does not name -->
+    <string name="fmt_jpg" translatable="false">JPG</string>
+    <string name="fmt_png" translatable="false">PNG</string>
+    <string name="fmt_webp" translatable="false">WebP</string>
+    <string name="fmt_heic" translatable="false">HEIC</string>
+    <string name="fmt_pdf" translatable="false">PDF</string>
+    <string name="fmt_txt">Text (TXT)</string>
+    <string name="fmt_mp4_h264" translatable="false">MP4 · H.264</string>
+    <string name="fmt_mp4_hevc" translatable="false">MP4 · HEVC</string>
+    <string name="fmt_m4a">M4A audio</string>
+    <string name="fmt_wav">WAV audio</string>
+    <string name="tool_img_rotate">Rotate images</string>
+    <string name="tool_qr_create">Create a QR code</string>
+    <string name="tool_pdf_strip">Remove PDF metadata</string>
+    <string name="tool_act_open_with">Open with</string>
+    <string name="tool_act_copy_folder">Copy to a folder</string>
+
+    <!-- Options -->
+    <string name="opt_compress_by">Compress by</string>
+    <string name="opt_compress_by_quality">Quality</string>
+    <string name="opt_compress_by_size">Target size</string>
+    <string name="opt_quality">Quality</string>
+    <string name="opt_quality_85">High</string>
+    <string name="opt_quality_75">Good</string>
+    <string name="opt_quality_60">Medium</string>
+    <string name="opt_quality_45">Small</string>
+    <string name="opt_target_kb">Largest size per image (KB)</string>
+    <string name="opt_format">Format</string>
+    <string name="opt_format_auto">Automatic</string>
+    <string name="opt_format_jpg" translatable="false">JPG</string>
+    <string name="opt_format_webp" translatable="false">WebP</string>
+    <string name="opt_resize_by">Resize by</string>
+    <string name="opt_resize_by_long_edge">Longest side</string>
+    <string name="opt_resize_by_percent">Percentage</string>
+    <string name="opt_long_edge">Longest side</string>
+    <string name="opt_long_edge_720">720 px</string>
+    <string name="opt_long_edge_1080">1080 px</string>
+    <string name="opt_long_edge_1600">1600 px</string>
+    <string name="opt_long_edge_2048">2048 px</string>
+    <string name="opt_long_edge_3840">3840 px</string>
+    <string name="opt_percent">Size</string>
+    <string name="opt_percent_25" formatted="false">25%</string>
+    <string name="opt_percent_50" formatted="false">50%</string>
+    <string name="opt_percent_75" formatted="false">75%</string>
+    <string name="opt_angle">Rotation</string>
+    <string name="opt_angle_90">90° clockwise</string>
+    <string name="opt_angle_180">180°</string>
+    <string name="opt_angle_270">90° counter-clockwise</string>
+    <string name="opt_strip">Remove</string>
+    <string name="opt_strip_location">Location only</string>
+    <string name="opt_strip_all">All metadata</string>
+    <string name="opt_page_size">Page size</string>
+    <string name="opt_page_size_a4" translatable="false">A4</string>
+    <string name="opt_page_size_image">Same as the image</string>
+    <string name="opt_dpi">Resolution</string>
+    <string name="opt_dpi_72">72 dpi (small)</string>
+    <string name="opt_dpi_150">150 dpi</string>
+    <string name="opt_dpi_300">300 dpi (print)</string>
+    <string name="opt_qr_text">Text or link</string>
+    <string name="opt_pdf_level">Compression</string>
+    <string name="opt_pdf_level_light">Light</string>
+    <string name="opt_pdf_level_balanced">Balanced</string>
+    <string name="opt_pdf_level_strong">Strong</string>
+    <string name="opt_split_mode">Split into</string>
+    <string name="opt_split_mode_each">One file per page</string>
+    <string name="opt_split_mode_ranges">Page ranges</string>
+    <string name="opt_ranges">Page ranges, e.g. 1-3, 5</string>
+    <string name="opt_pages">Pages (empty = all), e.g. 1-3, 5</string>
+    <string name="opt_preset">Size</string>
+    <string name="opt_preset_small">Small · 720p, for chats</string>
+    <string name="opt_preset_balanced">Balanced · 1080p</string>
+    <string name="opt_preset_high">High · original size</string>
+
+    <!-- Errors -->
+    <string name="error_decode_image">This image could not be read.</string>
+    <string name="error_format">This format cannot be written on this phone.</string>
+    <string name="error_no_heic_encoder">This phone has no HEIC encoder.</string>
+    <string name="error_encode">The image could not be saved in that format.</string>
+    <string name="error_target_size">Type a size in KB, for example 500.</string>
+    <string name="error_strip_failed">The location could not be removed from this file, so nothing was saved.</string>
+    <string name="error_no_qr">No QR code or barcode was found.</string>
+    <string name="error_qr_empty">Type the text or link for the QR code.</string>
+    <string name="error_qr_too_long">That text is too long for one QR code.</string>
+    <string name="error_pdf_protected">This PDF is protected. DropFlow does not remove protection.</string>
+    <string name="error_pdf_damaged">This PDF could not be read.</string>
+    <string name="error_page_range">Those pages do not exist in this PDF.</string>
+    <string name="error_media_read">This media file could not be read.</string>
+    <string name="error_media_encode">This phone could not encode the result.</string>
+    <string name="error_no_video">This file has no video.</string>
+    <string name="error_no_audio">This file has no sound.</string>
+    <string name="error_range">Choose an end after the start.</string>
+    <string name="error_frame">That frame could not be read.</string>
+    <string name="error_zip_damaged">This archive is damaged or encrypted.</string>
+    <string name="error_zip_unsafe">This archive tries to write outside its folder. Nothing was extracted.</string>
+    <string name="error_zip_too_large">This archive expands to too much data. Extraction stopped.</string>
+    <string name="error_zip_empty">This archive is empty.</string>
+    <string name="error_memory">This file is too large for this phone\'s memory.</string>
+    <string name="error_unexpected">Something went wrong.</string>
+    <string name="error_input">The shared file could not be read.</string>
+</resources>

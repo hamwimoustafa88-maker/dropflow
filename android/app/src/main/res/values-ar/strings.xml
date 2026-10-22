@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- النصوص العربية. أسماء الأدوات الموجودة في catalog/tools.json تأتي من الكتالوج نفسه. -->
+<resources>
+    <string name="share_label">DropFlow</string>
+
+    <!-- العجلة -->
+    <string name="tab_convert">تحويل</string>
+    <string name="tab_tools">أدوات</string>
+    <string name="tab_actions">إجراءات</string>
+    <string name="hub_switch">اضغط للتبديل</string>
+    <string name="hub_more">المزيد</string>
+    <string name="wheel_hint">اضغط على بتلة، أو اسحب إصبعك إليها ثم ارفعه</string>
+    <string name="wheel_preparing">جارٍ تجهيز ملفاتك…</string>
+    <string name="wheel_nothing">لا يملك DropFlow أدوات لهذه الملفات بعد.</string>
+    <plurals name="files_count">
+        <item quantity="zero">لا ملفات</item>
+        <item quantity="one">ملف واحد</item>
+        <item quantity="two">ملفان</item>
+        <item quantity="few">%d ملفات</item>
+        <item quantity="many">%d ملفًا</item>
+        <item quantity="other">%d ملف</item>
+    </plurals>
+    <string name="wheel_page">الصفحة %1$d من %2$d</string>
+
+    <!-- الأزرار -->
+    <string name="cancel">إلغاء</string>
+    <string name="close">إغلاق</string>
+    <string name="start">ابدأ</string>
+    <string name="open">فتح</string>
+    <string name="share">مشاركة</string>
+    <string name="copy_text">نسخ النص</string>
+    <string name="copied">تم النسخ</string>
+    <string name="back">رجوع</string>
+    <string name="keep_in_background">تابع العمل في الخلفية</string>
+
+    <!-- الخيارات والمحررات -->
+    <string name="editor_trim_title">اختر الجزء الذي تريد إبقاءه</string>
+    <string name="editor_frame_title">اختر الإطار الذي تريد حفظه</string>
+    <string name="editor_start">البداية %s</string>
+    <string name="editor_end">النهاية %s</string>
+    <string name="editor_length">المدة %s</string>
+    <string name="editor_at">عند %s</string>
+
+    <!-- التقدم والنتائج -->
+    <string name="working">جارٍ العمل على هذا الهاتف…</string>
+    <string name="result_done">تم</string>
+    <plurals name="result_saved">
+        <item quantity="zero">لم يُحفظ أي ملف في %2$s</item>
+        <item quantity="one">حُفظ ملف واحد في %2$s</item>
+        <item quantity="two">حُفظ ملفان في %2$s</item>
+        <item quantity="few">حُفظت %1$d ملفات في %2$s</item>
+        <item quantity="many">حُفظ %1$d ملفًا في %2$s</item>
+        <item quantity="other">حُفظ %1$d ملف في %2$s</item>
+    </plurals>
+    <string name="result_nothing">لم يُنتَج أي ملف.</string>
+    <string name="result_failed">لم تنجح العملية</string>
+    <string name="result_cancelled">أُلغيت العملية</string>
+    <string name="result_gone">لم تعد هذه النتيجة متاحة.</string>
+    <string name="result_text">النص الذي عُثر عليه</string>
+
+    <!-- الإشعارات -->
+    <string name="notif_channel_work">عمل قيد التنفيذ</string>
+    <string name="notif_channel_done">أعمال منتهية</string>
+    <string name="notif_working">نعمل على ملفاتك، على هذا الهاتف فقط</string>
+    <plurals name="notif_queued">
+        <item quantity="zero">لا شيء بالانتظار</item>
+        <item quantity="one">عمل واحد بالانتظار</item>
+        <item quantity="two">عملان بالانتظار</item>
+        <item quantity="few">%d أعمال بالانتظار</item>
+        <item quantity="many">%d عملًا بالانتظار</item>
+        <item quantity="other">%d عمل بالانتظار</item>
+    </plurals>
+    <string name="notif_done_title">تم: %s</string>
+    <string name="notif_failed_title">فشل: %s</string>
+
+    <!-- الإجراءات -->
+    <string name="share_chooser">مشاركة عبر</string>
+    <string name="open_chooser">فتح باستخدام</string>
+    <string name="no_app_to_open">لا يوجد تطبيق على هذا الهاتف يفتح هذا الملف.</string>
+    <plurals name="copy_done">
+        <item quantity="zero">لم يُنسخ أي ملف</item>
+        <item quantity="one">نُسخ ملف واحد</item>
+        <item quantity="two">نُسخ ملفان</item>
+        <item quantity="few">نُسخت %d ملفات</item>
+        <item quantity="many">نُسخ %d ملفًا</item>
+        <item quantity="other">نُسخ %d ملف</item>
+    </plurals>
+    <string name="copy_failed">تعذّر النسخ إلى ذلك المجلد.</string>
+
+    <!-- الشاشة الرئيسية -->
+    <string name="home_tagline">شارك. اضغط. انتهى.</string>
+    <string name="home_body">شارك الملفات مع DropFlow من أي تطبيق (المعرض، الملفات، واتساب…) فتظهر عجلة: تحويل، ضغط، قص، دمج، أرشفة والمزيد.</string>
+    <string name="home_pick">اختر ملفات</string>
+    <string name="home_create_qr">إنشاء رمز QR</string>
+    <string name="home_qr_hint">النص أو الرابط لرمز QR</string>
+    <string name="home_language">اللغة</string>
+    <string name="lang_system">لغة النظام</string>
+    <string name="home_privacy_title" formatted="false">كل شيء على هذا الهاتف</string>
+    <string name="home_privacy">ملفاتك لا تغادر هاتفك أبدًا. تطبيق DropFlow لأندرويد لا يملك حتى إذن الوصول إلى الإنترنت.</string>
+    <string name="home_where_title">أين تُحفظ النتائج</string>
+    <string name="home_where">في Pictures/DropFlow وMovies/DropFlow وMusic/DropFlow وDownload/DropFlow. الملفات الأصلية لا تتغير أبدًا.</string>
+    <string name="home_about">الإصدار %1$s · برنامج حر بترخيص GPL-3.0-or-later · ScoutHub</string>
+
+    <!-- عناصر العجلة غير الموجودة في الكتالوج -->
+    <string name="fmt_txt">نص (TXT)</string>
+    <string name="fmt_m4a">صوت M4A</string>
+    <string name="fmt_wav">صوت WAV</string>
+    <string name="tool_img_rotate">تدوير الصور</string>
+    <string name="tool_qr_create">إنشاء رمز QR</string>
+    <string name="tool_pdf_strip">حذف البيانات الوصفية من PDF</string>
+    <string name="tool_act_open_with">فتح باستخدام</string>
+    <string name="tool_act_copy_folder">نسخ إلى مجلد</string>
+
+    <!-- الخيارات -->
+    <string name="opt_compress_by">طريقة الضغط</string>
+    <string name="opt_compress_by_quality">حسب الجودة</string>
+    <string name="opt_compress_by_size">حسب الحجم</string>
+    <string name="opt_quality">الجودة</string>
+    <string name="opt_quality_85">عالية</string>
+    <string name="opt_quality_75">جيدة</string>
+    <string name="opt_quality_60">متوسطة</string>
+    <string name="opt_quality_45">صغيرة</string>
+    <string name="opt_target_kb">أقصى حجم لكل صورة (كيلوبايت)</string>
+    <string name="opt_format">الصيغة</string>
+    <string name="opt_format_auto">تلقائي</string>
+    <string name="opt_resize_by">تغيير الحجم حسب</string>
+    <string name="opt_resize_by_long_edge">الضلع الأطول</string>
+    <string name="opt_resize_by_percent">النسبة المئوية</string>
+    <string name="opt_long_edge">الضلع الأطول</string>
+    <string name="opt_long_edge_720">720 بكسل</string>
+    <string name="opt_long_edge_1080">1080 بكسل</string>
+    <string name="opt_long_edge_1600">1600 بكسل</string>
+    <string name="opt_long_edge_2048">2048 بكسل</string>
+    <string name="opt_long_edge_3840">3840 بكسل</string>
+    <string name="opt_percent">الحجم</string>
+    <string name="opt_percent_25" formatted="false">25%</string>
+    <string name="opt_percent_50" formatted="false">50%</string>
+    <string name="opt_percent_75" formatted="false">75%</string>
+    <string name="opt_angle">التدوير</string>
+    <string name="opt_angle_90">90° مع عقارب الساعة</string>
+    <string name="opt_angle_180">180°</string>
+    <string name="opt_angle_270">90° عكس عقارب الساعة</string>
+    <string name="opt_strip">ما الذي يُحذف</string>
+    <string name="opt_strip_location">الموقع فقط</string>
+    <string name="opt_strip_all">كل البيانات الوصفية</string>
+    <string name="opt_page_size">حجم الصفحة</string>
+    <string name="opt_page_size_image">مثل حجم الصورة</string>
+    <string name="opt_dpi">الدقة</string>
+    <string name="opt_dpi_72">72 نقطة/إنش (صغيرة)</string>
+    <string name="opt_dpi_150">150 نقطة/إنش</string>
+    <string name="opt_dpi_300">300 نقطة/إنش (للطباعة)</string>
+    <string name="opt_qr_text">النص أو الرابط</string>
+    <string name="opt_pdf_level">درجة الضغط</string>
+    <string name="opt_pdf_level_light">خفيفة</string>
+    <string name="opt_pdf_level_balanced">متوازنة</string>
+    <string name="opt_pdf_level_strong">قوية</string>
+    <string name="opt_split_mode">التقسيم إلى</string>
+    <string name="opt_split_mode_each">ملف لكل صفحة</string>
+    <string name="opt_split_mode_ranges">نطاقات صفحات</string>
+    <string name="opt_ranges">نطاقات الصفحات، مثل 1-3، 5</string>
+    <string name="opt_pages">الصفحات (فارغ = الكل)، مثل 1-3، 5</string>
+    <string name="opt_preset">الحجم</string>
+    <string name="opt_preset_small">صغير · 720p للمحادثات</string>
+    <string name="opt_preset_balanced">متوازن · 1080p</string>
+    <string name="opt_preset_high">عالٍ · الحجم الأصلي</string>
+
+    <!-- الأخطاء -->
+    <string name="error_decode_image">تعذّرت قراءة هذه الصورة.</string>
+    <string name="error_format">لا يمكن الكتابة بهذه الصيغة على هذا الهاتف.</string>
+    <string name="error_no_heic_encoder">لا يوجد في هذا الهاتف مُرمِّز HEIC.</string>
+    <string name="error_encode">تعذّر حفظ الصورة بهذه الصيغة.</string>
+    <string name="error_target_size">اكتب حجمًا بالكيلوبايت، مثل 500.</string>
+    <string name="error_strip_failed">تعذّر حذف الموقع من هذا الملف، لذلك لم يُحفظ شيء.</string>
+    <string name="error_no_qr">لم يُعثر على رمز QR أو باركود.</string>
+    <string name="error_qr_empty">اكتب النص أو الرابط لرمز QR.</string>
+    <string name="error_qr_too_long">هذا النص أطول من أن يتسع له رمز QR واحد.</string>
+    <string name="error_pdf_protected">ملف PDF هذا محمي. لا يزيل DropFlow الحماية.</string>
+    <string name="error_pdf_damaged">تعذّرت قراءة ملف PDF هذا.</string>
+    <string name="error_page_range">هذه الصفحات غير موجودة في ملف PDF.</string>
+    <string name="error_media_read">تعذّرت قراءة ملف الوسائط هذا.</string>
+    <string name="error_media_encode">لم يتمكن هذا الهاتف من ترميز النتيجة.</string>
+    <string name="error_no_video">لا يحتوي هذا الملف على فيديو.</string>
+    <string name="error_no_audio">لا يحتوي هذا الملف على صوت.</string>
+    <string name="error_range">اختر نهاية بعد البداية.</string>
+    <string name="error_frame">تعذّرت قراءة هذا الإطار.</string>
+    <string name="error_zip_damaged">هذا الأرشيف تالف أو مشفّر.</string>
+    <string name="error_zip_unsafe">يحاول هذا الأرشيف الكتابة خارج مجلده. لم يُستخرج شيء.</string>
+    <string name="error_zip_too_large">يتمدد هذا الأرشيف إلى بيانات كثيرة جدًا. توقف الاستخراج.</string>
+    <string name="error_zip_empty">هذا الأرشيف فارغ.</string>
+    <string name="error_memory">هذا الملف أكبر من ذاكرة هذا الهاتف.</string>
+    <string name="error_unexpected">حدث خطأ ما.</string>
+    <string name="error_input">تعذّرت قراءة الملف المُشارَك.</string>
+</resources>

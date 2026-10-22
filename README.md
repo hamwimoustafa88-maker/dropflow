@@ -86,19 +86,19 @@ with the `dropflow` CLI.
 Counts come from [`catalog/tools.json`](catalog/tools.json), the single source of truth shared by every app (full list:
 [docs/feature-catalog.md](docs/feature-catalog.md)):
 
-<p align="center"><strong>428 conversions · 63 tools · 7 file actions · 10 format families</strong></p>
+<p align="center"><strong><!--n:conversions-->428<!--/n--> conversions · <!--n:tools-->66<!--/n--> tools · <!--n:actions-->7<!--/n--> file actions · <!--n:families-->10<!--/n--> format families</strong></p>
 
 | Area | What you get |
 |---|---|
-| **Images** (16 tools) | JPG, PNG, WebP, HEIC, TIFF, AVIF, BMP, GIF, SVG, ICO; compress, resize, crop, rotate, edit, annotate, collage, strip EXIF/GPS, icons and favicons, QR codes |
-| **PDF** (18 tools) | merge, split, organize, rotate, compress, watermark, page numbers, crop, visible signature, true redaction, compare, protect / unlock (with a password you know), repair, PDF/A-2b, PDF → Word, PowerPoint, Excel, images, text, EPUB |
+| **Images** (<!--n:cat.image-->17<!--/n--> tools) | JPG, PNG, WebP, HEIC, TIFF, AVIF, BMP, GIF, SVG, ICO; compress, resize, crop, rotate, edit, annotate, collage, strip EXIF/GPS, icons and favicons, QR codes |
+| **PDF** (<!--n:cat.pdf-->18<!--/n--> tools) | merge, split, organize, rotate, compress, watermark, page numbers, crop, visible signature, true redaction, compare, protect / unlock (with a password you know), repair, PDF/A-2b, PDF → Word, PowerPoint, Excel, images, text, EPUB |
 | **Documents** | Word, spreadsheets, slides, Markdown, HTML, EPUB, CSV/JSON → PDF and images, through a built-in browser engine (no LibreOffice needed) |
-| **Video** (14) and **audio** (9) | convert, compress (also to a target size), trim, crop, split, join, speed, mute, normalize, bleep, waveform video, burn-in subtitles, and **DropFlow Encoder** (H.264 / H.265 / AV1, GPU encoders, presets) |
+| **Video** (<!--n:cat.video-->15<!--/n-->) and **audio** (<!--n:cat.audio-->10<!--/n-->) | convert, compress (also to a target size), trim, crop, split, join, speed, mute, normalize, bleep, waveform video, burn-in subtitles, and **DropFlow Encoder** (H.264 / H.265 / AV1, GPU encoders, presets) |
 | **Local AI** | speech to text with Whisper (Arabic included), OCR (Tesseract + Windows OCR, English and Arabic), background removal, automatic face/text redaction; models download only after you agree |
 | **Archives and utilities** | extract ZIP / TAR / GZ / 7z / RAR safely, create ZIP, hashes, Base64, batch rename |
 | **Actions** | copy, move, share, copy path, terminal, floating shelf, send to a phone on the same Wi-Fi (QR code) |
 
-The **web app** runs 36 of the 63 tools inside the browser (images, PDF, audio/video through ffmpeg.wasm, OCR, background
+The **web app** runs <!--n:web-->36<!--/n--> of the <!--n:tools-->66<!--/n--> tools inside the browser (images, PDF, audio/video through ffmpeg.wasm, OCR, background
 removal, subtitles, archives, hashes). Office conversions, Whisper and a few desktop-only tools need an app.
 
 ## Website

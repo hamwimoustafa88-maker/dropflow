@@ -99,6 +99,27 @@ const webCatalog = {
 mkdirSync(join(root, "web", "src", "data"), { recursive: true });
 writeFileSync(join(root, "web", "src", "data", "catalog.json"), JSON.stringify(webCatalog, null, 2) + "\n");
 
+// ---- numbers in the READMEs ----
+// README.md / README.ar.md write every count as <!--n:key-->value<!--/n--> so the numbers cannot drift from the catalog (the site reads
+// the same catalog). Keys: tools, conversions, actions, families, web (tools that run in the browser), cat.<id> (tools per category).
+const readmeNumbers = {
+  tools: toolCount,
+  conversions,
+  actions: cat.actions.length,
+  families: cat.categories.length,
+  web: cat.tools.filter((t) => (t.platforms ?? []).includes("web")).length,
+};
+for (const t of cat.tools) readmeNumbers[`cat.${t.cat}`] = (readmeNumbers[`cat.${t.cat}`] ?? 0) + 1;
+for (const file of ["README.md", "README.ar.md"]) {
+  const path = join(root, file);
+  const before = readFileSync(path, "utf8");
+  const after = before.replace(/<!--n:([\w.]+)-->[^<]*<!--\/n-->/g, (m, key) => {
+    if (!(key in readmeNumbers)) { fail(`${file}: unknown number key "${key}"`); return m; }
+    return `<!--n:${key}-->${readmeNumbers[key]}<!--/n-->`;
+  });
+  if (after !== before) writeFileSync(path, after);
+}
+
 if (errors.length) {
   console.error("catalog: FAILED\n - " + errors.join("\n - "));
   process.exit(1);

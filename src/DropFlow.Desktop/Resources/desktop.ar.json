@@ -1,0 +1,52 @@
+{
+  "tray.welcome": "طريقة استخدام DropFlow",
+  "tray.tooltip.paused": "DropFlow متوقف مؤقتاً",
+
+  "welcome.title": "أهلاً بك في DropFlow",
+  "welcome.drag.mac": "اسحب ملفاً في Finder، وأثناء الضغط على زر الفأرة انقر ⇧ Shift للتحويل، أو ⌘ Command للأدوات، أو ⌃ Control للإجراءات. ثم أفلت الملف على إحدى شرائح العجلة.",
+  "welcome.drag.linux": "اسحب ملفاً، وأثناء الضغط على زر الفأرة انقر Shift للتحويل، أو Ctrl للأدوات، أو Alt للإجراءات. ثم أفلت الملف على إحدى شرائح العجلة.",
+  "welcome.gnome.signout": "في GNOME يستخدم DropFlow إضافة صغيرة للواجهة كي يرى المفاتيح أثناء السحب. لقد ثُبّتت: سجّل الخروج ثم الدخول مرة واحدة لتفعيلها.",
+  "welcome.gnome.error": "تعذّر تفعيل إضافة DropFlow في GNOME. افتح تطبيق «الإضافات» وفعّل «DropFlow drag helper».",
+  "welcome.click": "لا يستطيع أي تطبيق مراقبة السحب في سطح المكتب هذا. انقر الملفات بزر الفأرة الأيمن في مدير الملفات واختر «افتح باستخدام DropFlow» لتظهر العجلة نفسها.",
+  "welcome.clickAlso": "يمكنك أيضاً النقر على الملفات بزر الفأرة الأيمن في مدير الملفات واختيار «افتح باستخدام DropFlow».",
+  "welcome.mac.gatekeeper": "‏DropFlow مجاني وغير موثَّق من Apple. إذا منعه macOS من الفتح، انقر التطبيق بزر الفأرة الأيمن واختر «فتح»، أو افتح إعدادات النظام ← الخصوصية والأمان واضغط «فتح على أي حال». يلزم ذلك مرة واحدة فقط.",
+  "welcome.mac.menubar": "يعمل DropFlow من شريط القوائم أعلى يمين الشاشة.",
+  "welcome.linux.tray": "يعمل DropFlow من علبة النظام. في GNOME تحتاج أيقونة العلبة إلى إضافة «AppIndicator and KStatusNotifierItem».",
+  "welcome.privacy": "كل شيء يجري على هذا الحاسوب، ولا يُرفع أي ملف.",
+  "welcome.ok": "فهمت",
+
+  "settings.output": "حفظ النتائج",
+  "settings.output.BesideSource": "بجانب الملف الأصلي",
+  "settings.output.Downloads": "في مجلد التنزيلات",
+  "settings.output.Desktop": "على سطح المكتب",
+  "settings.output.hint": "لا تُعدَّل الملفات الأصلية ولا تُستبدل أبداً.",
+  "settings.login": "شغّل DropFlow عند تسجيل الدخول",
+  "settings.fileManagers": "أضف «افتح باستخدام DropFlow» إلى قائمة النقر الأيمن في مدير الملفات",
+  "settings.extension": "إضافة GNOME Shell",
+  "settings.extension.Active": "مفعّلة",
+  "settings.extension.NeedsSignOut": "مثبّتة: سجّل الخروج ثم الدخول مرة واحدة لتفعيلها",
+  "settings.extension.Disabled": "معطّلة",
+  "settings.extension.Error": "خطأ: افحصها في تطبيق «الإضافات»",
+  "settings.extension.Missing": "غير مثبّتة",
+  "settings.extension.NotNeeded": "غير مطلوبة في سطح المكتب هذا",
+  "settings.extension.install": "ثبّت وفعّل",
+  "settings.engines.unix": "البرامج المساعدة",
+  "settings.engines.unixHint": "لا يثبّت DropFlow أي برنامج من تلقاء نفسه. لإضافة برنامج انسخ أمره وشغّله في الطرفية.",
+  "settings.engine.bundled": "مضمَّن",
+  "settings.engine.copy": "انسخ الأمر",
+  "settings.engine.copied": "نُسخ الأمر",
+  "settings.engine.noCommand": "ثبّته من مدير الحزم في نظامك.",
+  "settings.general": "عام",
+  "settings.pausedNote": "أثناء الإيقاف المؤقت لا تُراقَب عمليات السحب.",
+
+  "engine.missing.unix": "يلزم {0} لهذه العملية. ثبّته بالأمر: {1}",
+  "engine.missing.unixPlain": "يلزم {0} لهذه العملية. ثبّته من مدير الحزم في نظامك ثم حاول مجدداً.",
+  "run.notSupported": "«{0}» غير متاح في هذا الإصدار من DropFlow بعد.",
+
+  "fm.title": "افتح باستخدام DropFlow",
+
+  "history.clear": "امسح السجل",
+  "history.when": "{0:g}",
+
+  "shelf.dragOut": "اسحب الملفات من الرف لتستخدمها في أي مكان."
+}

@@ -1,0 +1,8 @@
+{
+  "uuid": "dropflow@scouthub.dev",
+  "name": "DropFlow drag helper",
+  "description": "Lets the DropFlow app open its wheel while you drag files on GNOME under Wayland. During a drag it tells DropFlow, over a private socket on this computer, when Shift, Ctrl or Alt goes down and where the pointer is. It reads nothing else and sends nothing over the network.",
+  "shell-version": ["45", "46", "47", "48", "49"],
+  "url": "https://github.com/hamwimoustafa88-maker/dropflow",
+  "version": 1
+}

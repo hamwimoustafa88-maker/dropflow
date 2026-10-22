@@ -2,6 +2,8 @@ using DropFlow.Core.Operations;
 using DropFlow.Engines.Archive.General.Rename;
 using DropFlow.TestSupport;
 
+using static DropFlow.TestSupport.TestPaths;
+
 namespace DropFlow.Engines.Archive.Tests;
 
 public class RenamePlanTests
@@ -11,8 +13,8 @@ public class RenamePlanTests
     /// <summary>Plans over paths that do not exist on disk: only the names matter, and nothing is touched.</summary>
     private static RenamePlan Plan(string[] names, RenameSpec spec, params string[] existingElsewhere)
     {
-        var all = names.Select(n => @"C:\photos\" + n).ToArray();
-        var existing = new HashSet<string>(all.Concat(existingElsewhere.Select(n => @"C:\photos\" + n)), StringComparer.OrdinalIgnoreCase);
+        var all = names.Select(n => P(@"C:\photos\") + n).ToArray();
+        var existing = new HashSet<string>(all.Concat(existingElsewhere.Select(n => P(@"C:\photos\") + n)), StringComparer.OrdinalIgnoreCase);
         return BatchRename.Plan(all, spec, new RenamePlanOptions { Exists = existing.Contains, Now = Now });
     }
 
@@ -248,7 +250,7 @@ public class RenamePlanTests
         var item = plan.Items[0];
         Assert.DoesNotContain('\\', item.NewName);
         Assert.DoesNotContain('/', item.NewName);
-        Assert.Equal(@"C:\photos", Path.GetDirectoryName(item.TargetPath));
+        Assert.Equal(P(@"C:\photos"), Path.GetDirectoryName(item.TargetPath));
     }
 
     [Theory]
@@ -276,9 +278,9 @@ public class RenamePlanTests
     [Fact]
     public void Targets_that_differ_only_by_case_are_duplicates_on_windows()
     {
-        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\in\A.jpg", @"C:\in\a.JPG" };
-        var plan = BatchRename.Plan([@"C:\in\A.jpg", @"C:\in\a.JPG"], new RenameSpec(),
-            new RenamePlanOptions { DestinationDirectory = @"C:\out", Exists = existing.Contains });
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { P(@"C:\in\A.jpg"), P(@"C:\in\a.JPG") };
+        var plan = BatchRename.Plan([P(@"C:\in\A.jpg"), P(@"C:\in\a.JPG")], new RenameSpec(),
+            new RenamePlanOptions { DestinationDirectory = P(@"C:\out"), Exists = existing.Contains });
 
         Assert.Equal(RenameIssue.None, plan.Items[0].Issue);
         Assert.Equal(RenameIssue.DuplicateTarget, plan.Items[1].Issue);
@@ -322,20 +324,20 @@ public class RenamePlanTests
     [Fact]
     public void Uniquify_policy_adds_numbers_instead_of_reporting_conflicts()
     {
-        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\in\a.jpg", @"C:\in\b.jpg", @"C:\out\same.jpg", @"C:\out\same (2).jpg" };
-        var plan = BatchRename.Plan([@"C:\in\a.jpg", @"C:\in\b.jpg"], new RenameSpec { Pattern = "same{ext}" },
-            new RenamePlanOptions { DestinationDirectory = @"C:\out", Conflicts = ConflictPolicy.Uniquify, Exists = existing.Contains });
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { P(@"C:\in\a.jpg"), P(@"C:\in\b.jpg"), P(@"C:\out\same.jpg"), P(@"C:\out\same (2).jpg") };
+        var plan = BatchRename.Plan([P(@"C:\in\a.jpg"), P(@"C:\in\b.jpg")], new RenameSpec { Pattern = "same{ext}" },
+            new RenamePlanOptions { DestinationDirectory = P(@"C:\out"), Conflicts = ConflictPolicy.Uniquify, Exists = existing.Contains });
 
         Assert.False(plan.HasConflicts);
         Assert.Equal(["same (3).jpg", "same (4).jpg"], plan.Items.Select(i => i.NewName));
         Assert.All(plan.Items, i => Assert.True(i.Adjusted));
-        Assert.All(plan.Items, i => Assert.Equal(@"C:\out", Path.GetDirectoryName(i.TargetPath)));
+        Assert.All(plan.Items, i => Assert.Equal(P(@"C:\out"), Path.GetDirectoryName(i.TargetPath)));
     }
 
     [Fact]
     public void Missing_sources_are_flagged()
     {
-        var plan = BatchRename.Plan([@"C:\nowhere\ghost.txt"], new RenameSpec { Pattern = "x{ext}" }, new RenamePlanOptions { Exists = _ => false });
+        var plan = BatchRename.Plan([P(@"C:\nowhere\ghost.txt")], new RenameSpec { Pattern = "x{ext}" }, new RenamePlanOptions { Exists = _ => false });
         Assert.Equal(RenameIssue.MissingSource, plan.Items[0].Issue);
         Assert.True(plan.HasConflicts);
     }
@@ -482,24 +484,50 @@ public class RenameApplyTests
         Assert.DoesNotContain("a.txt", Directory.GetFiles(temp.Path).Select(Path.GetFileName));
     }
 
-    [Fact]
+    [RenameFailureFact]
     public async Task A_failure_half_way_rolls_everything_back()
     {
         using var temp = new TempDir();
         var (a, b, c) = await ThreeFiles(temp);
-        var plan = BatchRename.Plan([a, b, c], new RenameSpec { Pattern = "z_{n}{ext}" });
 
-        // b is held open without sharing, so renaming it fails after a was already renamed
-        using var lockStream = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.None);
-        var result = BatchRename.Apply(plan);
+        if (OperatingSystem.IsWindows())
+        {
+            // b is held open without sharing, so renaming it fails after a was already renamed
+            var plan = BatchRename.Plan([a, b, c], new RenameSpec { Pattern = "z_{n}{ext}" });
+            using var lockStream = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.None);
+            var result = BatchRename.Apply(plan);
 
-        Assert.False(result.Success);
-        Assert.Contains("Everything was put back", result.Error);
-        lockStream.Dispose();
-        Assert.Equal(["a.txt", "b.txt", "c.txt"], Directory.GetFiles(temp.Path).Select(Path.GetFileName).Order());
+            Assert.False(result.Success);
+            Assert.Contains("Everything was put back", result.Error);
+            lockStream.Dispose();
+            Assert.Equal(["a.txt", "b.txt", "c.txt"], Directory.GetFiles(temp.Path).Select(Path.GetFileName).Order());
+            Assert.Equal("AAA", File.ReadAllText(a));
+            return;
+        }
+
+        // macOS and Linux rename open files freely, so b lives in a folder that is made read-only after planning: a is renamed,
+        // b's rename is refused, and a must be put back.
+        var locked = Directory.CreateDirectory(temp.Combine("locked")).FullName;
+        var lockedB = Path.Combine(locked, "b.txt");
+        File.Move(b, lockedB);
+        var unixPlan = BatchRename.Plan([a, lockedB, c], new RenameSpec { Pattern = "z_{n}{ext}" });
+        File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        RenameResult unixResult;
+        try
+        {
+            unixResult = BatchRename.Apply(unixPlan);
+        }
+        finally
+        {
+            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
+        Assert.False(unixResult.Success);
+        Assert.Contains("Everything was put back", unixResult.Error);
+        Assert.Equal(["a.txt", "c.txt"], Directory.GetFiles(temp.Path).Select(Path.GetFileName).Order());
+        Assert.True(File.Exists(lockedB));
         Assert.Equal("AAA", File.ReadAllText(a));
     }
-
     [Fact]
     public async Task Reverse_undoes_a_finished_rename()
     {
@@ -746,5 +774,18 @@ public class RenameConverterTests
         Assert.True(result.Success, result.Error);
         Assert.Contains("nothing to rename", result.Note);
         Assert.True(File.Exists(a));
+    }
+}
+
+/// <summary>
+/// The rollback test needs one rename to fail half way: Windows refuses to rename a file held open; elsewhere a read-only folder is
+/// used, which root ignores, so the test is skipped (visibly) when it runs as root on macOS/Linux (for example in a container).
+/// </summary>
+public sealed class RenameFailureFactAttribute : FactAttribute
+{
+    public RenameFailureFactAttribute()
+    {
+        if (!OperatingSystem.IsWindows() && Environment.UserName == "root")
+            Skip = "Running as root: folder permissions cannot make a rename fail here (run as a normal user, as CI does).";
     }
 }

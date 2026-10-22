@@ -704,12 +704,16 @@ public class SharingTests : IDisposable
         server.Stop();
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"Stop took {watch.Elapsed}");
 
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        // A bounded wait: a socket left half-open by the server must fail this test, not hang the whole run.
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var error = await Record.ExceptionAsync(async () =>
         {
             var buffer = new byte[1 << 20];
-            while (await stream.ReadAsync(buffer) > 0) { }
+            while (await stream.ReadAsync(buffer, limit.Token) > 0) { }
             throw new InvalidOperationException("the stream ended normally although the share was stopped");
         });
+        Assert.NotNull(error);
+        Assert.False(limit.IsCancellationRequested, "the download neither ended nor failed within 60 s of Stop");
     }
 
     [Fact]
@@ -772,7 +776,8 @@ public class SharingTests : IDisposable
         Assert.Throws<ArgumentException>(() => new PhoneShareServer([_temp.Path]));                 // a folder
         Assert.Throws<FileNotFoundException>(() => new PhoneShareServer([_temp.Combine("ghost.txt")]));
 
-        var deduplicated = new PhoneShareServer([file, file, file.ToUpperInvariant()]);
+        // the same file listed twice is shared once (and, where names ignore case, also under another spelling)
+        var deduplicated = new PhoneShareServer(OperatingSystem.IsWindows() ? [file, file, file.ToUpperInvariant()] : [file, file]);
         Assert.Single(deduplicated.Files);
         Assert.Equal(0, deduplicated.Files[0].Index);
         Assert.Equal("a.txt", deduplicated.Files[0].Name);
@@ -914,13 +919,15 @@ public class SharingTests : IDisposable
     /// <summary>Sends a request line exactly as given (HttpClient would normalise ".." away) and returns status, headers and body.</summary>
     private static async Task<(int Status, string Headers, byte[] Body)> RawGet(int port, string target)
     {
+        // Bounded: a server that never closes the connection fails the test instead of hanging the run.
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         using var client = new TcpClient();
-        await client.ConnectAsync(IPAddress.Loopback, port);
+        await client.ConnectAsync(IPAddress.Loopback, port, limit.Token);
         await using var stream = client.GetStream();
-        await stream.WriteAsync(Encoding.ASCII.GetBytes($"GET {target} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"));
+        await stream.WriteAsync(Encoding.ASCII.GetBytes($"GET {target} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"), limit.Token);
 
         using var all = new MemoryStream();
-        await stream.CopyToAsync(all);
+        await stream.CopyToAsync(all, limit.Token);
         var bytes = all.ToArray();
         var split = bytes.AsSpan().IndexOf("\r\n\r\n"u8);
         var head = split < 0 ? Encoding.ASCII.GetString(bytes) : Encoding.ASCII.GetString(bytes, 0, split);

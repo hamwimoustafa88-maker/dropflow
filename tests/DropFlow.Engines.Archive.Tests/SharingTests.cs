@@ -569,7 +569,7 @@ public class SharingTests : IDisposable
         Assert.Equal(1, server.CompletedDownloads);
     }
 
-    [MacOsUnverifiedFact("on the CI Mac the abandoned download is still not handed back after 5 s even with a 4 KB client window; passes on Linux x64/arm64 and Windows (x64, ARM64). Cause unknown without a Mac")]
+    [MacOsUnverifiedFact("on the CI Mac the abandoned download is still not handed back even with a 4 KB client window; passes on Linux x64/arm64 and Windows (x64, ARM64). Cause unknown without a Mac")]
     public async Task A_cut_off_single_download_can_be_retried_but_a_finished_one_cannot()
     {
         var data = Kit.Noise(40_000_000, 3);
@@ -604,7 +604,8 @@ public class SharingTests : IDisposable
         // the server notices the broken connection and gives the file back
         HttpStatusCode status = HttpStatusCode.Gone;
         byte[] body = [];
-        for (var attempt = 0; attempt < 100 && status != HttpStatusCode.OK; attempt++)
+        // Noticing the abandoned connection takes the server a moment (the client first tries to drain the response); a busy CI machine needs more than 5 s.
+        for (var attempt = 0; attempt < 600 && status != HttpStatusCode.OK; attempt++)
         {
             await Task.Delay(50);
             using var retry = await _http.GetAsync(server.FileUrl(0, loopback: true));

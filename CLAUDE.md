@@ -112,6 +112,13 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — Site polish (owner: "footer has too many buttons, use WhatsApp with its logo in several places; redesign privacy + terms; update the GitHub README"):
+  footer is now logo + line, Privacy, Terms, ONE "Open source" link and ONE WhatsApp button; Issues / security / code-signing policy / licence moved to the
+  Developers section. New reusable `WhatsAppButton` (solid / outline / icon, green `--wa*` tokens) also in About, the closing CTA and the legal pages (no floating
+  button: it would cover the download buttons). Privacy and Terms redesigned (display title, "in one minute" card, sticky contents list / mobile `<details>`,
+  numbered h2 sections, bold h3 with a gradient bar, promise/warn callouts, contact card); legal text regrouped into 3-4 sections with the old sections as
+  sub-sections, no statement weakened. README.md / README.ar.md gained Website + Contact sections and links to the legal pages. e2e legal + seo sections updated.
+  — web/src/components/{LegalPage,WhatsAppButton,About,Developers}.tsx, web/src/app/[locale]/page.tsx, web/messages/*, web/e2e/sections/{legal,seo}.mjs, README*.md
 - 2026-10-22 — Cross-platform test fixes after the first `build-cross.yml` run (everything built; 7 test classes failed off Windows). Tests that were
   Windows-only now work on Linux/macOS/ARM: `powershell.exe` byte-copy test uses `printf` octal escapes, 7z name depends on the OS (7zz/7z/7za), the 7z
   kill probe uses `ps` on Unix and tolerates a WMI timeout on Windows ARM, the rename-cancel test now cancels from the progress callback (the old

@@ -126,13 +126,15 @@ export async function seo({ b, base }) {
       const d = await b.ev(`(() => {
         const s = document.querySelector('#developers');
         const a = (id) => { const e = document.querySelector('[data-testid=' + id + ']'); return e ? { href: e.getAttribute('href'), text: e.textContent.trim(), h: e.getBoundingClientRect().height, rel: e.rel } : null; };
-        return { h2: s?.querySelector('h2')?.textContent ?? '', items: s ? s.querySelectorAll('[data-testid=dev-point]').length : 0, repo: a('dev-repo'), contrib: a('dev-contribute'), license: a('footer-license'),
+        return { h2: s?.querySelector('h2')?.textContent ?? '', items: s ? s.querySelectorAll('[data-testid=dev-point]').length : 0, repo: a('dev-repo'), contrib: a('dev-contribute'), license: a('dev-license'), issues: a('dev-issues'), security: a('dev-security'), signing: a('dev-signing'),
           nav: !!document.querySelector('header nav a[href="#developers"]') };
       })()`);
       check(`/${loc}: developer section with a heading and 3 points`, d.h2.length > 5 && d.items === 3, `${d.h2} (${d.items})`);
       check(`/${loc}: "${repoText}" links to the repository`, d.repo?.href === REPO && d.repo.text === repoText && d.repo.h >= 44 && /noopener/.test(d.repo.rel), JSON.stringify(d.repo));
       check(`/${loc}: "${contribText}" links to CONTRIBUTING.md`, d.contrib?.href === CONTRIBUTING && d.contrib.text === contribText && d.contrib.h >= 44, JSON.stringify(d.contrib));
-      check(`/${loc}: footer licence links to the GPL LICENSE file`, d.license?.href === `${REPO}/blob/main/LICENSE` && /GPL-3\.0/.test(d.license.text), JSON.stringify(d.license));
+      check(`/${loc}: the developer section keeps the licence (GPL LICENSE file), issues, security and code-signing policy links (each >= 44 px tall)`,
+        d.license?.href === `${REPO}/blob/main/LICENSE` && /GPL-3\.0/.test(d.license.text) && d.issues?.href === `${REPO}/issues` && d.security?.href === `${REPO}/blob/main/SECURITY.md` &&
+          d.signing?.href === `${REPO}/blob/main/docs/code-signing-policy.md` && [d.license, d.issues, d.security, d.signing].every((x) => x.h >= 44 && /noopener/.test(x.rel)), JSON.stringify([d.license, d.issues, d.security, d.signing]));
       check(`/${loc}: header nav links to the developer section`, d.nav);
     }
     for (const path of PAGES) {
@@ -207,9 +209,13 @@ export async function seo({ b, base }) {
     for (const loc of LOCALES) {
       await b.goto(`${base}/${loc}`, 900);
       const f = await b.ev(`[...document.querySelectorAll('[data-testid=footer-nav] a')].map((a) => [a.getAttribute('data-testid'), a.getAttribute('href'), a.getBoundingClientRect().height])`);
-      const want = { "footer-privacy": `/${loc}/privacy`, "footer-terms": `/${loc}/terms`, "footer-github": REPO, "footer-issues": `${REPO}/issues`, "footer-contributing": CONTRIBUTING, "footer-security": `${REPO}/blob/main/SECURITY.md`, "footer-signing": `${REPO}/blob/main/docs/code-signing-policy.md`, "footer-whatsapp": "https://wa.me/96170863903" };
+      const want = { "footer-privacy": `/${loc}/privacy`, "footer-terms": `/${loc}/terms`, "footer-github": REPO };
       const got = Object.fromEntries(f.map(([id, href]) => [id, href]));
-      check(`/${loc}: footer links privacy, terms, GitHub, issues (contact), contributing, security, code signing policy, WhatsApp (each >= 44 px tall)`, JSON.stringify(got) === JSON.stringify(want) && f.every(([, , h]) => h >= 44), JSON.stringify(got));
+      check(`/${loc}: the footer nav is only Privacy, Terms and ONE open-source link to the repository (each >= 44 px tall)`, JSON.stringify(got) === JSON.stringify(want) && f.every(([, , h]) => h >= 44), JSON.stringify(got));
+      const wa = await b.ev(`(() => { const a = document.querySelector('footer [data-testid=footer-whatsapp]'); const r = a.getBoundingClientRect(); return { href: a.getAttribute('href'), target: a.target, rel: a.rel, label: a.getAttribute('aria-label'), text: a.textContent.trim(), glyph: !!a.querySelector('svg[aria-hidden=true] path'), h: r.height, all: document.querySelectorAll('footer a').length }; })()`);
+      check(`/${loc}: the footer has ONE prominent WhatsApp button (glyph, name starts with its visible text, new tab, noopener, >= 44 px) and 4 links in total`, wa.href === "https://wa.me/96170863903" && wa.target === "_blank" && /noopener/.test(wa.rel) && wa.glyph && wa.label.startsWith(wa.text) && wa.h >= 44 && wa.all === 4, JSON.stringify(wa));
+      const spots = await b.ev(`['footer-whatsapp', 'cta-whatsapp', 'about-whatsapp'].map((id) => { const a = document.querySelector('[data-testid=' + id + ']'); return [id, a?.getAttribute('href'), a?.getAttribute('data-variant')]; })`);
+      check(`/${loc}: the WhatsApp button is also in About (solid) and the closing call to action (outline)`, JSON.stringify(spots) === JSON.stringify([["footer-whatsapp", "https://wa.me/96170863903", "solid"], ["cta-whatsapp", "https://wa.me/96170863903", "outline"], ["about-whatsapp", "https://wa.me/96170863903", "solid"]]), JSON.stringify(spots));
       const names = await b.ev(`[...document.querySelectorAll('header [role=group] button')].map((e) => ({ text: e.textContent.trim(), label: e.getAttribute('aria-label') ?? '' }))`);
       check(`/${loc}: language buttons' accessible names start with their visible text (label in name)`, names.length === 2 && names.every((n) => n.label.startsWith(n.text)), JSON.stringify(names));
     }

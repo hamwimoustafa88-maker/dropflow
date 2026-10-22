@@ -20,6 +20,15 @@
   /* success: >= 4.5:1 as text on bg/surface, and on-ok on ok (white on #0b7a4b = 5.5:1) */
   --ok: #0b7a4b;
   --on-ok: #ffffff;
+  /* WhatsApp contact button: white on --wa = 5.9:1, --wa as text on surface = 5.9:1 */
+  --wa: #0a7a46;
+  --wa-hover: #07603a;
+  --wa-soft: #e1f5ea;
+  --on-wa: #ffffff;
+  /* legal pages: callout for limits and warnings (--warn on --warn-soft = 6.4:1) */
+  --warn: #7c4a03;
+  --warn-soft: #fff6e0;
+  --warn-border: #e9b44c;
   color-scheme: light;
 }
 
@@ -34,6 +43,14 @@
   --color-on-primary: var(--on-primary);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-wa: var(--wa);
+  --color-wa-hover: var(--wa-hover);
+  --color-wa-soft: var(--wa-soft);
+  --color-on-wa: var(--on-wa);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-border: var(--warn-border);
   --font-sans: var(--font-plex), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }

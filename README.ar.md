@@ -16,6 +16,7 @@
   <a href="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml"><img src="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml/badge.svg" alt="حالة CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="الرخصة: GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Web-4338ca" alt="المنصات: ويندوز وماك ولينكس وأندرويد والويب">
+  <a href="https://wa.me/96170863903"><img src="https://img.shields.io/badge/WhatsApp-chat%20with%20the%20team-0a7a46?logo=whatsapp&logoColor=white" alt="تواصل مع الفريق عبر واتساب"></a>
 </p>
 
 <p align="center">
@@ -23,6 +24,9 @@
   <a href="https://dropflow.scouthub.dev/ar/app">تطبيق الويب</a> ·
   <a href="#التنزيل">التنزيل</a> ·
   <a href="#البناء-من-المصدر">البناء</a> ·
+  <a href="https://dropflow.scouthub.dev/ar/privacy">الخصوصية</a> ·
+  <a href="https://dropflow.scouthub.dev/ar/terms">الشروط</a> ·
+  <a href="#التواصل">التواصل</a> ·
   <a href="README.md"><strong>English</strong></a>
 </p>
 
@@ -99,6 +103,15 @@ DropFlow محوّل ملفات مجاني ومفتوح المصدر مبني ع�
 **تطبيق الويب** يشغّل 36 أداة من الـ 63 داخل المتصفح (الصور وPDF والصوت والفيديو عبر ffmpeg.wasm وOCR وإزالة الخلفية والترجمات
 والأرشيف والبصمات). أما تحويلات Office وWhisper وبعض الأدوات الأخرى فتحتاج أحد التطبيقات.
 
+## الموقع
+
+[dropflow.scouthub.dev](https://dropflow.scouthub.dev/ar) موقع ثابت وبسيط بلغتين (العربية افتراضياً والإنجليزية، من اليمين لليسار، بلا كوكيز ولا إحصاءات تتبّع):
+
+- **الصفحة الرئيسية**: عجلة تجريبية، وأزرار التنزيل لكل المنصات، وقسم للمبرمجين (خطوات البناء، البلاغات، سياسة الأمان، سياسة توقيع الكود، الرخصة)، وأسئلة شائعة.
+- **[تطبيق الويب](https://dropflow.scouthub.dev/ar/app)**: DropFlow داخل المتصفح، ولا يُرفع أي شيء.
+- **[سياسة الخصوصية](https://dropflow.scouthub.dev/ar/privacy)** و**[شروط الاستخدام](https://dropflow.scouthub.dev/ar/terms)**: صفحتان بلغة بسيطة، فيهما ملخص «في دقيقة واحدة» وفهرس للأقسام.
+- **التواصل**: زر واتساب واحد في تذييل الصفحة وقسم «عن DropFlow» ودعوة التنزيل الأخيرة والصفحتين القانونيتين. وللأعطال والثغرات استخدم [Issues على GitHub](https://github.com/hamwimoustafa88-maker/dropflow/issues) (ولا تنشر ملفات خاصة هناك).
+
 ## الخصوصية
 
 الخصوصية هي جوهر المنتج: **محتوى ملفاتك لا يغادر جهازك أبداً.**
@@ -107,7 +120,7 @@ DropFlow محوّل ملفات مجاني ومفتوح المصدر مبني ع�
   وتنزيل ملف من رابط تطلبه أنت، وخادم «إرسال للهاتف» على شبكتك المحلية ما دامت نافذته مفتوحة.
 - تطبيق الويب يعالج الملفات داخل المتصفح (Web Workers وWebAssembly)، وسياسة أمان المحتوى (CSP) تمنع الرفع، واختبار آلي يفحص الكود
   بحثاً عن أي اتصال شبكي غير طلب «تنزيل هذا الرابط».
-- لا حسابات ولا إحصاءات تتبّع ولا إعلانات. التفاصيل في [سياسة الخصوصية](https://dropflow.scouthub.dev/ar/privacy).
+- لا حسابات ولا إحصاءات تتبّع ولا إعلانات. التفاصيل في [سياسة الخصوصية](https://dropflow.scouthub.dev/ar/privacy) و[شروط الاستخدام](https://dropflow.scouthub.dev/ar/terms).
 
 ## بنية المشروع
 
@@ -202,7 +215,7 @@ node catalog/build.mjs          # validates the catalog, must print OK
 | `src/DropFlow.Desktop` | تطبيق Avalonia لماك ولينكس (جديد) |
 | `src/DropFlow.Cli` | أداة سطر الأوامر `dropflow` |
 | `android/` | تطبيق أندرويد (جديد) |
-| `web/` | صفحة الهبوط وتطبيق الويب (Next.js، عربي/إنجليزي) ([web/README.md](web/README.md)) |
+| `web/` | صفحة الهبوط وصفحتا الخصوصية والشروط وتطبيق الويب (Next.js، عربي/إنجليزي) ([web/README.md](web/README.md)) |
 | `tests/` | مشاريع xUnit ومولّدات ملفات العيّنات |
 | `installer/` · `.github/workflows/` | التحزيم وقوالب winget وسير عمل CI والإصدار |
 | `tools/` | سكربتات تجلب المحركات وقت البناء (لا تُرفع الملفات التنفيذية إلى Git) |
@@ -216,6 +229,12 @@ node catalog/build.mjs          # validates the catalog, must print OK
 [Discussions](https://github.com/hamwimoustafa88-maker/dropflow/discussions) (يمكنك الكتابة بالعربية). التزم بـ [ميثاق السلوك](CODE_OF_CONDUCT.md).
 
 خارطة الطريق: [docs/plan.md](docs/plan.md) · الأعمال المؤجلة: [docs/deferred.md](docs/deferred.md).
+
+## التواصل
+
+[![واتساب ‎+961 70 863 903](https://img.shields.io/badge/WhatsApp-%2B961%2070%20863%20903-0a7a46?logo=whatsapp&logoColor=white)](https://wa.me/96170863903)
+
+للأسئلة والأفكار والشراكات: واتساب. وللأعطال وطلبات الميزات: [Issues على GitHub](https://github.com/hamwimoustafa88-maker/dropflow/issues).
 
 ## الأمان
 
@@ -233,7 +252,7 @@ DropFlow برنامج حر وفق **رخصة جنو العمومية العام�
 
 ## الفريق والشكر
 
-من تطوير فرق **ScoutHub**، ورئيس فريق التطوير **مصطفى الحموي** (لبنان). للتواصل: واتساب [‎+961 70 863 903](https://wa.me/96170863903).
+من تطوير فرق **ScoutHub**، ورئيس فريق التطوير **مصطفى الحموي** (لبنان). للتواصل: انظر [التواصل](#التواصل).
 
 يقوم DropFlow على جهود مشاريع كثيرة، منها: FFmpeg وqpdf وTesseract OCR وMagick.NET ‏(ImageMagick) وPDFsharp وPdfPig وPDFium
 وOpen XML SDK وClosedXML وMarkdig وSharpCompress وZXing.Net وWhisper.net ‏(whisper.cpp) وONNX Runtime وVelopack وAvalonia

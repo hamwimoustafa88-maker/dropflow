@@ -14,6 +14,7 @@
   <a href="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml"><img src="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Web-4338ca" alt="Platforms: Windows, macOS, Linux, Android, Web">
+  <a href="https://wa.me/96170863903"><img src="https://img.shields.io/badge/WhatsApp-chat%20with%20the%20team-0a7a46?logo=whatsapp&logoColor=white" alt="Chat with the team on WhatsApp"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,9 @@
   <a href="https://dropflow.scouthub.dev/en/app">Web app</a> ·
   <a href="#download">Download</a> ·
   <a href="#build-from-source">Build</a> ·
+  <a href="https://dropflow.scouthub.dev/en/privacy">Privacy</a> ·
+  <a href="https://dropflow.scouthub.dev/en/terms">Terms</a> ·
+  <a href="#contact">Contact</a> ·
   <a href="README.ar.md"><strong>اقرأ بالعربية</strong></a>
 </p>
 
@@ -97,6 +101,15 @@ Counts come from [`catalog/tools.json`](catalog/tools.json), the single source o
 The **web app** runs 36 of the 63 tools inside the browser (images, PDF, audio/video through ffmpeg.wasm, OCR, background
 removal, subtitles, archives, hashes). Office conversions, Whisper and a few desktop-only tools need an app.
 
+## Website
+
+[dropflow.scouthub.dev](https://dropflow.scouthub.dev/en) is a small, static, bilingual site (Arabic by default, English, full RTL; no cookies, no analytics):
+
+- **Home**: the demo wheel, download buttons for every platform, a developer section (build steps, issues, security policy, code-signing policy, licence) and a FAQ.
+- **[Web app](https://dropflow.scouthub.dev/en/app)**: DropFlow in the browser, nothing uploaded.
+- **[Privacy Policy](https://dropflow.scouthub.dev/en/privacy)** and **[Terms of Use](https://dropflow.scouthub.dev/en/terms)**: plain-language pages with a one-minute summary and a contents list.
+- **Contact**: one WhatsApp button in the footer, the About section, the closing call to action and the legal pages. Bugs and security reports go to [GitHub Issues](https://github.com/hamwimoustafa88-maker/dropflow/issues) (please do not post private files there).
+
 ## Privacy
 
 Privacy is the product: **file contents never leave your device.**
@@ -105,7 +118,7 @@ Privacy is the product: **file contents never leave your device.**
   file you ask them to fetch from a link, and the local-network "Send to phone" server while its window is open.
 - The web app processes files in Web Workers with WebAssembly. Its Content Security Policy blocks uploads, and a test scans
   the code for any network call besides the one "download this link" request.
-- No accounts, analytics, ads or tracking. Details: [Privacy Policy](https://dropflow.scouthub.dev/en/privacy).
+- No accounts, analytics, ads or tracking. Details: [Privacy Policy](https://dropflow.scouthub.dev/en/privacy) · [Terms of Use](https://dropflow.scouthub.dev/en/terms).
 
 ## Architecture
 
@@ -193,7 +206,7 @@ What is verified and what is not is tracked in [docs/status.md](docs/status.md);
 | `src/DropFlow.Desktop` | Avalonia app for macOS and Linux (new) |
 | `src/DropFlow.Cli` | The `dropflow` command-line tool |
 | `android/` | Android app (new) |
-| `web/` | Next.js landing page and in-browser app, ar/en ([web/README.md](web/README.md)) |
+| `web/` | Next.js landing page, privacy and terms pages, and in-browser app, ar/en ([web/README.md](web/README.md)) |
 | `tests/` | xUnit projects and sample generators |
 | `installer/` · `.github/workflows/` | Packaging, winget templates, CI and release workflows |
 | `tools/` | Scripts that fetch engine binaries at build time (binaries are never committed) |
@@ -208,6 +221,12 @@ Conventional Commits) and sign off every commit under the [Developer Certificate
 [Discussions](https://github.com/hamwimoustafa88-maker/dropflow/discussions). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Roadmap: [docs/plan.md](docs/plan.md) (Arabic) · postponed work: [docs/deferred.md](docs/deferred.md).
+
+## Contact
+
+[![WhatsApp +961 70 863 903](https://img.shields.io/badge/WhatsApp-%2B961%2070%20863%20903-0a7a46?logo=whatsapp&logoColor=white)](https://wa.me/96170863903)
+
+Questions, ideas, partnerships: WhatsApp. Bugs and feature requests: [GitHub Issues](https://github.com/hamwimoustafa88-maker/dropflow/issues).
 
 ## Security
 
@@ -225,8 +244,7 @@ DropFlow is free software under the **GNU General Public License, version 3 or (
 
 ## Credits
 
-Developed by the **ScoutHub** teams; lead developer **Moustafa Al-Hamwi** (Lebanon). Contact: WhatsApp
-[+961 70 863 903](https://wa.me/96170863903).
+Developed by the **ScoutHub** teams; lead developer **Moustafa Al-Hamwi** (Lebanon). Contact: see [Contact](#contact).
 
 DropFlow stands on the work of many projects, including FFmpeg, qpdf, Tesseract OCR, Magick.NET (ImageMagick), PDFsharp, PdfPig,
 PDFium, Open XML SDK, ClosedXML, Markdig, SharpCompress, ZXing.Net, Whisper.net (whisper.cpp), ONNX Runtime, Velopack, Avalonia,

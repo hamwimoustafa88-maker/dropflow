@@ -7,6 +7,8 @@ using DropFlow.Core.Runner;
 using DropFlow.Core.Session;
 using DropFlow.Core.Wheel;
 
+using static DropFlow.Core.Tests.TestPaths;
+
 namespace DropFlow.Core.Tests;
 
 public class OperationRunnerTests
@@ -268,26 +270,26 @@ public class AppLogicTests
     [Fact]
     public void Copy_path_gives_one_full_path_per_line_optionally_quoted()
     {
-        var text = FileActionPlans.PathLines([@"C:\a\b.txt", @"C:\c d\e.txt"]);
-        Assert.Equal($"C:\\a\\b.txt{Environment.NewLine}C:\\c d\\e.txt", text);
-        Assert.Equal("\"C:\\c d\\e.txt\"", FileActionPlans.PathLines([@"C:\c d\e.txt"], quote: true));
+        var text = FileActionPlans.PathLines([P(@"C:\a\b.txt"), P(@"C:\c d\e.txt")]);
+        Assert.Equal($"{P(@"C:\a\b.txt")}{Environment.NewLine}{P(@"C:\c d\e.txt")}", text);
+        Assert.Equal("\"" + P(@"C:\c d\e.txt") + "\"", FileActionPlans.PathLines([P(@"C:\c d\e.txt")], quote: true));
     }
 
     [Fact]
     public void Move_never_overwrites_and_numbers_clashes_even_between_the_moved_files_themselves()
     {
-        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"D:\out\a.txt" };
-        var steps = FileActionPlans.PlanMove([@"C:\x\a.txt", @"C:\y\a.txt", @"C:\x\b.txt"], @"D:\out", existing.Contains);
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { P(@"D:\out\a.txt") };
+        var steps = FileActionPlans.PlanMove([P(@"C:\x\a.txt"), P(@"C:\y\a.txt"), P(@"C:\x\b.txt")], P(@"D:\out"), existing.Contains);
 
-        Assert.Equal([@"D:\out\a (2).txt", @"D:\out\a (3).txt", @"D:\out\b.txt"], steps.Select(s => s.To));
-        Assert.Equal([@"C:\x\a.txt", @"C:\y\a.txt", @"C:\x\b.txt"], steps.Select(s => s.From));
+        Assert.Equal([P(@"D:\out\a (2).txt"), P(@"D:\out\a (3).txt"), P(@"D:\out\b.txt")], steps.Select(s => s.To));
+        Assert.Equal([P(@"C:\x\a.txt"), P(@"C:\y\a.txt"), P(@"C:\x\b.txt")], steps.Select(s => s.From));
     }
 
     [Fact]
     public void Terminal_opens_the_folder_or_the_files_folder()
     {
-        Assert.Equal(@"C:\docs", FileActionPlans.TerminalFolder(@"C:\docs\file.txt", _ => false));
-        Assert.Equal(@"C:\docs", FileActionPlans.TerminalFolder(@"C:\docs", p => p == @"C:\docs"));
+        Assert.Equal(P(@"C:\docs"), FileActionPlans.TerminalFolder(P(@"C:\docs\file.txt"), _ => false));
+        Assert.Equal(P(@"C:\docs"), FileActionPlans.TerminalFolder(P(@"C:\docs"), p => p == P(@"C:\docs")));
     }
 
     [Fact]

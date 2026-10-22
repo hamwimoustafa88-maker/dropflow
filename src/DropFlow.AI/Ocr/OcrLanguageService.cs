@@ -90,22 +90,6 @@ public interface IWindowsOcrLanguageSource
     IReadOnlyList<string> InstalledTags();
 }
 
-/// <summary>Reads the real list from <c>Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages</c>.</summary>
-public sealed class WindowsOcrLanguageSource : IWindowsOcrLanguageSource
-{
-    public IReadOnlyList<string> InstalledTags()
-    {
-        try
-        {
-            return Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages.Select(l => l.LanguageTag).ToList();
-        }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or PlatformNotSupportedException)
-        {
-            return [];
-        }
-    }
-}
-
 /// <summary>What the UI shows when a Windows OCR language is missing.</summary>
 public sealed record OcrLanguageInstallHint(
     OcrLanguage Language,
@@ -120,7 +104,7 @@ public sealed record OcrLanguageInstallHint(
 /// </summary>
 public sealed class OcrLanguageService(IWindowsOcrLanguageSource? source = null)
 {
-    private readonly IWindowsOcrLanguageSource _source = source ?? new WindowsOcrLanguageSource();
+    private readonly IWindowsOcrLanguageSource _source = source ?? AiPlatform.CreateOcrLanguageSource();
 
     /// <summary>Installed Windows OCR packs (BCP-47 tags).</summary>
     public IReadOnlyList<string> InstalledTags() => _source.InstalledTags();

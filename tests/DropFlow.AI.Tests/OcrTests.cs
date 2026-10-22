@@ -334,12 +334,21 @@ public class OcrLanguageServiceTests
         Assert.Empty(OcrLanguages.ParseList("auto", out _));
     }
 
+#if WINDOWS
     [Fact]
     public void The_real_windows_source_never_throws_and_returns_bcp47_tags()
     {
         var tags = new WindowsOcrLanguageSource().InstalledTags();
         Assert.All(tags, t => Assert.Matches(@"^[a-z]{2,3}(-[A-Za-z0-9]+)*$", t));
     }
+#else
+    [Fact]
+    public void Without_windows_no_system_ocr_pack_is_reported()
+    {
+        Assert.Empty(new OcrLanguageService().InstalledTags());
+        Assert.False(new OcrLanguageService().IsInstalled("en"));
+    }
+#endif
 
     [OcrFact("en")]
     public void English_is_installed_on_this_machine_as_expected()

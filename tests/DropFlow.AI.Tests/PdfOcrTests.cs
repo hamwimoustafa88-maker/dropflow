@@ -6,9 +6,13 @@ using Xunit;
 
 namespace DropFlow.AI.Tests;
 
-/// <summary>The PDF page renderer built into Windows, run for real on generated PDFs.</summary>
-public class WindowsPdfPageRasterizerTests
+/// <summary>What every page renderer must do, run for real on generated PDFs (Windows' own renderer and PDFium).</summary>
+public abstract class PageRasterizerContract
 {
+    protected abstract IPageRasterizer Create();
+
+    protected abstract int MaxSide { get; }
+
     [Fact]
     public async Task Renders_every_page_to_a_png_at_the_requested_dpi()
     {
@@ -17,7 +21,7 @@ public class WindowsPdfPageRasterizerTests
         var outDir = dir.Combine("pages");
 
         var progress = new List<double>();
-        var files = await new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, outDir, 150, new SyncProgress(progress.Add), default);
+        var files = await Create().RenderPagesAsync(pdf, outDir, 150, new SyncProgress(progress.Add), default);
 
         Assert.Equal([Path.Combine(outDir, "page-0001.png"), Path.Combine(outDir, "page-0002.png")], files);
         Assert.Equal([0.5, 1.0], progress);
@@ -35,7 +39,7 @@ public class WindowsPdfPageRasterizerTests
     {
         using var dir = new TempDir();
         var pdf = Samples.Pdf(dir.Combine("one.pdf"), pages: 1);
-        var files = await new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, dir.Combine("p"), 100, null, default);
+        var files = await Create().RenderPagesAsync(pdf, dir.Combine("p"), 100, null, default);
 
         using var png = new TextImage.Reader(files[0]);
         var dark = 0;
@@ -50,13 +54,13 @@ public class WindowsPdfPageRasterizerTests
     {
         using var dir = new TempDir();
         var pdf = Samples.Pdf(dir.Combine("p.pdf"));
-        var low = await new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, dir.Combine("low"), 72, null, default);
-        var high = await new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, dir.Combine("high"), 600, null, default);
+        var low = await Create().RenderPagesAsync(pdf, dir.Combine("low"), 72, null, default);
+        var high = await Create().RenderPagesAsync(pdf, dir.Combine("high"), 600, null, default);
         using var a = new TextImage.Reader(low[0]);
         using var b = new TextImage.Reader(high[0]);
         Assert.Equal(612, a.Width);
-        Assert.True(b.Height <= WindowsPdfPageRasterizer.MaxPixelsPerSide);
-        Assert.InRange(b.Height, 6000, WindowsPdfPageRasterizer.MaxPixelsPerSide);   // 792/72*600 = 6600, under the cap
+        Assert.True(b.Height <= MaxSide);
+        Assert.InRange(b.Height, 6000, MaxSide);   // 792/72*600 = 6600, under the cap
     }
 
     [Fact]
@@ -67,7 +71,7 @@ public class WindowsPdfPageRasterizerTests
         Directory.CreateDirectory(folder);
         var pdf = Samples.Pdf(Path.Combine(folder, "عقد الإيجار.pdf"));
 
-        var files = await new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, dir.Combine("out"), 72, null, default);
+        var files = await Create().RenderPagesAsync(pdf, dir.Combine("out"), 72, null, default);
         Assert.Single(files);
         Assert.True(new FileInfo(files[0]).Length > 1000);
     }
@@ -78,7 +82,7 @@ public class WindowsPdfPageRasterizerTests
         using var dir = new TempDir();
         var junk = dir.WriteText("junk.pdf", "%PDF-1.4\nthis is not really a pdf\n");
         var empty = dir.WriteText("empty.pdf", "");
-        var r = new WindowsPdfPageRasterizer();
+        var r = Create();
         await Assert.ThrowsAsync<PdfRenderException>(() => r.RenderPagesAsync(junk, dir.Combine("a"), 72, null, default));
         await Assert.ThrowsAsync<PdfRenderException>(() => r.RenderPagesAsync(empty, dir.Combine("b"), 72, null, default));
         await Assert.ThrowsAsync<PdfRenderException>(() => r.RenderPagesAsync(dir.Combine("missing.pdf"), dir.Combine("c"), 72, null, default));
@@ -93,9 +97,59 @@ public class WindowsPdfPageRasterizerTests
         var progress = new SyncProgress(p => { if (p > 0) cts.Cancel(); });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new WindowsPdfPageRasterizer().RenderPagesAsync(pdf, dir.Combine("out"), 72, progress, cts.Token));
+            Create().RenderPagesAsync(pdf, dir.Combine("out"), 72, progress, cts.Token));
         Assert.True(Directory.GetFiles(dir.Combine("out")).Length < 6);
     }
+
+    protected sealed class SyncProgress(Action<double> onReport) : IProgress<double>
+    {
+        public void Report(double value) => onReport(value);
+    }
+}
+
+/// <summary>PDFium (PDFtoImage): the default on macOS and Linux.</summary>
+public class PdfiumPageRasterizerTests : PageRasterizerContract
+{
+    protected override IPageRasterizer Create() => new PdfiumPageRasterizer();
+
+    protected override int MaxSide => PdfiumPageRasterizer.MaxPixelsPerSide;
+
+    [EngineFact(EngineId.Qpdf)]
+    public async Task A_password_protected_pdf_raises_the_render_exception()
+    {
+        using var dir = new TempDir();
+        var plain = Samples.Pdf(dir.Combine("plain.pdf"));
+        var locked = dir.Combine("locked.pdf");
+        var qpdf = DropFlow.TestSupport.Engines.Locator.Locate(EngineId.Qpdf)!;
+        var run = await DropFlow.Engines.Common.ProcessRunner.RunAsync(qpdf, ["--encrypt", "user-pw", "owner-pw", "256", "--", plain, locked]);
+        Assert.True(run.Success, run.LastMessage);
+
+        var ex = await Assert.ThrowsAsync<PdfRenderException>(() => Create().RenderPagesAsync(locked, dir.Combine("out"), 72, null, default));
+        Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Pixel_size_follows_the_dpi()
+    {
+        Assert.Equal((1275, 1650), PdfiumPageRasterizer.PixelSize(612, 792, 150));
+        Assert.Equal((5100, 6600), PdfiumPageRasterizer.PixelSize(612, 792, 600));   // under the cap
+    }
+
+    [Fact]
+    public void A_huge_page_is_capped_on_its_longest_side()
+    {
+        // A0 (2384 x 3370 pt) at 300 dpi would be 9933 x 14042 px
+        Assert.Equal((6367, PdfiumPageRasterizer.MaxPixelsPerSide), PdfiumPageRasterizer.PixelSize(2384, 3370, 300));
+    }
+}
+
+#if WINDOWS
+/// <summary>The PDF page renderer built into Windows (Windows.Data.Pdf): the default on Windows.</summary>
+public class WindowsPdfPageRasterizerTests : PageRasterizerContract
+{
+    protected override IPageRasterizer Create() => new WindowsPdfPageRasterizer();
+
+    protected override int MaxSide => WindowsPdfPageRasterizer.MaxPixelsPerSide;
 
     [OcrFact("en")]
     public async Task A_rendered_page_can_be_read_back_by_windows_ocr()
@@ -112,12 +166,8 @@ public class WindowsPdfPageRasterizerTests
             Assert.Contains("Invoice", result.Text, StringComparison.OrdinalIgnoreCase);
         }
     }
-
-    private sealed class SyncProgress(Action<double> onReport) : IProgress<double>
-    {
-        public void Report(double value) => onReport(value);
-    }
 }
+#endif
 
 public class PdfOcrConverterTests
 {
@@ -184,8 +234,10 @@ public class PdfOcrConverterTests
     {
         using var dir = new TempDir();
         var fake = new FakeTesseract(dir);
-        File.WriteAllText(fake.ScriptPath, File.ReadAllText(fake.ScriptPath)
-            .Replace(">>\"%~dp0args.log\" echo", "type \"%~1\" > \"%~dp0pages-copy.txt\"\r\n>>\"%~dp0args.log\" echo"));
+        // keep a copy of the page list the converter hands to tesseract (its first argument)
+        File.WriteAllText(fake.ScriptPath, OperatingSystem.IsWindows()
+            ? File.ReadAllText(fake.ScriptPath).Replace(">>\"%~dp0args.log\" echo", "type \"%~1\" > \"%~dp0pages-copy.txt\"\r\n>>\"%~dp0args.log\" echo")
+            : File.ReadAllText(fake.ScriptPath).Replace("echo \"CD=", "cp \"$1\" \"$here/pages-copy.txt\"\necho \"CD="));
         var pdf = Samples.Pdf(dir.Combine("scan.pdf"));
         var rasterizer = new RecordingRasterizer();
 
@@ -207,7 +259,11 @@ public class PdfOcrConverterTests
         var fake = new FakeTesseract(dir);
         var pdf = Samples.Pdf(dir.Combine("scan.pdf"));
         var converter = new PdfOcrConverter(fake.Engines, tesseract: new TesseractOcr(fake.Engines));
+#if WINDOWS
         Assert.IsType<WindowsPdfPageRasterizer>(converter.Rasterizer);
+#else
+        Assert.IsType<PdfiumPageRasterizer>(converter.Rasterizer);
+#endif
 
         var custom = new RecordingRasterizer();
         converter.Rasterizer = custom;

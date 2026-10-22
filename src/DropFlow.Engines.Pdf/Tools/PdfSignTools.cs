@@ -262,9 +262,18 @@ internal static class PdfSignTools
         }
     }
 
+    /// <summary>macOS script fonts that ship with the system (Supplemental folder), in order of preference.</summary>
+    private static readonly string[] MacScriptFonts =
+    [
+        "/System/Library/Fonts/Supplemental/Apple Chancery.ttf",
+        "/System/Library/Fonts/Supplemental/Brush Script.ttf",
+        "/System/Library/Fonts/Supplemental/Bradley Hand Bold.ttf",
+    ];
+
     private static string? FindScriptFont()
     {
-        if (!OperatingSystem.IsWindows()) return null;
+        if (OperatingSystem.IsMacOS()) return MacScriptFonts.FirstOrDefault(File.Exists);
+        if (!OperatingSystem.IsWindows()) return null;   // Linux has no common script font: the name is drawn in the regular font
         var folders = new[]
         {
             Environment.GetFolderPath(Environment.SpecialFolder.Fonts),

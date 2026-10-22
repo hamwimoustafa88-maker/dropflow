@@ -95,11 +95,72 @@ public static class WhisperModelChoice
 
     private static string Describe(long bytes) => $"{bytes / (double)Gb:0.#} GB";
 
-    /// <summary>Free physical memory right now (including cached memory Windows will give back). Falls back to 4 GB if the query fails.</summary>
+    /// <summary>
+    /// Free physical memory right now, including cache the system gives back: GlobalMemoryStatusEx on Windows, MemAvailable from
+    /// /proc/meminfo on Linux, free + inactive + speculative pages from vm_stat on macOS. Falls back to half the memory .NET may use
+    /// (or 4 GB) if the query fails.
+    /// </summary>
     public static long GetAvailableRamBytes()
     {
-        var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
-        return GlobalMemoryStatusEx(ref status) ? (long)status.AvailablePhysical : 4 * Gb;
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
+                if (GlobalMemoryStatusEx(ref status)) return (long)status.AvailablePhysical;
+            }
+            else if (OperatingSystem.IsLinux() && ParseMemInfo(File.ReadAllText("/proc/meminfo")) is { } linux)
+            {
+                return linux;
+            }
+            else if (OperatingSystem.IsMacOS() && RunVmStat() is { } output && ParseVmStat(output) is { } mac)
+            {
+                return mac;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // fall through to the estimate
+        }
+        var total = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+        return total > 0 ? total / 2 : 4 * Gb;
+    }
+
+    /// <summary>"MemAvailable:  123456 kB" from Linux's /proc/meminfo, in bytes.</summary>
+    internal static long? ParseMemInfo(string meminfo)
+    {
+        foreach (var line in meminfo.Split('\n'))
+        {
+            if (!line.StartsWith("MemAvailable:", StringComparison.Ordinal)) continue;
+            var parts = line["MemAvailable:".Length..].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 && long.TryParse(parts[0], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var kb) ? kb * 1024 : null;
+        }
+        return null;
+    }
+
+    /// <summary>Free, inactive and speculative pages from macOS's <c>vm_stat</c>, times its page size, in bytes.</summary>
+    internal static long? ParseVmStat(string vmStat)
+    {
+        var page = System.Text.RegularExpressions.Regex.Match(vmStat, @"page size of (\d+) bytes");
+        if (!page.Success) return null;
+        long pageSize = long.Parse(page.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), pages = 0;
+        var found = false;
+        foreach (var name in new[] { "Pages free", "Pages inactive", "Pages speculative" })
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(vmStat, System.Text.RegularExpressions.Regex.Escape(name) + @":\s+(\d+)");
+            if (!m.Success) continue;
+            pages += long.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            found = true;
+        }
+        return found ? pages * pageSize : null;
+    }
+
+    private static string? RunVmStat()
+    {
+        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("vm_stat") { RedirectStandardOutput = true, UseShellExecute = false });
+        if (process is null) return null;
+        var output = process.StandardOutput.ReadToEnd();
+        return process.WaitForExit(3000) && process.ExitCode == 0 ? output : null;
     }
 
     [StructLayout(LayoutKind.Sequential)]

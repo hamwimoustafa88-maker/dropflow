@@ -21,6 +21,13 @@ public static class PdfModule
     public static IReadOnlyList<IConverter> Create(IEngineProvider engines, IHtmlPdfRenderer? htmlRenderer = null) =>
         Create(engines, new ProcessEngineRunner(), htmlRenderer);
 
+    /// <summary>
+    /// The HTML-to-PDF tool (<c>pdf.html-to-pdf</c>) printed by <paramref name="htmlRenderer"/>. On Windows the app registers
+    /// <c>DropFlow.Engines.Web</c>'s tool instead; on macOS and Linux pass a <see cref="ChromiumHtmlPdfRenderer"/> (or a WKWebView
+    /// renderer) here and to <see cref="Create(IEngineProvider, IHtmlPdfRenderer?)"/>.
+    /// </summary>
+    public static IReadOnlyList<IConverter> CreateHtmlTools(IHtmlPdfRenderer htmlRenderer) => [new HtmlToPdfConverter(htmlRenderer)];
+
     /// <summary>Test seam: lets tests replace the external-process layer without installing qpdf or LibreOffice.</summary>
     internal static IReadOnlyList<IConverter> Create(IEngineProvider engines, IEngineRunner runner, IHtmlPdfRenderer? htmlRenderer = null) =>
     [

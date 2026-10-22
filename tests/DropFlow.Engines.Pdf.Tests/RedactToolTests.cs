@@ -175,7 +175,7 @@ public class RedactToolTests
         b.AddPage().Arabic("المبلغ سري للغاية", 500, 200, 28);
         var pdf = b.Save(dir.Combine("arabic.pdf"));
         var before = PixelKit.RenderPage(pdf, 1, 100);
-        var words = Clusters(before);
+        var words = Words(before, 3);
         Assert.Equal(3, words.Count);                                         // three words, left to right: "للغاية", "سري", "المبلغ"
         var bounds = before.InkBounds(128)!.Value;
 
@@ -679,6 +679,26 @@ public class RedactToolTests
     // ---- helpers --------------------------------------------------------------------------------------------------------
 
     /// <summary>Runs of ink columns separated by at least <paramref name="gap"/> empty columns (one run per word of a single line).</summary>
+    /// <summary>
+    /// The ink split into <paramref name="count"/> words at the widest gaps between ink columns. Gaps between letters depend on the font
+    /// (Arial on Windows and macOS, DejaVu Sans on Linux), the space between words is always wider.
+    /// </summary>
+    private static List<(int From, int To)> Words(Gray page, int count)
+    {
+        var runs = Clusters(page, gap: 1);
+        if (runs.Count < count) return runs;
+        var cuts = Enumerable.Range(1, runs.Count - 1).OrderByDescending(i => runs[i].From - runs[i - 1].To).Take(count - 1).Order().ToList();
+        var words = new List<(int From, int To)>();
+        var start = 0;
+        foreach (var cut in cuts)
+        {
+            words.Add((runs[start].From, runs[cut - 1].To));
+            start = cut;
+        }
+        words.Add((runs[start].From, runs[^1].To));
+        return words;
+    }
+
     private static List<(int From, int To)> Clusters(Gray page, int gap = 6)
     {
         var inkColumns = new bool[page.Width];

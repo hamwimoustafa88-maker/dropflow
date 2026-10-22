@@ -122,7 +122,7 @@ public sealed class BackgroundRemovalConverter : IConverter, IDisposable
 }
 
 /// <summary>
-/// <c>img.redact-auto</c>: finds faces (UltraFace, ONNX) and/or printed text (OCR) and covers them. Writes "name (redacted).ext"
+/// <c>img.redact-auto</c>: finds faces (Windows face detection, or the UltraFace ONNX model) and/or printed text (OCR) and covers them. Writes "name (redacted).ext"
 /// and strips EXIF/XMP/IPTC (an embedded thumbnail would otherwise still show the original).
 /// <para>
 /// Options (keys): <c>target</c> (faces | text | both), <c>style</c> (solid | blur), <c>padding</c> (0..50, percent of the box's shorter
@@ -138,20 +138,25 @@ public sealed class RedactAutoConverter : IConverter, IDisposable
     public const string PaddingKey = "padding";
     public const string LanguageKey = "language";
 
-    public const string FaceModelId = "ultraface-rfb-320";
+    public const string FaceModelId = UltraFaceFinder.ModelId;
 
-    private readonly ModelManager _models;
     private readonly OcrService _ocr;
-    private readonly FaceDetector _faces;
+    private readonly IFaceFinder _faces;
     private readonly OnnxSessionCache? _ownedSessions;
 
-    public RedactAutoConverter(ModelManager models, OcrService ocr, OnnxSessionCache? sessions = null)
+    /// <param name="faces">
+    /// Who finds the faces. Null picks the platform default: on Windows the face detection built into Windows (no download) with the
+    /// UltraFace model as fallback; on macOS and Linux the UltraFace model.
+    /// </param>
+    public RedactAutoConverter(ModelManager models, OcrService ocr, OnnxSessionCache? sessions = null, IFaceFinder? faces = null)
     {
-        _models = models;
         _ocr = ocr;
-        _ownedSessions = sessions is null ? new OnnxSessionCache() : null;
-        _faces = new FaceDetector(sessions ?? _ownedSessions!);
+        _ownedSessions = sessions is null && faces is null ? new OnnxSessionCache() : null;
+        _faces = faces ?? AiPlatform.CreateFaceFinder(models, new FaceDetector(sessions ?? _ownedSessions!));
     }
+
+    /// <summary>The face finder this converter uses.</summary>
+    public IFaceFinder Faces => _faces;
 
     /// <summary>Releases the loaded network (when this converter created its own session cache).</summary>
     public void Dispose() => _ownedSessions?.Dispose();
@@ -187,8 +192,8 @@ public sealed class RedactAutoConverter : IConverter, IDisposable
         var padding = Math.Clamp(job.GetDouble(PaddingKey, 10), 0, 50);
 
         // Fail early and loudly: a half-redacted image is worse than none.
-        if (wantFaces && !_models.IsInstalled(FaceModelId))
-            return ConversionResult.Fail(AiFailures.MissingModel(_models, FaceModelId), sw.Elapsed);
+        if (wantFaces && _faces.Unavailable() is { } facesMissing)
+            return ConversionResult.Fail(facesMissing, sw.Elapsed);
 
         string? output = null;
         try
@@ -203,7 +208,7 @@ public sealed class RedactAutoConverter : IConverter, IDisposable
             if (wantFaces)
             {
                 progress.Report(new JobProgress(0.15, "Finding faces"));
-                var faces = await Task.Run(() => _faces.Detect(image, _models.PathOf(FaceModelId), cancellationToken: cancellationToken), cancellationToken).ConfigureAwait(false);
+                var faces = await _faces.FindAsync(image, cancellationToken).ConfigureAwait(false);
                 foreach (var f in faces)
                     if (RedactionRegions.PadAndClamp(new OcrRect(f.X, f.Y, f.Width, f.Height), padding, width, height) is { } r) rects.Add(r);
                 if (faces.Count > 0) found.Add($"{faces.Count} face(s)");

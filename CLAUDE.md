@@ -1,4 +1,4 @@
-﻿# DropFlow
+# DropFlow
 
 An enhanced Windows 10/11 + web counterpart of Tangerine (tangerineformac.com): drag a file, tap a key,
 and a radial wheel appears to convert, process, or act on files 100% locally — no uploads, on desktop or in the browser.
@@ -20,7 +20,7 @@ when a program is missing.
 
 ## Stack
 - Desktop: C# / .NET 10, WPF with DropFlow's own theme (WPF-UI was not adopted), CommunityToolkit.Mvvm, H.NotifyIcon (tray), Velopack (updates)
-- Engines: FFmpeg (GPL, separate bundled program), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig (PDF/A and HEIC to PDF are in-process; Ghostscript is never used), LibreOffice headless (optional),
+- Engines: FFmpeg (GPL, separate bundled program), Magick.NET, qpdf, PDFtoImage (PDFium + SkiaSharp natives for Windows x64/ARM64, macOS, Linux; replaced PDFiumCore), PDFsharp, PdfPig (PDF/A and HEIC to PDF are in-process; Ghostscript is never used), LibreOffice headless (optional),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
 - macOS / Linux desktop: Avalonia 12.1.3 (MIT; Avalonia.Desktop, Avalonia.Themes.Fluent), Objective-C runtime and libX11/XFixes P/Invoke, nfpm + AppImage packaging
@@ -37,10 +37,10 @@ when a program is missing.
 | catalog/build.mjs | Validates the catalog, checks Tangerine parity, regenerates docs/feature-catalog.md |
 | DropFlow.sln | Desktop solution |
 | src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder`, `OutputPathResolver`, settings, history (no UI, no engines) |
-| src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator`, winget-based `EngineInstaller` |
-| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window and `MediaPreview` (stills, waveform, loudness, listening renders) for the editors; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL) |
+| src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator` (Windows/macOS/Linux names and folders, `engines/` and a `.app`'s `Resources/engines`), winget-based `EngineInstaller` (Windows), `NativeLocks.Pdfium`, `FontFiles` |
+| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL), has `SystemFontResolver` (PDFsharp fonts off Windows), `ChromiumHtmlPdfRenderer` (headless Chrome/Edge HTML→PDF off Windows) and the portable `HtmlToPdfConverter` |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
-| src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, `ModelManager` (resumable, SHA-256 verified; downloads only after the app asks the user) (net10.0-windows10.0.19041.0) |
+| src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, `ModelManager` (resumable, SHA-256 verified; downloads only after the app asks the user). Multi-targets `net10.0-windows10.0.19041.0` (`Platform/Windows`: Windows OCR, Windows.Data.Pdf, Windows face detection) and `net10.0` (`Platform/Unix`: Tesseract, PDFium pages, UltraFace) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
 | src/DropFlow.Overlay | `WheelWindow` (non-activating topmost OLE drop target), `WheelControl`/`WheelGeometry`, option form, floating shelf |
 | src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker. `Views/Editors/Media`: dedicated media editors (`MediaEditors` = `IOptionsEditor`; `MediaSession` player, `MediaTimeline`) |
@@ -49,7 +49,7 @@ when a program is missing.
 | src/DropFlow.Desktop | macOS + Linux app (Avalonia 12, `dropflow-desktop`): `IDragWatcher` (macOS drag pasteboard, X11 XFixes, GNOME Shell extension socket, none) over a pure `DragDecider`, Avalonia wheel/options/settings/history/shelf/welcome/toast, tray, Unix-socket single instance, `DesktopRunner`. Links `WheelGeometry`/`WheelItem`/`OptionForm`/`Shelf` from Overlay. docs/desktop-mac-linux.md |
 | linux/gnome-extension | DropFlow's GNOME Shell 45–49 extension (`dropflow@scouthub.dev`) that reports wheel keys during Wayland drags |
 | installer/macos · installer/linux · installer/unix | `build-macos.sh` (.app + DMG, ad-hoc signed), `build-linux.sh` (nfpm .deb/.rpm + AppImage), `fetch-ffmpeg.sh` (pinned FFmpeg 9.0.2 for mac/Linux) |
-| installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md) |
+| installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md); `build-cross.yml` (tests on Linux x64/arm64, macOS arm64, Windows 11 ARM64) and `build-win-arm64.yml` (reusable: win-arm64 installer on the `win-arm64` channel) |
 | src/DropFlow.* (planned) | Encoder window, Shell — created as their phases start |
 | tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
 | tests/*.Tests | xUnit tests, one project per src project. `DropFlow.App.Tests` is cross-module: catalog conformance of every converter, no overlapping converters, option-label coverage in ar/en, the known-gaps ratchet, Encoder and phone-share windows |
@@ -160,6 +160,13 @@ After every change to the project (code, docs, decisions, dependencies), before 
   build-time statistics turned off. 169 new tests (Windows + Linux Docker); Linux packages built, installed and snapshotted in Docker;
   nothing ran on a Mac and no real drag was tried (docs/status.md). — src/DropFlow.Desktop, tests/DropFlow.Desktop.Tests, linux/,
   installer/{macos,linux,unix}, .github/workflows/build-{macos,linux}.yml, docs/desktop-mac-linux.md, THIRD-PARTY-NOTICES.md
+- 2026-10-22 — Cross-platform libraries (task from the integrator; approved deps: PDFtoImage, ExcelDataReader not needed): Core, Engines.Common/Images/Media/Pdf/Archive
+  and AI now build and pass their tests on Windows and Linux (macOS/ARM64 via the new `build-cross.yml`). Platform layer: AI multi-targets
+  `net10.0-windows10.0.19041.0;net10.0` (`Platform/Windows` vs `Platform/Unix`; Tesseract + PDFium off Windows, Windows face detection
+  by default on Windows with UltraFace as fallback, `IFaceFinder`); `EngineLocator` knows macOS/Linux names, Homebrew, `/usr/bin` and `.app/Contents/Resources/engines`;
+  PDFiumCore replaced by PDFtoImage; `SystemFontResolver`; `ChromiumHtmlPdfRenderer` behind `IHtmlPdfRenderer`; named-pipe single instance fixed on Unix;
+  phone-share test waits bounded (macOS Archive hang not reproduced). Reusable `build-win-arm64.yml` + `fetch-engines.ps1 -Arch arm64` (FFmpeg, qpdf; no ARM64 Tesseract).
+  Counts in docs/status.md. — src/DropFlow.{AI,Engines.Common,Engines.Pdf,Core/App}, tests/**, tools/fetch-engines.ps1, .github/workflows, docs/{macos,status,deferred}.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

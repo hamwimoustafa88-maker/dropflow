@@ -5,6 +5,8 @@ using DropFlow.Engines.Archive.Archives;
 using DropFlow.Engines.Common;
 using DropFlow.TestSupport;
 
+using static DropFlow.TestSupport.TestPaths;
+
 namespace DropFlow.Engines.Archive.Tests;
 
 /// <summary>Direct tests of the pieces the archive pipeline is built from.</summary>
@@ -145,11 +147,11 @@ public class SinkTests
     [Fact]
     public void Output_naming_drops_the_double_extension()
     {
-        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(@"C:\x\photos.tar.gz")));
-        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(@"C:\x\photos.tgz")));
-        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(@"C:\x\photos.zip")));
-        Assert.Equal("my.data.tmp", Path.GetFileName(OutputNaming.BaseOf(@"C:\x\my.data.zip")));
-        Assert.Equal("report.txt.tmp", Path.GetFileName(OutputNaming.BaseOf(@"C:\x\report.txt.gz")));
+        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(P(@"C:\x\photos.tar.gz"))));
+        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(P(@"C:\x\photos.tgz"))));
+        Assert.Equal("photos.tmp", Path.GetFileName(OutputNaming.BaseOf(P(@"C:\x\photos.zip"))));
+        Assert.Equal("my.data.tmp", Path.GetFileName(OutputNaming.BaseOf(P(@"C:\x\my.data.zip"))));
+        Assert.Equal("report.txt.tmp", Path.GetFileName(OutputNaming.BaseOf(P(@"C:\x\report.txt.gz"))));
     }
 
     [Fact]

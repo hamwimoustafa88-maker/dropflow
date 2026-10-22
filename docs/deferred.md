@@ -1,8 +1,8 @@
-﻿# Deferred work — what is postponed, why, and how to resume
+# Deferred work — what is postponed, why, and how to resume
 
 Everything that can be built and verified on the development machine has been. What is listed here is **postponed on purpose**:
 it needs a decision, an account, a download the owner has not approved, hardware, or a real person at the keyboard.
-For what is verified and what is not, see [status.md](status.md). Last updated: 2026-10-21.
+For what is verified and what is not, see [status.md](status.md). Last updated: 2026-10-22.
 
 ## A. Needs the owner (decision, account or consent)
 
@@ -38,9 +38,10 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 | C5 | `Availability.NeedsModel` on `IConverter` | Today the consent dialog appears after the options dialog (ADR-0006). | Add the member and let the runner ask before the options. |
 | C6 | Option kinds: file picker (sign picture path), multi-line text (redact regions/terms), multi-select (protect permissions) | The generic options form only has text, number, choice, bool, password, folder, range. | Add the kinds to `ToolOptionKind` and the dialog. |
 | C7 | Localised result notes | Notes returned by converters (for example the redact summary) are English and long. | Return resource keys with arguments instead of text. |
-| C8 | Windows ARM64 | PDFiumCore ships win-x64/x86 natives only. | Release win-x64 first. |
+| C8 | Windows ARM64 | **Built, unverified on hardware (2026-10-22):** PDFiumCore was replaced by PDFtoImage (PDFium for win-arm64 too); `.github/workflows/build-win-arm64.yml` publishes win-arm64 self-contained, bundles ARM64 FFmpeg (BtbN) and qpdf, and packs `DropFlow-win-arm64-Setup.exe` on the `win-arm64` channel. Tesseract has no Windows ARM64 build (left out unless the x64 build is bundled for emulation). | Wire the workflow into `release.yml`, run `build-cross.yml` (includes `windows-11-arm`), then install on a real ARM64 PC. Refresh the BtbN FFmpeg pin when that dated autobuild is pruned. |
 | C9 | Catalog `platforms` for web | **Done:** the flag now lists exactly the 20 tools the browser implements. | |
 | C10 | Compare PDFs on files whose owner flags forbid copying text | Refused today (as the other text tools do), although the pixel diff alone would work. | Skip the word summary instead of refusing. |
+| C11 | macOS / Linux packages of the app | The shared libraries and CLI logic now run there (Linux verified in a container; macOS via `build-cross.yml`), but no macOS `.app`/Linux package bundles FFmpeg, qpdf or Tesseract yet: they are found in Homebrew or the distribution (`EngineLocator`). HTML to PDF needs an installed Chrome/Chromium/Edge (or a WKWebView renderer from the Mac app). | Bundle engines under `Contents/Resources/engines` (macOS) or `engines/` (Linux): the locator already looks there. |
 
 ## Links and exact steps (keyed to the items above)
 

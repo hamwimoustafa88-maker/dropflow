@@ -345,7 +345,9 @@ public class OcrServiceTests
     {
         using var dir = new TempDir();
         var fake = new FakeTesseract(dir, "");
-        File.WriteAllText(fake.ScriptPath, "@echo off\r\nif \"%~1\"==\"--list-langs\" (echo eng& exit /b 0)\r\necho Error opening data file 1>&2\r\nexit /b 1\r\n");
+        File.WriteAllText(fake.ScriptPath, OperatingSystem.IsWindows()
+            ? "@echo off\r\nif \"%~1\"==\"--list-langs\" (echo eng& exit /b 0)\r\necho Error opening data file 1>&2\r\nexit /b 1\r\n"
+            : "#!/bin/sh\nif [ \"$1\" = \"--list-langs\" ]; then echo eng; exit 0; fi\necho 'Error opening data file' >&2\nexit 1\n");
         var png = Samples.Png(dir.Combine("scan.png"));
         var svc = new OcrService(fake.Engines, new OcrLanguageService(new FakeLanguages()));
 
@@ -356,6 +358,36 @@ public class OcrServiceTests
     }
 
     // ---- real Tesseract (skipped unless installed) ---------------------------------------------------------------------
+
+    [EngineFact(EngineId.Tesseract)]
+    public async Task Real_tesseract_reads_arabic_text()
+    {
+        using var dir = new TempDir();
+        var image = TextImage.Render(dir.Combine("ar.png"), "مرحبا بالعالم", fontSize: 72, width: 900, height: 200, rtl: true);
+        var svc = new OcrService(DropFlow.TestSupport.Engines.Locator, new OcrLanguageService(new FakeLanguages()));
+        var plan = await svc.PlanAsync(new OcrRequest("ar", OcrEnginePreference.Tesseract), default);
+        if (plan.Plan is null) { Assert.Contains("ara", plan.Error); return; }   // Tesseract without Arabic data says what is missing
+
+        var result = await svc.RecognizeAsync(image.Path, new OcrRequest("ar", OcrEnginePreference.Tesseract), default);
+
+        Assert.Equal("tesseract", result.Engine);
+        Assert.Contains("مرحبا", result.Text);
+    }
+
+#if !WINDOWS
+    [EngineFact(EngineId.Tesseract)]
+    public async Task Without_windows_auto_ocr_plans_tesseract_with_arabic_and_english()
+    {
+        var svc = new OcrService(DropFlow.TestSupport.Engines.Locator);   // the platform defaults: no system OCR on this OS
+        var caps = await svc.GetCapabilitiesAsync(default);
+        var plan = await svc.PlanAsync(new OcrRequest("auto"), default);
+
+        Assert.False(caps.WindowsOcrExists);
+        Assert.Empty(caps.WindowsTags);
+        Assert.Equal(OcrEngineKind.Tesseract, plan.Plan!.Engine);
+        Assert.Equal(new[] { "ara", "eng" }.Where(caps.TesseractLanguages.Contains), plan.Plan.TesseractLanguages);
+    }
+#endif
 
     [EngineFact(EngineId.Tesseract)]
     public async Task Real_tesseract_reads_rendered_english_text_with_rectangles()

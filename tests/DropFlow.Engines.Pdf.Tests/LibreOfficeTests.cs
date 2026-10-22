@@ -131,15 +131,17 @@ public class LibreOfficeArgumentTests
     {
         var plan = LibreOfficePlanner.Plan("doc", "docx")!;
 
-        var args = LibreOfficeArguments.Build(@"C:\work\in\input.doc", @"C:\work\out", @"C:\work\profile", plan);
+        var work = OperatingSystem.IsWindows() ? @"C:\work" : "/work";
+        string input = Path.Combine(work, "in", "input.doc"), output = Path.Combine(work, "out");
+        var args = LibreOfficeArguments.Build(input, output, Path.Combine(work, "profile"), plan);
 
         Assert.Equal(
         [
             "--headless", "--invisible", "--nologo", "--norestore", "--nolockcheck", "--nodefault",
-            "-env:UserInstallation=file:///C:/work/profile",
+            OperatingSystem.IsWindows() ? "-env:UserInstallation=file:///C:/work/profile" : "-env:UserInstallation=file:///work/profile",
             "--convert-to", "docx:MS Word 2007 XML",
-            "--outdir", @"C:\work\out",
-            @"C:\work\in\input.doc",
+            "--outdir", output,
+            input,
         ], args);
     }
 
@@ -157,13 +159,14 @@ public class LibreOfficeArgumentTests
     [Fact]
     public void The_profile_url_handles_spaces_and_arabic_folder_names()
     {
-        var url = LibreOfficeArguments.ProfileUrl(@"C:\Users\مستخدم\my files\profile");
+        var folder = OperatingSystem.IsWindows() ? @"C:\Users\مستخدم\my files\profile" : "/home/مستخدم/my files/profile";
+        var url = LibreOfficeArguments.ProfileUrl(folder);
 
-        Assert.StartsWith("file:///C:/Users/", url);
+        Assert.StartsWith(OperatingSystem.IsWindows() ? "file:///C:/Users/" : "file:///home/", url);
         Assert.Contains("my%20files", url);
         Assert.DoesNotContain(" ", url);
         Assert.DoesNotContain("\\", url);
-        Assert.Equal(@"C:\Users\مستخدم\my files\profile", new Uri(url).LocalPath);
+        Assert.Equal(folder, new Uri(url).LocalPath);
     }
 
     [Fact]

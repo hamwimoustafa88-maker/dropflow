@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Windows tests the Windows build of the engine (Windows OCR, Windows.Data.Pdf, Windows face detection); macOS and Linux test the
+       portable build. Code that only exists in one of them is behind #if WINDOWS (defined for the -windows target framework). -->
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="'$(OS)' == 'Windows_NT'">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="'$(OS)' != 'Windows_NT'">net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -9,9 +12,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+  </ItemGroup>
+
+  <!-- GDI+ test images (Windows only; elsewhere TextImage.Magick.cs draws with Magick.NET). -->
+  <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
+    <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>

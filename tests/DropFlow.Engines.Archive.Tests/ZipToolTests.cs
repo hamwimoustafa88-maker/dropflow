@@ -157,15 +157,16 @@ public class ZipToolTests
         var project = Kit.NewDir(temp, "project");
         File.WriteAllText(Path.Combine(project, "public.txt"), "public");
 
-        // A junction needs no special privilege; fall back to a symlink if mklink is somehow unavailable.
+        // On Windows a junction needs no special privilege; fall back to a symlink if mklink is somehow unavailable.
+        // macOS and Linux create symlinks freely.
         var link = Path.Combine(project, "link");
-        var made = await Engines.Common.ProcessRunner.RunAsync("cmd.exe", ["/c", "mklink", "/J", link, secret]);
-        if (!made.Success)
+        var made = OperatingSystem.IsWindows() ? await Engines.Common.ProcessRunner.RunAsync("cmd.exe", ["/c", "mklink", "/J", link, secret]) : null;
+        if (made is not { Success: true })
         {
             try { Directory.CreateSymbolicLink(link, secret); }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
-                Assert.Fail("Could not create a junction or a symlink to test with: " + made.StdOut + made.StdErr);
+                Assert.Fail("Could not create a junction or a symlink to test with: " + made?.StdOut + made?.StdErr);
             }
         }
         Assert.NotNull(new DirectoryInfo(link).LinkTarget);

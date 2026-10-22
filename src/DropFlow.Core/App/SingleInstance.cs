@@ -62,35 +62,65 @@ public sealed class SingleInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Serves one launch at a time. The next server instance is created as soon as a client connects, before the current one is read
+    /// and closed: on macOS and Linux a named pipe is a Unix domain socket whose listener closes with the last instance, so closing first
+    /// would drop launches that connected in the meantime (on Windows the waiting instance simply accepts the next launch sooner).
+    /// </summary>
     private async Task ServeAsync(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        NamedPipeServerStream? server = null;
+        try
         {
-            try
+            while (!ct.IsCancellationRequested)
             {
-                await using var server = new NamedPipeServerStream(_pipeName, PipeDirection.In, 4, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-                await server.WaitForConnectionAsync(ct).ConfigureAwait(false);
+                server ??= CreateServer();
+                try
+                {
+                    await server.WaitForConnectionAsync(ct).ConfigureAwait(false);
+                }
+                catch (IOException)
+                {
+                    await server.DisposeAsync().ConfigureAwait(false);
+                    server = null;
+                    continue;
+                }
 
-                var header = new byte[4];
-                await server.ReadExactlyAsync(header, ct).ConfigureAwait(false);
-                var length = BitConverter.ToInt32(header);
-                if (length is < 0 or > 1_000_000) continue;          // ignore garbage, keep serving
+                var connected = server;
+                server = CreateServer();
+                await using (connected.ConfigureAwait(false))
+                {
+                    try
+                    {
+                        var header = new byte[4];
+                        await connected.ReadExactlyAsync(header, ct).ConfigureAwait(false);
+                        var length = BitConverter.ToInt32(header);
+                        if (length is < 0 or > 1_000_000) continue;          // ignore garbage, keep serving
 
-                var body = new byte[length];
-                await server.ReadExactlyAsync(body, ct).ConfigureAwait(false);
-                var args = JsonSerializer.Deserialize<string[]>(body) ?? [];
-                ArgumentsReceived?.Invoke(args);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-            catch (Exception ex) when (ex is IOException or JsonException or EndOfStreamException)
-            {
-                // a client that disconnected early or sent junk must never stop the server
+                        var body = new byte[length];
+                        await connected.ReadExactlyAsync(body, ct).ConfigureAwait(false);
+                        var args = JsonSerializer.Deserialize<string[]>(body) ?? [];
+                        ArgumentsReceived?.Invoke(args);
+                    }
+                    catch (Exception ex) when (ex is IOException or JsonException or EndOfStreamException)
+                    {
+                        // a client that disconnected early or sent junk must never stop the server
+                    }
+                }
             }
         }
+        catch (OperationCanceledException)
+        {
+            // stopping
+        }
+        finally
+        {
+            if (server is not null) await server.DisposeAsync().ConfigureAwait(false);
+        }
     }
+
+    private NamedPipeServerStream CreateServer() =>
+        new(_pipeName, PipeDirection.In, 4, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
     public void Dispose()
     {

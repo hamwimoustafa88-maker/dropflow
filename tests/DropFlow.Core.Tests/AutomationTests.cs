@@ -4,6 +4,8 @@ using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
 using DropFlow.Core.Registry;
 
+using static DropFlow.Core.Tests.TestPaths;
+
 namespace DropFlow.Core.Tests;
 
 public class RecipeRunnerTests
@@ -173,7 +175,7 @@ public class RecipeStoreTests
 public class WatchFilterTests
 {
     private static WatchRule Rule(string[]? ext = null, bool sub = false, bool enabled = true) =>
-        new("r", @"C:\Downloads", ext ?? ["heic"], "heic-to-jpg", enabled, sub, "DropFlow");
+        new("r", P(@"C:\Downloads"), ext ?? ["heic"], "heic-to-jpg", enabled, sub, "DropFlow");
 
     [Theory]
     [InlineData(@"C:\Downloads\IMG_001.HEIC", true)]
@@ -187,23 +189,23 @@ public class WatchFilterTests
     [InlineData(@"C:\Elsewhere\a.heic", false)]
     [InlineData(@"C:\DownloadsExtra\a.heic", false)]           // prefix-but-different folder
     public void Which_files_a_rule_acts_on(string path, bool expected) =>
-        Assert.Equal(expected, WatchFilter.Matches(Rule(), path));
+        Assert.Equal(expected, WatchFilter.Matches(Rule(), P(path)));
 
     [Fact]
     public void Subfolders_can_be_included_but_the_output_folder_never_is()
     {
         var r = Rule(sub: true);
-        Assert.True(WatchFilter.Matches(r, @"C:\Downloads\sub\a.heic"));
-        Assert.False(WatchFilter.Matches(r, @"C:\Downloads\DropFlow\a.heic"));
-        Assert.False(WatchFilter.Matches(r, @"C:\Downloads\dropflow\deep\a.heic"));      // case-insensitive
+        Assert.True(WatchFilter.Matches(r, P(@"C:\Downloads\sub\a.heic")));
+        Assert.False(WatchFilter.Matches(r, P(@"C:\Downloads\DropFlow\a.heic")));
+        Assert.False(WatchFilter.Matches(r, P(@"C:\Downloads\dropflow\deep\a.heic")));      // case-insensitive
     }
 
     [Fact]
     public void Disabled_rules_and_already_produced_files_are_skipped_and_no_extension_list_means_everything()
     {
-        Assert.False(WatchFilter.Matches(Rule(enabled: false), @"C:\Downloads\a.heic"));
-        Assert.False(WatchFilter.Matches(Rule(), @"C:\Downloads\a.heic", new HashSet<string> { @"C:\Downloads\a.heic" }));
-        Assert.True(WatchFilter.Matches(Rule(ext: []), @"C:\Downloads\anything.xyz"));
+        Assert.False(WatchFilter.Matches(Rule(enabled: false), P(@"C:\Downloads\a.heic")));
+        Assert.False(WatchFilter.Matches(Rule(), P(@"C:\Downloads\a.heic"), new HashSet<string> { P(@"C:\Downloads\a.heic") }));
+        Assert.True(WatchFilter.Matches(Rule(ext: []), P(@"C:\Downloads\anything.xyz")));
     }
 }
 

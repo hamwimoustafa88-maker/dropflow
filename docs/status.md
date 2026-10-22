@@ -1,4 +1,4 @@
-﻿# Status ledger — what is verified and what is not
+# Status ledger — what is verified and what is not
 
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
@@ -32,6 +32,24 @@ On 2026-10-22 the Media suite was run with the bundled FFmpeg essentials first o
 
 Skips are visible in the test output (`[EngineFact]` / `[ModelFact]` / `[WebViewFact]`); they are never silent passes.
 
+## Cross-platform libraries (2026-10-22, platform layer)
+
+Core, Engines.Common/Images/Media/Pdf/Archive and AI build for Windows x64, Windows ARM64, macOS and Linux. **Verified:** Windows 10 x64 (this PC)
+and Linux x64 (`mcr.microsoft.com/dotnet/sdk:10.0`, Ubuntu 24.04, FFmpeg 6.1.1, qpdf 11.9.0, Tesseract 5.3.4 + `ara`, Whisper tiny):
+
+| Project | Windows x64 passed / skipped | Linux x64 passed / skipped |
+|---|---|---|
+| Core | 349 / 0 | 349 / 0 |
+| Engines.Common | 37 / 0 | 37 / 0 |
+| Engines.Images | 74 / 0 | 74 / 0 |
+| Engines.Media | 712 / 0 | 712 / 0 |
+| Engines.Pdf | 733 / 1 (veraPDF) | 728 / 6 (veraPDF, 3 LibreOffice, 2 headless-browser; none installed in the container) |
+| Engines.Archive | 561 / 0 | 543 / 18 (7-Zip/WinRAR programs, 1 rename test that needs a non-root user) |
+| AI | 308 / 3 (3 models not in the default folder) | 289 / 14 (Windows OCR/speech APIs, models) |
+
+**Unverified:** macOS (arm64/x64), Linux arm64, Windows ARM64 (run `.github/workflows/build-cross.yml`); a real headless Chrome print (the
+logic is tested with a fake browser; the real-browser tests skip when none is installed); the win-arm64 installer (`build-win-arm64.yml` was
+never run; its engine pins were downloaded and hash-checked here); Apple Vision / WKWebView (the interfaces `IWindowsOcr` and `IHtmlPdfRenderer` are the plug points).
 ## What the catalog covers
 
 `node catalog/build.mjs`: 428 conversions, 66 tools, 7 actions; every Tangerine tool and format target is covered by the catalog.

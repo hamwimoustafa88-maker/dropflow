@@ -177,3 +177,15 @@ public static class Samples
         return c ^ 0xFFFFFFFFu;
     }
 }
+
+/// <summary>Test data is often written with Windows paths; <see cref="P"/> turns them into paths of the OS the tests run on.</summary>
+public static class TestPaths
+{
+    /// <summary>Unchanged on Windows; elsewhere <c>C:\a\b</c> becomes <c>/C/a/b</c> (the drive letter is a top-level folder).</summary>
+    public static string P(string windowsPath)
+    {
+        if (OperatingSystem.IsWindows()) return windowsPath;
+        var unix = windowsPath.Replace('\\', '/');
+        return unix.Length >= 2 && unix[1] == ':' ? "/" + unix[0] + unix[2..] : unix;
+    }
+}

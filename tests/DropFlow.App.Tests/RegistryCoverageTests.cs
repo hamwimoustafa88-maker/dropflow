@@ -6,6 +6,7 @@ using DropFlow.Core.Catalog;
 using DropFlow.Core.Localization;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Registry;
+using DropFlow.Core.Wheel;
 using DropFlow.Overlay;
 using DropFlow.TestSupport;
 
@@ -112,6 +113,39 @@ public sealed class RegistryCoverageTests : IDisposable
                 else if (converter.EngineFor($"convert:{target}") != EngineId.None) problems.Add($"{input} -> {target}: needs {converter.EngineFor($"convert:{target}")}");
             }
         AssertNone(problems);
+    }
+
+    [Theory]
+    [InlineData("movie.srt", "txt.translate")]
+    [InlineData("captions.vtt", "txt.translate")]
+    [InlineData("notes.txt", "txt.translate")]
+    [InlineData("readme.md", "txt.translate")]
+    [InlineData("page.html", "txt.translate")]
+    [InlineData("sign.png", "img.translate")]
+    [InlineData("photo.jpg", "img.translate")]
+    [InlineData("contract.pdf", "pdf.translate")]
+    public void The_translation_tools_are_on_the_tools_wheel_of_the_files_they_translate(string file, string tool)
+    {
+        var wheel = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "en", new HashSet<string>());
+        var wedge = Assert.Single(wheel.Tools, w => w.Operation == tool);
+        Assert.Equal(WedgeState.Ready, wedge.State);                  // the model is asked for when it is used, nothing has to be installed
+        Assert.True(wedge.NeedsOptions);                              // the direction is chosen first
+
+        var arabic = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "ar", new HashSet<string>());
+        Assert.Equal(Catalog.Tool(tool)!.Ar, Assert.Single(arabic.Tools, w => w.Operation == tool).Label);
+    }
+
+    [Theory]
+    [InlineData("film.ass", "txt.translate")]          // styled subtitles are not handled
+    [InlineData("letter.docx", "txt.translate")]
+    [InlineData("song.mp3", "txt.translate")]
+    [InlineData("clip.mp4", "img.translate")]
+    [InlineData("scan.pdf", "img.translate")]
+    [InlineData("sign.png", "pdf.translate")]
+    public void The_translation_tools_are_not_offered_for_other_files(string file, string tool)
+    {
+        var wheel = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "en", new HashSet<string>());
+        Assert.DoesNotContain(wheel.Tools, w => w.Operation == tool);
     }
 
     [Fact]

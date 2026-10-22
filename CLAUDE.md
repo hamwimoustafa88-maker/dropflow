@@ -22,7 +22,7 @@ when a program is missing.
 - Desktop: C# / .NET 10, WPF with DropFlow's own theme (WPF-UI was not adopted), CommunityToolkit.Mvvm, H.NotifyIcon (tray), Velopack (updates)
 - Engines: FFmpeg (GPL, separate bundled program), Magick.NET, qpdf, PDFtoImage (PDFium + SkiaSharp natives for Windows x64/ARM64, macOS, Linux; replaced PDFiumCore), PDFsharp, PdfPig (PDF/A and HEIC to PDF are in-process; Ghostscript is never used), LibreOffice headless (optional),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
-- Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
+- Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime (background removal, faces, Opus-MT translation) + Microsoft.ML.Tokenizers (SentencePiece for Opus-MT)
 - macOS / Linux desktop: Avalonia 12.1.3 (MIT; Avalonia.Desktop, Avalonia.Themes.Fluent), Objective-C runtime and libX11/XFixes P/Invoke, nfpm + AppImage packaging
 - Web: Next.js + TypeScript + Tailwind + next-intl on Vercel (https://dropflow.scouthub.dev); in-browser pdf-lib, pdf.js, fflate
   (ffmpeg.wasm was removed: GPL)
@@ -40,7 +40,7 @@ when a program is missing.
 | src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator` (Windows/macOS/Linux names and folders, `engines/` and a `.app`'s `Resources/engines`), winget-based `EngineInstaller` (Windows), `NativeLocks.Pdfium`, `FontFiles` |
 | src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL), has `SystemFontResolver` (PDFsharp fonts off Windows), `ChromiumHtmlPdfRenderer` (headless Chrome/Edge HTML→PDF off Windows) and the portable `HtmlToPdfConverter` |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
-| src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, `ModelManager` (resumable, SHA-256 verified; downloads only after the app asks the user). Multi-targets `net10.0-windows10.0.19041.0` (`Platform/Windows`: Windows OCR, Windows.Data.Pdf, Windows face detection) and `net10.0` (`Platform/Unix`: Tesseract, PDFium pages, UltraFace) |
+| src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, English/Arabic translation (`Translation/`: `MarianModel` beam search, `MarianTokenizer`, `TextSegmenter`, format parsers for SRT/VTT/Markdown/HTML/text, `TextOverlayRenderer`; converters `txt.translate`, `img.translate`, `pdf.translate`), `ModelManager` (resumable, SHA-256 verified, single files or multi-file packs; downloads only after the app asks the user). Multi-targets `net10.0-windows10.0.19041.0` (`Platform/Windows`: Windows OCR, Windows.Data.Pdf, Windows face detection) and `net10.0` (`Platform/Unix`: Tesseract, PDFium pages, UltraFace) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
 | src/DropFlow.Overlay | `WheelWindow` (non-activating topmost OLE drop target), `WheelControl`/`WheelGeometry`, option form, floating shelf |
 | src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker. `Views/Editors/Media`: dedicated media editors (`MediaEditors` = `IOptionsEditor`; `MediaSession` player, `MediaTimeline`) |
@@ -112,6 +112,18 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-23 — English <-> Arabic translation, 100 % local (owner request): `txt.translate` (SRT/VTT, TXT, Markdown, HTML; also on the Document wheel),
+  `img.translate` (OCR, then translate; option `overlay` also writes a copy of the picture with the translation drawn over the text) and `pdf.translate`
+  (text layer to .txt/.md; scanned PDFs: run OCR first). Engine: Opus-MT (Helsinki-NLP; Apache-2.0 on the model cards, CC-BY-4.0 upstream, attribution in
+  THIRD-PARTY-NOTICES) from the ONNX exports `Xenova/opus-mt-en-ar` / `-ar-en` pinned to commits: int8 encoder + merged decoder + `source.spm` + `vocab.json`,
+  108 MB per direction, hashes computed from real downloads (NLLB and every cloud API excluded). Own batched beam search with key/value cache (`MarianModel`);
+  tokenizer = the one package the owner approved, Microsoft.ML.Tokenizers 2.0.1 (+ Google.Protobuf), which reads `source.spm` correctly, so no own Unigram.
+  `ModelManager` now installs multi-file models (`ModelInfo.Files`: one id, one consent, per-file SHA-256 and resume); the existing missing-model
+  flow, Settings list and `dropflow models list|download|delete` work for them unchanged. Subtitles keep numbers, timings, tags and line counts; Markdown keeps
+  syntax and code; links, times, dates and amounts are kept; direction `auto` = Arabic-script ratio; text already in the target language is skipped (counted in
+  a note). Overlay: the ImageMagick inside Magick.NET 15 lays out Arabic itself (Raqm), `ArabicShaper` is a tested fallback. Verified with the real models, the
+  real CLI and real files (samples in docs/status.md; ADR-0014); web, macOS/Linux and Android translation deferred (docs/deferred.md C12-C14).
+  — src/DropFlow.AI/Translation/**, Models/*, src/DropFlow.Engines.Pdf/Extraction/PdfTextReader.cs, catalog/tools.json, strings.*.json, tests/DropFlow.AI.Tests/*, docs/*
 - 2026-10-22 — v0.2.0 released (owner: "merge to main, push, run build-cross, then release"): all four `build-cross.yml` jobs (Linux x64/arm64, macOS arm64,
   Windows 11 ARM64) green after fixing what they found — real product bugs: phone-share kept a single-download file reserved until TCP gave up when a
   client left without a reset (new `PhoneShareOptions.StallTimeout`, 60 s, resets the connection and releases the claim; deterministic test fails without
@@ -326,6 +338,5 @@ After every change to the project (code, docs, decisions, dependencies), before 
 - 2026-10-20 — Planning session: re-read the live Tangerine site tab by tab and recorded the parity baseline; adopted
   GPL-3.0-or-later; added iLovePDF-parity PDF suite (Phase 2), Media Studio with Encoder + Whisper (Phase 3), landing
   page with Phase 1, in-browser web app (Phase 6); deferred accounts/payments to Phase 9; drag keys Shift/Ctrl/Alt.
-- 2026-10-19 — Initial concept plan written (docs/archive/first-plan.md), based on tangerineformac.com.
 
 

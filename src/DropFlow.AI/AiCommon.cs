@@ -15,9 +15,12 @@ public static class AiOperations
     public const string PdfOcr = "pdf.ocr";
     public const string RemoveBackground = "img.remove-bg";
     public const string RedactAuto = "img.redact-auto";
+    public const string TextTranslate = "txt.translate";
+    public const string ImageTranslate = "img.translate";
+    public const string PdfTranslate = "pdf.translate";
 
     public static IReadOnlyList<string> All { get; } =
-        [AudioTranscribe, VideoTranscribe, ImageOcr, PdfOcr, RemoveBackground, RedactAuto];
+        [AudioTranscribe, VideoTranscribe, ImageOcr, PdfOcr, RemoveBackground, RedactAuto, TextTranslate, ImageTranslate, PdfTranslate];
 }
 
 /// <summary>Input extensions come from the shared catalog so Supports can never drift from what the wheel offers.</summary>
@@ -42,7 +45,7 @@ public static class AiFailures
     {
         var info = models.Find(modelId);
         var detail = info is null ? "" : $" ({info.DisplayName}, {info.SizeBytes / 1_048_576.0:0.#} MB)";
-        return $"Model '{modelId}' is not installed{detail}. Download it from the model manager first.";
+        return $"Model '{modelId}' is not installed{detail}. Download it from the model manager first (command line: dropflow models download {modelId} --yes).";
     }
 
     private static readonly Regex MissingModelPattern = new(@"Model '(?<id>[^']+)' is not installed", RegexOptions.Compiled);

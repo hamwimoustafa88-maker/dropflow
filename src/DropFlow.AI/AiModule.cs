@@ -2,6 +2,7 @@ using DropFlow.AI.Imaging;
 using DropFlow.AI.Models;
 using DropFlow.AI.Ocr;
 using DropFlow.AI.Speech;
+using DropFlow.AI.Translation;
 using DropFlow.Core.Operations;
 
 namespace DropFlow.AI;
@@ -15,6 +16,7 @@ namespace DropFlow.AI;
 /// <item><c>pdf.ocr</c>: searchable PDF through Tesseract; pages are rendered by an <see cref="IPageRasterizer"/>.</item>
 /// <item><c>img.remove-bg</c>: ONNX segmentation model (u2netp or birefnet-lite from the model manager).</item>
 /// <item><c>img.redact-auto</c>: faces (Windows face detection, else the UltraFace model) and text (OCR) covered with solid boxes or blur.</item>
+/// <item><c>txt.translate</c>, <c>img.translate</c>, <c>pdf.translate</c>: English and Arabic translation with the Opus-MT models (ONNX Runtime, CPU), for text, Markdown, HTML, subtitles, pictures (OCR first) and PDFs with a text layer.</item>
 /// </list>
 /// Nothing here downloads anything. Models are fetched only by <see cref="ModelManager.DownloadAsync"/>, which the app calls after
 /// the user agrees; converters that lack a model fail with "Model 'id' is not installed" (see <see cref="AiFailures.TryParseMissingModel"/>).
@@ -36,6 +38,7 @@ public static class AiModule
     {
         var ocr = new OcrService(engines);
         var sessions = new OnnxSessionCache();
+        var translator = new MarianTextTranslator(models);
         return
         [
             new TranscribeConverter(engines, models),
@@ -43,6 +46,9 @@ public static class AiModule
             new PdfOcrConverter(engines, rasterizer),
             new BackgroundRemovalConverter(models, sessions),
             new RedactAutoConverter(models, ocr, sessions),
+            new TextTranslateConverter(translator, ownsTranslator: true),   // disposes the translator (and the loaded models) with the converters
+            new ImageTranslateConverter(ocr, translator),
+            new PdfTranslateConverter(translator),
         ];
     }
 }

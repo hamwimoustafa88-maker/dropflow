@@ -5,7 +5,15 @@ public enum ModelPurpose
     SpeechToText,
     BackgroundRemoval,
     FaceDetection,
+    Translation,
 }
+
+/// <summary>
+/// One file of a model that consists of several files (a "pack": network halves, vocabulary, tokenizer). Every file is pinned by
+/// size and SHA-256 and lives in the pack's folder under the models folder.
+/// </summary>
+/// <param name="Name">Plain file name inside the pack folder (no sub-folders).</param>
+public sealed record ModelFile(string Name, Uri Url, long SizeBytes, string Sha256);
 
 /// <summary>
 /// One downloadable AI model. Models are never bundled and never fetched implicitly: the user chooses to download one,
@@ -19,13 +27,26 @@ public sealed record ModelInfo
     public required string DisplayName { get; init; }
     public required ModelPurpose Purpose { get; init; }
 
-    /// <summary>File name inside the models folder.</summary>
+    /// <summary>File name inside the models folder; for a pack (see <see cref="Files"/>) the name of the pack's folder.</summary>
     public required string FileName { get; init; }
 
+    /// <summary>Where the file comes from; for a pack the address of its first file (shown to the user as the download host).</summary>
     public required Uri Url { get; init; }
 
-    /// <summary>Exact size in bytes; shown to the user before downloading and used to detect truncated or wrong files.</summary>
+    /// <summary>
+    /// Exact size in bytes; shown to the user before downloading and used to detect truncated or wrong files.
+    /// For a pack it is the total of all its files.
+    /// </summary>
     public required long SizeBytes { get; init; }
+
+    /// <summary>
+    /// Non-empty for a model made of several files (translation models: encoder, decoder, vocabulary, tokenizer). Then
+    /// <see cref="Sha256"/> stays null and every file carries its own hash, <see cref="SizeBytes"/> is their sum and
+    /// <see cref="FileName"/> names the folder that holds them.
+    /// </summary>
+    public IReadOnlyList<ModelFile> Files { get; init; } = [];
+
+    public bool IsPack => Files.Count > 0;
 
     /// <summary>
     /// Lower-case hex SHA-256 of the file. When null the manager refuses to download unless <see cref="AllowUnverified"/> is set,
@@ -43,7 +64,7 @@ public sealed record ModelInfo
 
     public string Description { get; init; } = "";
 
-    public bool IsVerified => Sha256 is not null;
+    public bool IsVerified => IsPack ? Files.All(f => f.Sha256.Length == 64) : Sha256 is not null;
 }
 
 /// <summary>The built-in model list. URLs are pinned to an immutable Hugging Face commit so the pinned SHA-256 stays valid.</summary>
@@ -68,8 +89,53 @@ public static class ModelCatalog
         Description = description,
     };
 
+    // Translation: Opus-MT (Helsinki-NLP, Tatoeba/OPUS data) in the ONNX export of Xenova/transformers.js, int8-quantised encoder and merged decoder
+    // (about 113 MB per direction). Sizes and hashes were computed from real downloads of exactly these revisions on 2026-10-23 (the large files
+    // also match the git-lfs oid Hugging Face reports). The weights are published under Apache-2.0 on the Hugging Face model cards of the
+    // original Helsinki-NLP repositories; the upstream OPUS-MT project describes its models as CC-BY-4.0. Both are permissive; the attribution
+    // in THIRD-PARTY-NOTICES.md satisfies both. NLLB (CC-BY-NC) is deliberately not used.
+    private const string EnArRev = "034a684356c19021a187cda4d7f823298b913921";
+    private const string ArEnRev = "09c7556866400dcc53562ba8d7035119e7d9a2c1";
+
+    private static ModelInfo OpusMt(string pair, string rev, string display, string description,
+        (string Name, string Remote, long Size, string Sha)[] files)
+    {
+        var repo = $"https://huggingface.co/Xenova/opus-mt-{pair}";
+        var list = files.Select(f => new ModelFile(f.Name, new Uri($"{repo}/resolve/{rev}/{f.Remote}"), f.Size, f.Sha)).ToList();
+        return new ModelInfo
+        {
+            Id = "opus-mt-" + pair,
+            DisplayName = display,
+            Purpose = ModelPurpose.Translation,
+            FileName = "opus-mt-" + pair,
+            Url = list[0].Url,
+            SizeBytes = list.Sum(f => f.SizeBytes),
+            Files = list,
+            License = "Apache-2.0",
+            SourcePage = repo,
+            Description = description,
+        };
+    }
+
     public static IReadOnlyList<ModelInfo> Default { get; } =
     [
+        OpusMt("en-ar", EnArRev, "Opus-MT English to Arabic (translation)",
+            "108 MB. Translates English text, subtitles and images into Arabic. Plain and short sentences work best; names and slang may be off.",
+            [
+                ("encoder_model.onnx", "onnx/encoder_model_int8.onnx", 51_600_664, "045dce89bd4b5bd5d8f546b9e3f9b506a9dbae70c551e8744eac67564050ddfd"),
+                ("decoder_model_merged.onnx", "onnx/decoder_model_merged_int8.onnx", 58_878_333, "f2cd3894f105e5859d60cd66ad5f83356a3343e68f60c1997627a6e2d156f549"),
+                ("source.spm", "source.spm", 801_074, "81ac8f4d4ee271f4109eac67560a31f9c2d555463ba5eb95c32c6deee8ae819d"),
+                ("vocab.json", "vocab.json", 2_243_581, "8b74af9e4c1ec122b8d06362db6c38795e10ca2b0156b2110cf08d4716744b76"),
+            ]),
+        OpusMt("ar-en", ArEnRev, "Opus-MT Arabic to English (translation)",
+            "108 MB. Translates Arabic text, subtitles and images into English. Good on everyday and news-style sentences.",
+            [
+                ("encoder_model.onnx", "onnx/encoder_model_int8.onnx", 51_617_048, "c95b80aad377b35481f5c828b984c5a05a08c5dc97767bea6d219eb80f982e3c"),
+                ("decoder_model_merged.onnx", "onnx/decoder_model_merged_int8.onnx", 58_894_845, "e782fb4f915303df4bcbded070eb4fb7cbd2b58103c6d04654e265f6334d4f0e"),
+                ("source.spm", "source.spm", 917_407, "484f7210e5f4466f7e5b99b660717c6ef2a6f90746196daba507795b69dc02a2"),
+                ("vocab.json", "vocab.json", 2_257_246, "87b78c097c331672ca22a522c3ba24c5dc2cdff90495dcb52cf742635439a3a0"),
+            ]),
+
         Whisper("ggml-tiny", "Whisper tiny (multilingual)", 77_691_713,
             "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
             "Fastest, lowest accuracy. Fine for quick drafts in English; weak for Arabic."),

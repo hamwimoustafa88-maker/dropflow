@@ -26,7 +26,9 @@ the repository; planned components are in `docs/plan.md` §3. DropFlow itself is
 | SharpCompress | 0.50.7 | MIT | Reading ZIP/TAR/7z/RAR | Engines.Archive |
 | ZXing.Net | 0.16.11 | Apache-2.0 | Creating and reading QR codes | Engines.Archive |
 | Whisper.net, Whisper.net.Runtime | 1.9.1 | MIT (bundles whisper.cpp, MIT) | Speech to text (CPU runtime; Apple-only Metal runtime rides along unused) | AI |
-| Microsoft.ML.OnnxRuntime | 1.31.0 | MIT | Background removal and face detection | AI |
+| Microsoft.ML.OnnxRuntime | 1.31.0 | MIT | Background removal, face detection and the English/Arabic translation networks (Opus-MT) | AI |
+| Microsoft.ML.Tokenizers | 2.0.1 | MIT | Cuts text into SentencePiece pieces for the translation models (reads their `source.spm`, incl. the NFKC normalisation); added 2026-10-23 with the owner's approval | AI |
+| Google.Protobuf (via Microsoft.ML.Tokenizers) | 3.30.2 | BSD-3-Clause | Reads the SentencePiece model file | AI |
 
 Transitive packages that ride along are MIT or Apache-2.0 (for example Microsoft.Extensions.AI.Abstractions 10.2.0,
 System.Numerics.Tensors 9.0.0, Magick.NET.Core 15.0.0).
@@ -94,8 +96,16 @@ qpdf and Tesseract have no pinned, redistributable macOS build: the Mac app show
 | u2netp (background removal) | Apache-2.0 | `BritishWerewolf/U-2-Netp` |
 | BiRefNet lite (background removal) | MIT | `onnx-community/BiRefNet_lite-ONNX` |
 | UltraFace RFB-320 (face detection) | MIT | `Arm/ultraface-rfb-320-onnx-raspberry` |
+| Opus-MT English to Arabic and Arabic to English (translation; `opus-mt-en-ar`, `opus-mt-ar-en`) | Apache-2.0 on the Hugging Face model cards of `Helsinki-NLP/opus-mt-en-ar` and `-ar-en`; the OPUS-MT / Tatoeba project describes its models as CC-BY-4.0 (attribution below) | ONNX export `Xenova/opus-mt-en-ar` (revision `034a6843`) and `Xenova/opus-mt-ar-en` (revision `09c75568`); the int8-quantised encoder and merged decoder plus `source.spm` and `vocab.json`, about 108 MB per direction, 4 files each pinned by SHA-256 |
 
-RMBG-1.4 and other non-commercial models are deliberately **not** used; a test enforces it.
+**Attribution for the translation models.** The English-Arabic and Arabic-English translation models are the OPUS-MT models of the
+Language Technology Research Group at the University of Helsinki (Helsinki-NLP), trained on the OPUS corpus by Jorg Tiedemann and
+Santhosh Thottingal (OPUS-MT, EAMT 2020; Tatoeba Translation Challenge, 2020). The ONNX conversion is by Joshua Lochner (Xenova,
+Transformers.js). DropFlow runs them unmodified with ONNX Runtime and a SentencePiece tokenizer; nothing is sent anywhere. Translations
+are machine output and can be wrong: check anything important.
+
+RMBG-1.4 and other non-commercial models are deliberately **not** used; a test enforces it. For translation, NLLB (CC-BY-NC) and every
+cloud translation service are excluded for the same reason (licence and privacy); the same test covers it.
 
 ## Windows components used through the OS (not redistributed)
 

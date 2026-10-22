@@ -2,7 +2,7 @@
 
 Everything that can be built and verified on the development machine has been. What is listed here is **postponed on purpose**:
 it needs a decision, an account, a download the owner has not approved, hardware, or a real person at the keyboard.
-For what is verified and what is not, see [status.md](status.md). Last updated: 2026-10-22.
+For what is verified and what is not, see [status.md](status.md). Last updated: 2026-10-23 (translation: C12-C14).
 
 ## A. Needs the owner (decision, account or consent)
 
@@ -43,6 +43,10 @@ For what is verified and what is not, see [status.md](status.md). Last updated: 
 | C10 | Compare PDFs on files whose owner flags forbid copying text | Refused today (as the other text tools do), although the pixel diff alone would work. | Skip the word summary instead of refusing. |
 | C11 | macOS / Linux packages of the app | The shared libraries and CLI logic now run there (Linux verified in a container; macOS via `build-cross.yml`), but no macOS `.app`/Linux package bundles FFmpeg, qpdf or Tesseract yet: they are found in Homebrew or the distribution (`EngineLocator`). HTML to PDF needs an installed Chrome/Chromium/Edge (or a WKWebView renderer from the Mac app). | Bundle engines under `Contents/Resources/engines` (macOS) or `engines/` (Linux): the locator already looks there. |
 
+| C12 | **Web translation** (English <-> Arabic in the browser, `/app`) | Not built on purpose (2026-10-23). The two Opus-MT models are about 108 MB each; the web app would have to download them from a third party (Hugging Face) at run time, which needs the strict `/app` CSP `connect-src` opened beyond `self/blob/data` (today only the link-drop tool may fetch, and only with GET) and a new consent note, and it would run the networks in WASM (onnxruntime-web is already vendored for background removal). | Vendor the same four files per direction at build time like `u2netp` (`web/scripts/vendor.mjs`, SHA-256 pinned from `src/DropFlow.AI/Models/ModelCatalog.cs`), serve them from `/vendor/opus-mt/`, load them in a Web Worker with the vendored `onnxruntime-web` and port `MarianModel.Generate` (beam search with the merged decoder's key/value cache), `MarianTokenizer` (SentencePiece Unigram: needs a JS tokenizer or a small own Unigram implementation; `source.spm` is a protobuf) and `TextSegmenter` to TypeScript. Then add `txt.translate`/`img.translate`/`pdf.translate` to the catalog `platforms` for web, to the web manifest and to the no-upload test. Subtitle and Markdown parsers (`src/DropFlow.AI/Translation/Formats`) are plain string code and port directly. |
+| C13 | **Translation on macOS, Linux and Android** | The translation code (`src/DropFlow.AI/Translation`) is platform-neutral and builds for `net10.0`, but the Avalonia desktop app (`src/DropFlow.Desktop`) does not reference the AI project yet (same as speech, OCR and cut-out), and `img.translate` needs an OCR engine there (Tesseract only). Android has no ONNX/Marian runtime in the app. | macOS/Linux: reference `DropFlow.AI` from `DropFlow.Desktop`, call `AiModule.Create`, reuse the consent flow with `ModelManager`; the overlay already works there as long as ImageMagick lays out Arabic (the Magick.NET build reports `raqm`; `ArabicShaper` is the fallback). Android: ONNX Runtime Mobile plus a Kotlin port of `MarianModel`/`MarianTokenizer` (about 108 MB download per direction, consent first). |
+| C14 | Translation quality work | English to Arabic is the weaker direction (the Helsinki model scores BLEU 14 on the Tatoeba test set; Arabic to English 49). Better English to Arabic models exist (for example `Helsinki-NLP/opus-mt-tc-big-en-ar`, CC-BY-4.0, about 4x larger) but no ONNX export of it is published (checked 2026-10-23: `Xenova/` and `onnx-community/` have none; `Helsinki-NLP/opus-mt-tc-big-en-ar` is PyTorch only). | Export it with Hugging Face Optimum (`optimum-cli export onnx`, then int8-quantise and merge the decoder), host or pin the files, evaluate it against `tests/DropFlow.AI.Tests/RealTranslationTests.cs` and the samples in `docs/status.md`, add it as a third catalogue entry (`opus-mt-tc-big-en-ar`) and offer it as a `quality=best` choice. |
+
 ## Links and exact steps (keyed to the items above)
 
 Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/deferred.md
@@ -54,7 +58,8 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
   https://github.com/qpdf/qpdf/releases · https://www.libreoffice.org/download/download-libreoffice/ . Then `dotnet test DropFlow.sln`.
 - **A3 models and Arabic OCR:** Settings > AI models > Download (shows size, source and licence first). Sources:
   Whisper https://huggingface.co/ggerganov/whisper.cpp · U²-Net https://huggingface.co/BritishWerewolf/U-2-Netp ·
-  BiRefNet-lite https://huggingface.co/onnx-community/BiRefNet_lite-ONNX · UltraFace https://huggingface.co/Arm/ultraface-rfb-320-onnx-raspberry .
+  BiRefNet-lite https://huggingface.co/onnx-community/BiRefNet_lite-ONNX · UltraFace https://huggingface.co/Arm/ultraface-rfb-320-onnx-raspberry ·
+  Opus-MT translation https://huggingface.co/Xenova/opus-mt-en-ar and https://huggingface.co/Xenova/opus-mt-ar-en (`dropflow models download opus-mt-en-ar --yes`).
   Tesseract: `winget install --id UB-Mannheim.TesseractOCR -e` (https://github.com/UB-Mannheim/tesseract/wiki); Arabic data
   `ara.traineddata` from https://github.com/tesseract-ocr/tessdata into Tesseract's `tessdata` folder.
 - **A4 CI:** billing https://github.com/settings/billing · repo visibility https://github.com/hamwimoustafa88-maker/dropflow/settings (Danger Zone) ·
@@ -74,5 +79,8 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
 - PDF crop keeps cropped-away content in the file; redact is the privacy tool.
 - "Sign PDF" is a visible signature, not a cryptographic one.
 - Wi-Fi sharing is IPv4 only and listens on every adapter (the token is the protection).
+- Translation is machine translation: names, slang, dialects, idioms and very long sentences can come out wrong; English to Arabic is weaker than Arabic to English (C14). Files are translated sentence by sentence, so context across sentences is lost; Markdown emphasis markers split a sentence into separately translated pieces.
+- `img.translate` overlay paints a patch of the surrounding colour over each paragraph: on photos with textured backgrounds the patch is visible, and a translation much longer than the original shrinks or extends sideways. Unknown scripts and mixed-direction posters are not handled.
+- `pdf.translate` writes text and Markdown only; it does not rebuild the PDF layout, and scanned PDFs must be OCR'd first.
 - `pdf.watermark` and `pdf.page-numbers` misplace on pages whose MediaBox does not start at 0,0 (a PDFsharp quirk; `pdf.sign` compensates).
 

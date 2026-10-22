@@ -5,6 +5,9 @@ Updated by hand whenever a milestone lands. **Verified** means an automated test
 
 Last updated: 2026-10-21 (third pass: bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
+**Android app (`android/`, added 2026-10-22):** builds (debug + signed release), 46 JVM unit tests pass, lint 0 errors;
+it has **not run on any device or emulator yet** (none available). Details and the full unverified list: [android.md](android.md).
+
 ## Test totals (`dotnet test DropFlow.sln`, dev PC with FFmpeg, qpdf, LibreOffice, Tesseract and four AI models present)
 
 | Project | Passed | Skipped |

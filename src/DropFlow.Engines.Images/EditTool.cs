@@ -7,9 +7,24 @@ namespace DropFlow.Engines.Images;
 /// <c>img.edit</c> — photo adjustments in one pass.
 /// Options: <c>brightness</c> -100..100 · <c>contrast</c> -100..100 · <c>saturation</c> 0..200 (100 = unchanged) · <c>sharpen</c> 0..100 ·
 /// <c>blur</c> 0..20 · <c>filter</c> none|grayscale|sepia|invert · <c>rotate</c> 0|90|180|270 · <c>flipH</c> · <c>flipV</c>.
+/// When only turning/mirroring is asked for a JPEG, the picture is not re-encoded: only its EXIF orientation changes (lossless,
+/// see <see cref="JpegExif"/>), and the note <c>note.img.rotatedLossless</c> says so.
 /// </summary>
 internal sealed class EditTool() : ImageTool("img.edit")
 {
+    /// <summary>
+    /// Writes a copy of a JPEG that only declares a new orientation (no re-encode). Returns null when the file is not a JPEG or its EXIF block
+    /// cannot take the tag, in which case the caller turns the pixels instead.
+    /// </summary>
+    internal static string? TryLosslessJpeg(string input, PhotoOrientation change, string suffix, string? outputDirectory)
+    {
+        if (DropFlow.Core.Catalog.ToolCatalog.ExtensionOf(input) != "jpg") return null;
+        var bytes = File.ReadAllBytes(input);
+        var turned = PhotoOrientation.FromExif(JpegExif.ReadOrientation(bytes)).Then(change);
+        if (JpegExif.WithOrientation(bytes, turned.ToExif()) is not { } patched) return null;
+        return ImageIo.SaveBytes(patched, ImageIo.OutputFor(input, "jpg", suffix, outputDirectory));
+    }
+
     public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
     [
         new("brightness", ToolOptionKind.Number, 0d, Min: -100, Max: 100),
@@ -26,8 +41,6 @@ internal sealed class EditTool() : ImageTool("img.edit")
     protected override IReadOnlyList<string> Process(ConversionJob job, string input, CancellationToken ct, out string? note)
     {
         note = null;
-        using var image = ImageIo.Read(input);
-
         var brightness = job.GetDouble("brightness");
         var contrast = job.GetDouble("contrast");
         var saturation = job.GetDouble("saturation", 100);
@@ -44,6 +57,15 @@ internal sealed class EditTool() : ImageTool("img.edit")
             note = "No adjustment chosen.";
             return [];
         }
+
+        var geometryOnly = brightness == 0 && contrast == 0 && saturation == 100 && sharpen == 0 && blur == 0 && filter == "none";
+        if (geometryOnly && TryLosslessJpeg(input, PhotoOrientation.Edit(rotate is 90 or 180 or 270 ? rotate : 0, flipH, flipV), "edited", job.OutputDirectory) is { } lossless)
+        {
+            note = "note.img.rotatedLossless";
+            return [lossless];
+        }
+
+        using var image = ImageIo.Read(input);
 
         if (brightness != 0 || contrast != 0) image.BrightnessContrast(new Percentage(brightness), new Percentage(contrast));
         if (saturation != 100) image.Modulate(new Percentage(100), new Percentage(Math.Clamp(saturation, 0, 200)), new Percentage(100));

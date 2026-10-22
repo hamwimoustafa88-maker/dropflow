@@ -7,7 +7,7 @@ namespace DropFlow.Engines.Images;
 
 /// <summary>
 /// <c>img.background</c> — place the picture on a solid colour, gradient or another image.
-/// Options: <c>background</c> "#rrggbb" | "gradient:#a:#b" | "image:C:\path.jpg" · <c>aspect</c> original|1:1|4:3|3:2|16:9|9:16|4:5 ·
+/// Options: <c>background</c> "#rrggbb" | "gradient:#a:#b[:angle]" | "blur" (the picture itself, blurred) | "image:C:\path.jpg" · <c>aspect</c> original|1:1|4:3|3:2|16:9|9:16|4:5|3:4 ·
 /// <c>padding</c> % of the picture (0-40) · <c>radius</c> % of the shorter side (0-50) · <c>shadow</c> bool.
 /// </summary>
 internal sealed class BackgroundTool() : ImageTool("img.background")
@@ -15,7 +15,7 @@ internal sealed class BackgroundTool() : ImageTool("img.background")
     public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
     [
         new("background", ToolOptionKind.Text, "#ffffff"),
-        new("aspect", ToolOptionKind.Choice, "original", ["original", "1:1", "4:3", "3:2", "16:9", "9:16", "4:5"]),
+        new("aspect", ToolOptionKind.Choice, "original", ["original", "1:1", "4:3", "3:2", "16:9", "9:16", "4:5", "3:4"]),
         new("padding", ToolOptionKind.Number, 8d, Min: 0, Max: 40),
         new("radius", ToolOptionKind.Number, 0d, Min: 0, Max: 50),
         new("shadow", ToolOptionKind.Bool, false),
@@ -40,37 +40,34 @@ internal sealed class BackgroundTool() : ImageTool("img.background")
     {
         note = null;
         using var image = ImageIo.Read(input);
-        var (cw, ch) = CanvasSize(image.Width, image.Height, job.GetDouble("padding", 8), job.GetString("aspect", "original")!);
-
-        using var canvas = MakeBackground(job.GetString("background", "#ffffff")!, cw, ch);
-
-        var radius = Math.Clamp(job.GetDouble("radius"), 0, 50) / 100 * Math.Min(image.Width, image.Height);
-        if (radius > 0) Round(image, radius);
-
-        var x = (int)((cw - image.Width) / 2);
-        var y = (int)((ch - image.Height) / 2);
-
-        if (job.GetBool("shadow"))
-        {
-            using var shadow = new MagickImage(MagickColors.Black, image.Width, image.Height);
-            shadow.Alpha(AlphaAction.Set);
-            shadow.Composite(image, CompositeOperator.CopyAlpha);   // silhouette of the picture
-            shadow.Evaluate(Channels.Alpha, EvaluateOperator.Multiply, 0.45);
-            shadow.Blur(0, Math.Max(4, Math.Min(cw, ch) / 60.0));
-            canvas.Composite(shadow, x + (int)(cw / 120), y + (int)(ch / 70), CompositeOperator.Over);
-        }
-        canvas.Composite(image, x, y, CompositeOperator.Over);
+        using var canvas = BackgroundComposer.Compose(image, job.GetString("background", "#ffffff")!, job.GetString("aspect", "original")!,
+            job.GetDouble("padding", 8), job.GetDouble("radius"), job.GetBool("shadow"));
         return [ImageIo.Save(canvas, ImageIo.OutputFor(input, "png", "background", job.OutputDirectory), "png")];
     }
 
-    private static MagickImage MakeBackground(string spec, uint w, uint h)
+    internal static MagickImage MakeBackground(string spec, uint w, uint h, MagickImage picture)
     {
+        if (spec.Equals("blur", StringComparison.OrdinalIgnoreCase))
+        {
+            // the picture itself, filling the canvas, softly blurred and a little darker (sizes relative, so previews match)
+            var bg = (MagickImage)picture.Clone();
+            bg.Alpha(AlphaAction.Remove);
+            bg.Resize(new MagickGeometry(w, h) { FillArea = true });
+            bg.Crop(new MagickGeometry(w, h), Gravity.Center);
+            bg.ResetPage();
+            bg.Blur(0, Math.Max(2, Math.Min(w, h) / 22.0));
+            bg.Evaluate(Channels.RGB, EvaluateOperator.Multiply, 0.85);
+            return bg;
+        }
         if (spec.StartsWith("gradient:", StringComparison.OrdinalIgnoreCase))
         {
-            var parts = spec.Split(':', 3);
+            var parts = spec.Split(':', 4);
             var a = ImageIo.Color(parts.ElementAtOrDefault(1), "#4338ca");
             var b = ImageIo.Color(parts.ElementAtOrDefault(2), "#0e7490");
-            return new MagickImage($"gradient:{a.ToHexString()}-{b.ToHexString()}", new MagickReadSettings { Width = w, Height = h });
+            var settings = new MagickReadSettings { Width = w, Height = h };
+            if (parts.Length > 3 && double.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var angle))
+                settings.SetDefine("gradient:angle", angle.ToString(CultureInfo.InvariantCulture));
+            return new MagickImage($"gradient:{a.ToHexString()}-{b.ToHexString()}", settings);
         }
         if (spec.StartsWith("image:", StringComparison.OrdinalIgnoreCase))
         {
@@ -91,6 +88,48 @@ internal sealed class BackgroundTool() : ImageTool("img.background")
             .RoundRectangle(0, 0, image.Width - 1, image.Height - 1, radius * 2, radius * 2).Draw(mask);
         image.Alpha(AlphaAction.Set);
         image.Composite(mask, CompositeOperator.DstIn);
+    }
+}
+
+/// <summary>
+/// Puts a picture on a background (used by <c>img.background</c> and by the editor's preview). Every size is relative to the picture,
+/// so a preview built from a small copy looks like the full-size result.
+/// </summary>
+public static class BackgroundComposer
+{
+    /// <param name="background">"#rrggbb", "gradient:#a:#b[:angle]" (0 = left to right, 90 = top to bottom), "blur" (the picture itself, blurred) or "image:path".</param>
+    /// <param name="aspect">original|1:1|4:3|3:2|16:9|9:16|4:5|3:4.</param>
+    /// <param name="padding">% of the picture (0-40).</param>
+    /// <param name="radius">% of the shorter side (0-50).</param>
+    public static MagickImage Compose(MagickImage picture, string background, string aspect, double padding, double radius, bool shadow)
+    {
+        using var image = (MagickImage)picture.Clone();
+        var (cw, ch) = BackgroundTool.CanvasSize(image.Width, image.Height, padding, aspect);
+        var canvas = BackgroundTool.MakeBackground(background, cw, ch, image);
+        ImageIo.EnsureColor(canvas);
+
+        var r = Math.Clamp(radius, 0, 50) / 100 * Math.Min(image.Width, image.Height);
+        if (r > 0) BackgroundTool.Round(image, r);
+
+        var x = (int)((cw - image.Width) / 2);
+        var y = (int)((ch - image.Height) / 2);
+
+        if (shadow)
+        {
+            // the silhouette sits in a larger transparent frame so the blur can spread past the picture's edges
+            var sigma = Math.Max(1, Math.Min(cw, ch) / 60.0);
+            var margin = (int)Math.Ceiling(sigma * 3);
+            using var silhouette = new MagickImage(MagickColors.Black, image.Width, image.Height);
+            silhouette.Alpha(AlphaAction.Set);
+            silhouette.Composite(image, CompositeOperator.CopyAlpha);
+            silhouette.Evaluate(Channels.Alpha, EvaluateOperator.Multiply, 0.45);
+            using var shade = new MagickImage(MagickColors.Transparent, image.Width + 2 * (uint)margin, image.Height + 2 * (uint)margin);
+            shade.Composite(silhouette, margin, margin, CompositeOperator.Over);
+            shade.Blur(0, sigma);
+            canvas.Composite(shade, x - margin + (int)(cw / 120), y - margin + (int)(ch / 70), CompositeOperator.Over);
+        }
+        canvas.Composite(image, x, y, CompositeOperator.Over);
+        return canvas;
     }
 }
 
@@ -137,6 +176,20 @@ internal sealed class RedactTool() : ImageTool("img.redact")
         var style = job.GetString("style", "solid");
         var color = ImageIo.Color(job.GetString("color"), "#000000");
 
+        RedactRenderer.Apply(image, regions, style ?? "solid", color);
+
+        image.Strip();   // no EXIF thumbnail that still shows the covered area
+        var ext = ImageIo.EditedExtension(input);
+        return [ImageIo.Save(image, ImageIo.OutputFor(input, ext, "redacted", job.OutputDirectory), ext, 95)];
+    }
+}
+
+/// <summary>Covers rectangles of a picture (shared by <c>img.redact</c> and the redact editor's preview; sizes are relative to each box).</summary>
+public static class RedactRenderer
+{
+    /// <param name="style">solid | blur | pixelate.</param>
+    public static void Apply(MagickImage image, IEnumerable<(int X, int Y, int W, int H)> regions, string style, IMagickColor<byte> color)
+    {
         foreach (var (rx, ry, rw, rh) in regions)
         {
             var x = Math.Clamp(rx, 0, (int)image.Width - 1);
@@ -172,9 +225,8 @@ internal sealed class RedactTool() : ImageTool("img.redact")
                     break;
             }
         }
-
-        image.Strip();   // no EXIF thumbnail that still shows the covered area
-        var ext = ImageIo.EditedExtension(input);
-        return [ImageIo.Save(image, ImageIo.OutputFor(input, ext, "redacted", job.OutputDirectory), ext, 95)];
     }
+
+    /// <summary>The colour for <paramref name="text"/> ("#rrggbb"), black when empty or invalid.</summary>
+    public static MagickColor ColorOf(string? text) => ImageIo.Color(text, "#000000");
 }

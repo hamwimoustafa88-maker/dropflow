@@ -96,6 +96,9 @@ public sealed class WheelWindow : Window
     /// <summary>Esc or Back in the "+ Add" list.</summary>
     public event EventHandler? AddListBack;
 
+    /// <summary>The wheel has just appeared on screen (the welcome guide ticks its practice step with it).</summary>
+    public event EventHandler? Shown;
+
     /// <summary>
     /// Replaces the wheel with the "+ Add" list and takes focus so the list works with the keyboard. Called from inside an OLE drop,
     /// so activation is deferred until the drop has finished.
@@ -175,6 +178,7 @@ public sealed class WheelWindow : Window
         var (x, y, size, dpi) = WindowNative.ShowTopmostCentered(_hwnd, point, SizeDips);
         IsWheelVisible = true;
         Wheel.PlayOpenAnimation();
+        Shown?.Invoke(this, EventArgs.Empty);
         if (interactive)
         {
             Activate();

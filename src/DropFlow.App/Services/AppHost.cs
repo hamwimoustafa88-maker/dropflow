@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using DropFlow.AI;
 using DropFlow.AI.Models;
 using DropFlow.App.Views;
+using DropFlow.App.Views.Editors;
 using DropFlow.Core.Automation;
 using DropFlow.Core.App;
 using DropFlow.Core.Catalog;
@@ -120,6 +121,7 @@ internal sealed class AppHost : IDisposable
     private readonly WatchStore _watchStore;
     private readonly RecipeStore _recipeStore;
     private readonly ModelDownloadService _modelDownloads;
+    private readonly RedactDetection _redact;
     private readonly HashSet<BatchHandle> _modelRetries = [];
     private WatchService? _watch;
     private readonly RequestBatcher _requests;
@@ -134,6 +136,7 @@ internal sealed class AppHost : IDisposable
     private SettingsWindow? _settingsWindow;
     private HistoryWindow? _historyWindow;
     private OpenLinkWindow? _linkWindow;
+    private WelcomeWindow? _welcomeWindow;
     private UrlDownloader? _links;
     private Task<IReadOnlyList<string>>? _selectionTask;
     private readonly UpdateService _updates = new("https://github.com/hamwimoustafa88-maker/dropflow");
@@ -164,6 +167,7 @@ internal sealed class AppHost : IDisposable
         _recipeStore = new RecipeStore(Path.Combine(Paths.DataDir, "recipes.json"));
         Kit = new UiKit(WheelTheme.FromSystem(), Loc);
         _modelDownloads = new ModelDownloadService(ui, Kit, Models);
+        _redact = new RedactDetection(Models, Engines);
         Disposer = new RecycleBinDisposer();
 
         _requests = new RequestBatcher(_scheduler, files => _ui.BeginInvoke(() => OpenWheelFor(files, null)));
@@ -182,6 +186,8 @@ internal sealed class AppHost : IDisposable
     public HistoryStore History { get; }
     public UiKit Kit { get; }
     public IFileDisposer Disposer { get; }
+
+    /// <summary>The visual editors that replace the generic options form for their tools.</summary>
     public WheelSession Session { get; private set; } = null!;
     public WheelPresenter Presenter { get; private set; } = null!;
     private WheelBuilder Builder => _builder ??= new WheelBuilder(Catalog, Registry, Engines);
@@ -213,6 +219,7 @@ internal sealed class AppHost : IDisposable
         _wheel.ItemContextRequested += (_, index) => Presenter.OnItemContext(index);
         _wheel.AddItemPicked += (_, id) => _ = Session.OnAddPickedAsync(id);
         _wheel.AddListBack += (_, _) => Session.CloseAddList();
+        _wheel.Shown += (_, _) => _welcomeWindow?.MarkWheelOpened();
 
         Queue.Changed += batch => _ui.BeginInvoke(() => OnBatchChanged(batch));
         Queue.BatchCompleted += (batch, result) => _ui.BeginInvoke(() => OnBatchCompleted(batch, result));
@@ -228,7 +235,8 @@ internal sealed class AppHost : IDisposable
 
         if (Settings.ShowFirstRunTips)
         {
-            ShowToast(Loc["firstrun.title"], Loc["firstrun.text"], null, [], TimeSpan.FromSeconds(8));
+            // the guide replaces the old 8-second tip; the toast stays as the fallback when the window cannot open
+            if (!ShowWelcome()) ShowToast(Loc["firstrun.title"], Loc["firstrun.text"], null, [], TimeSpan.FromSeconds(8));
             Update(Settings with { ShowFirstRunTips = false });
         }
     }
@@ -400,8 +408,9 @@ internal sealed class AppHost : IDisposable
                 () => host.Settings.OfferEngineInstalls),
             EngineInfo.ApproxSizeMb,
             op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op,
-            // Dedicated editors (timelines, boxes on the picture) instead of the generic form; more editor families join this list.
+            // Dedicated editors (images, then timelines/boxes for media) instead of the generic form.
             new CompositeOptionsEditor(
+                new Views.Editors.Image.ImageEditors(host.Kit, host._redact),
                 new Views.Editors.Media.MediaEditors(host._ui, host.Kit, host.Engines,
                     msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; })));
     }
@@ -547,6 +556,37 @@ internal sealed class AppHost : IDisposable
             PinnedRows()));
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    /// <summary>The welcome guide (first run and tray). Returns false when it could not be shown.</summary>
+    private bool ShowWelcome()
+    {
+        if (_welcomeWindow is { IsVisible: true }) { _welcomeWindow.Activate(); return true; }
+        string photo;
+        try { photo = PracticePhoto.Ensure(Paths.DataDir); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ImageMagick.MagickException)
+        {
+            FileLog.Error("welcome: practice photo", ex);
+            photo = "";
+        }
+        try
+        {
+            _welcomeWindow = new WelcomeWindow(Kit, new WelcomeContext(photo, Settings.Keys, Settings.Language, SystemIntegration.IsStartupEnabled(),
+                Settings.ClipboardHotkey, Settings.Paused, (language, startup) =>
+                {
+                    try { SystemIntegration.SetStartup(startup, ExePath); }
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { FileLog.Error("welcome: startup", ex); }
+                    Update(Settings with { Language = language });
+                }));
+            _welcomeWindow.Show();
+            _welcomeWindow.Activate();
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            FileLog.Error("welcome window", ex);
+            return false;
+        }
     }
 
     private void ShowHistory()
@@ -807,6 +847,7 @@ internal sealed class AppHost : IDisposable
         menu.Items.Add(Item("tray.shelf", ToggleShelf));
         menu.Items.Add(Item("tray.history", ShowHistory));
         menu.Items.Add(Item("tray.settings", ShowSettings));
+        menu.Items.Add(Item("tray.welcome", () => ShowWelcome()));
         menu.Items.Add(Item("tray.update", () => _ = CheckForUpdatesAsync(interactive: true)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("tray.quit", () => Application.Current.Shutdown()));
@@ -831,6 +872,7 @@ internal sealed class AppHost : IDisposable
         _links?.Dispose();
         foreach (var converter in Registry.Converters.OfType<IDisposable>()) converter.Dispose();
         Models.Dispose();
+        _redact.Dispose();
         _tray?.Dispose();
         FileLog.Info("DropFlow stopped");
     }

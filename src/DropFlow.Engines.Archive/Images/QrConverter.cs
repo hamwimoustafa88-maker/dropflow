@@ -11,8 +11,11 @@ namespace DropFlow.Engines.Archive.Images;
 /// <list type="bullet">
 /// <item><c>read</c> (default for images): decodes every QR code and barcode in the picture into <c>name (qr).txt</c>.
 /// One result is written as plain text. Several are written as blocks "[QR_CODE]" followed by the text, separated by a blank line.</item>
-/// <item><c>create</c>: makes <c>name (qr).png</c> from option <c>text</c> (a URL or any text) or, when empty, from the input
-/// <c>.txt</c> file. Options <c>errorCorrection</c> (L, M default, Q, H), <c>size</c> (pixels, default 512), <c>quietZone</c> (modules, default 4).</item>
+/// <item><c>create</c>: makes <c>name (qr).png</c> and/or <c>name (qr).svg</c> from option <c>text</c> (a URL or any text) or, when empty,
+/// from the input <c>.txt</c> file. Options <c>errorCorrection</c> (L, M default, Q, H, auto = H with a logo else M), <c>size</c> (pixels,
+/// default 512), <c>quietZone</c> (modules, default 4), and the style: <c>modules</c>, <c>eyes</c>, <c>color</c>, <c>color2</c> (gradient end),
+/// <c>eyeColor</c>, <c>background</c> ("transparent" allowed), <c>logo</c> (picture path) and <c>format</c> (png, svg, both).
+/// A plain PNG is drawn by <see cref="QrCodeService"/> exactly as before; anything styled (and every SVG) by <see cref="QrDesigner"/>.</item>
 /// </list>
 /// When <c>mode</c> is missing it is inferred: a .txt input creates, an image reads.
 /// </summary>
@@ -22,13 +25,27 @@ public sealed class QrConverter : IConverter
 
     private static readonly string[] ImageExtensions = ["jpg", "png", "webp", "heic", "tiff", "avif", "bmp", "gif", "svg", "ico"];
 
+    private static readonly string[] ModuleChoices = ["square", "rounded", "dots", "diamond", "fluid", "bars"];
+    private static readonly string[] EyeChoices = ["square", "rounded", "circle", "leaf"];
+    private static readonly string[] FormatChoices = ["png", "svg", "both"];
+
     private static readonly IReadOnlyList<ToolOption> Options =
     [
         new("mode", ToolOptionKind.Choice, "read", ["read", "create"]),
         new("text", ToolOptionKind.Text, ""),
-        new("errorCorrection", ToolOptionKind.Choice, "M", ["L", "M", "Q", "H"]),
+        new("errorCorrection", ToolOptionKind.Choice, "M", ["L", "M", "Q", "H", "auto"]),
         new("size", ToolOptionKind.Number, 512, null, QrCodeService.MinSize, QrCodeService.MaxSize),
         new("quietZone", ToolOptionKind.Number, 4, null, 0, 16),
+        new("modules", ToolOptionKind.Choice, "square", ModuleChoices),
+        new("eyes", ToolOptionKind.Choice, "square", EyeChoices),
+        new("color", ToolOptionKind.Text, "#000000"),
+        new("color2", ToolOptionKind.Text, ""),
+        new("angle", ToolOptionKind.Number, 45d, null, 0, 360),
+        new("eyeColor", ToolOptionKind.Text, ""),
+        new("background", ToolOptionKind.Text, "#ffffff"),
+        new("logo", ToolOptionKind.Text, ""),
+        new("plate", ToolOptionKind.Bool, true),
+        new("format", ToolOptionKind.Choice, "png", FormatChoices),
     ];
 
     public IReadOnlyCollection<string> Operations { get; } = [OperationId];
@@ -108,7 +125,15 @@ public sealed class QrConverter : IConverter
 
         if (string.IsNullOrEmpty(text)) return ConversionResult.Fail("Enter the text or URL to turn into a QR code.");
 
-        var level = Enum.TryParse<QrErrorCorrection>(job.GetString("errorCorrection", "M"), ignoreCase: true, out var parsed) ? parsed : QrErrorCorrection.M;
+        var levelText = (job.GetString("errorCorrection") ?? "M").Trim();
+        QrErrorCorrection? level = null;
+        if (!levelText.Equals("auto", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Enum.TryParse<QrErrorCorrection>(levelText, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                return ConversionResult.Fail($"Unknown error-correction level '{levelText}'. Use L, M, Q, H or auto.");
+            level = parsed;
+        }
+
         int size, quiet;
         try
         {
@@ -120,8 +145,75 @@ public sealed class QrConverter : IConverter
             return ConversionResult.Fail("size and quietZone must be numbers.");
         }
 
-        var png = QrCodeService.CreatePng(text, new QrCreateOptions(level, size, quiet));
-        return ConversionResult.Ok([WriteNew(job, input, "png", png)]);
+        if (!TryChoice(job, "modules", ModuleChoices, out var modules, out var error)
+            || !TryChoice(job, "eyes", EyeChoices, out var eyes, out error)
+            || !TryChoice(job, "format", FormatChoices, out var format, out error))
+            return ConversionResult.Fail(error);
+
+        var logo = Blank(job.GetString("logo"));
+        if (logo is not null && !File.Exists(logo)) return ConversionResult.Fail($"Logo not found: {logo}");
+
+        var style = new QrStyle(
+            Modules: Enum.Parse<QrModuleShape>(modules, ignoreCase: true),
+            Eyes: Enum.Parse<QrEyeShape>(eyes, ignoreCase: true),
+            Foreground: (job.GetString("color") ?? "").Trim() is { Length: > 0 } color ? color : "#000000",
+            Foreground2: Blank(job.GetString("color2")),
+            GradientAngle: job.GetDouble("angle", 45),
+            EyeColor: Blank(job.GetString("eyeColor")),
+            Background: (job.GetString("background") ?? "").Trim() is { Length: > 0 } background ? background : "#ffffff",
+            LogoPath: logo,
+            LogoPlate: job.GetBool("plate", true));
+        var design = new QrDesign(text, style, level, size, quiet);
+
+        // Everything is rendered before anything is written, so a failure leaves no half result behind.
+        var files = new List<(string Extension, byte[] Content)>();
+        string? note = null;
+        try
+        {
+            if (format is "png" or "both")
+            {
+                var plain = style == new QrStyle();
+                var png = plain
+                    ? QrCodeService.CreatePng(text, new QrCreateOptions(QrDesigner.EffectiveLevel(design), size, quiet))
+                    : QrDesigner.RenderPng(design);
+                if (!plain && !QrDesigner.Check(png, text).Scans)
+                    note = "This design may be hard to scan. Try darker colours, a smaller logo or a higher error-correction level.";
+                files.Add(("png", png));
+            }
+            if (format is "svg" or "both") files.Add(("svg", new UTF8Encoding(false).GetBytes(QrDesigner.RenderSvg(design))));
+        }
+        catch (ArgumentException ex)
+        {
+            return ConversionResult.Fail(ex.Message);
+        }
+
+        var outputs = new List<string>();
+        try
+        {
+            foreach (var (extension, content) in files) outputs.Add(WriteNew(job, input, extension, content));
+        }
+        catch
+        {
+            foreach (var written in outputs) TryDelete(written);
+            throw;
+        }
+        return ConversionResult.Ok(outputs, default, note);
+    }
+
+    private static bool TryChoice(ConversionJob job, string key, string[] choices, out string value, out string error)
+    {
+        value = (job.GetString(key) ?? choices[0]).Trim().ToLowerInvariant();
+        if (value.Length == 0) value = choices[0];
+        error = choices.Contains(value) ? "" : $"Unknown {key} '{value}'. Use {string.Join(", ", choices)}.";
+        return error.Length == 0;
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* best effort */ }
     }
 
     private static string WriteNew(ConversionJob job, string input, string extension, byte[] content)

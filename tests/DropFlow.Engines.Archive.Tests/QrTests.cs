@@ -50,7 +50,9 @@ public class QrTests
         var mode = Assert.Single(options, o => o.Key == "mode");
         Assert.Equal(["read", "create"], mode.Choices);
         Assert.Equal("read", mode.Default);
-        Assert.Equal(["L", "M", "Q", "H"], Assert.Single(options, o => o.Key == "errorCorrection").Choices);
+        var level = Assert.Single(options, o => o.Key == "errorCorrection");
+        Assert.Equal(["L", "M", "Q", "H", "auto"], level.Choices);
+        Assert.Equal("M", level.Default);
         Assert.Contains(options, o => o.Key == "text");
         Assert.Contains(options, o => o.Key == "size");
         Assert.Contains(options, o => o.Key == "quietZone");

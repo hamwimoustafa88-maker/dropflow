@@ -120,4 +120,37 @@ public class ModelsCommandTests : IDisposable
         Assert.Contains("Deleted", stdout);
         Assert.False(models.IsInstalled("tiny-test"));
     }
+
+    // ---- the translation models are multi-file packs in the real catalogue ----------------------------------------
+
+    [Fact]
+    public async Task The_translation_models_are_listed_with_their_whole_size_and_nothing_is_downloaded_without_yes()
+    {
+        var requests = 0;
+        using var models = new ModelManager(_dir.Combine("real-models"), httpClient: new HttpClient(new Handler([], () => Interlocked.Increment(ref requests))));
+
+        var list = (await Run(models, "list")).Out;
+        Assert.Contains("opus-mt-en-ar", list);
+        Assert.Contains("opus-mt-ar-en", list);
+        Assert.Contains("Translation", list);
+        Assert.Contains("108 MB", list);                                   // the total of the four files, not of one of them
+        Assert.Contains("Apache-2.0", list);
+
+        var (code, stdout, _) = await Run(models, "download", "opus-mt-ar-en");
+        Assert.Equal(2, code);
+        Assert.Contains("108.4 MB from huggingface.co", stdout);
+        Assert.Contains("Nothing was downloaded", stdout);
+        Assert.Equal(0, requests);
+        Assert.False(models.IsInstalled("opus-mt-ar-en"));
+        Assert.False(Directory.Exists(models.PathOf("opus-mt-ar-en")));
+    }
+
+    [Fact]
+    public async Task Deleting_a_translation_model_that_is_not_installed_says_so()
+    {
+        using var models = new ModelManager(_dir.Combine("real-models"));
+        var (code, stdout, _) = await Run(models, "delete", "opus-mt-en-ar");
+        Assert.Equal(0, code);
+        Assert.Contains("was not installed", stdout);
+    }
 }

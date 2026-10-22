@@ -113,7 +113,7 @@ public class ImageToolsTests
 
         Assert.True(r.Success);
         Assert.Empty(r.Outputs);
-        Assert.Contains("Already optimal", r.Note);
+        Assert.Equal("note.img.alreadySmall", r.Note);   // a resource key: the app shows it in the user's language
     }
 
     [Fact]

@@ -111,6 +111,14 @@ public sealed class WheelControl : FrameworkElement
 
     // ----- input ------------------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// The whole square of the control is one hit target, drawn or not. During an OLE drag WPF re-targets the drag whenever the element under the
+    /// pointer changes; if petals, the gaps between them, the hub and the empty corners alternated with the window background, every crossing would
+    /// be a DragLeave/DragEnter pair and a flicker of the "no drop" cursor. Which wedge is meant is decided by <see cref="WheelGeometry"/>, not by WPF.
+    /// </summary>
+    protected override HitTestResult? HitTestCore(PointHitTestParameters hitTestParameters) =>
+        new Rect(RenderSize).Contains(hitTestParameters.HitPoint) ? new PointHitTestResult(this, hitTestParameters.HitPoint) : null;
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);

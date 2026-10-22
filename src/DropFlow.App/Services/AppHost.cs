@@ -202,7 +202,11 @@ internal sealed class AppHost : IDisposable
             savePins: pins => Update(Settings with { PinnedItems = pins }));
         Presenter.Session = Session;
 
-        _wheel.FilesEntered += (_, files) => Session.OnFilesEntered(files);
+        _wheel.FilesEntered += (_, files) =>
+        {
+            _wheelGotFiles = files.Count > 0;
+            Session.OnFilesEntered(files);
+        };
         _wheel.ItemDropped += (_, e) => _ = Session.OnItemDroppedAsync(e.Files, e.Index);
         _wheel.ItemClicked += (_, index) => _ = Session.OnItemDroppedAsync(_wheel.Files.Count > 0 ? _wheel.Files : Session.Files, index);
         _wheel.DropCancelled += (_, _) => Session.Dismiss();
@@ -238,6 +242,10 @@ internal sealed class AppHost : IDisposable
         _detector.KeyTapped += OnKeyTappedFromHook;
         _detector.DragEnded += OnDragEndedFromHook;
         _detector.DragCancelled += OnDragCancelledFromHook;
+        _detector.TapRejected += OnTapRejectedFromHook;
+        _detector.ConfirmFailed += OnConfirmFailedFromHook;
+        // Only real file drags open the wheel (Settings.RequireFileDrag is the escape hatch); read on every tap, so a settings change applies at once.
+        _detector.ConfirmFileDrag = () => !Settings.RequireFileDrag || _wheelGotFiles || ShellDragProbe.IsFileDragInProgress();
         try
         {
             _hook = new LowLevelInputHook(_detector);
@@ -258,6 +266,9 @@ internal sealed class AppHost : IDisposable
         _detector.KeyTapped -= OnKeyTappedFromHook;
         _detector.DragEnded -= OnDragEndedFromHook;
         _detector.DragCancelled -= OnDragCancelledFromHook;
+        _detector.TapRejected -= OnTapRejectedFromHook;
+        _detector.ConfirmFailed -= OnConfirmFailedFromHook;
+        _detector.ConfirmFileDrag = null;
         _hook?.Dispose();
         _hook = null;
         Session?.Dismiss();
@@ -275,8 +286,29 @@ internal sealed class AppHost : IDisposable
             ApplyExplorerSelectionWhenReady();
         });
 
-    private void OnDragEndedFromHook(ScreenPoint p) => _ui.BeginInvoke(Session.OnDragEnded);
-    private void OnDragCancelledFromHook() => _ui.BeginInvoke(Session.OnDragCancelled);
+    private void OnDragEndedFromHook(ScreenPoint p)
+    {
+        _wheelGotFiles = false;
+        _ui.BeginInvoke(Session.OnDragEnded);
+    }
+
+    private void OnDragCancelledFromHook()
+    {
+        _wheelGotFiles = false;
+        _ui.BeginInvoke(Session.OnDragCancelled);
+    }
+
+    /// <summary>Set when OLE handed the dragged files to the wheel during this drag: proof it is a file drag. Read on the hook thread.</summary>
+    private volatile bool _wheelGotFiles;
+
+    private void OnTapRejectedFromHook(ModifierKey key)
+    {
+        var seen = ShellDragProbe.Describe();
+        _ui.BeginInvoke(() => FileLog.Info($"{key} tap ignored: no file drag in progress ({seen}). If the wheel never opens, turn off \"RequireFileDrag\" in Settings."));
+    }
+
+    private void OnConfirmFailedFromHook(Exception ex) =>
+        _ui.BeginInvoke(() => FileLog.Error("the file-drag check failed, so the tap was allowed", ex));
 
     private static TriggerKey ToTrigger(ModifierKey key) => key switch
     {
@@ -414,7 +446,7 @@ internal sealed class AppHost : IDisposable
         var title = result.Success
             ? Loc.Format("result.done", Loc.Format("result.files", Math.Max(1, result.Outputs.Count)))
             : Loc.Format("result.failed", result.Error ?? "");
-        ShowToast(title, result.Note ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
+        ShowToast(title, NoteText.Localize(result.Note, Loc) ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
     }
 
     private async Task DownloadModelAndRetryAsync(BatchHandle failed, string modelId)
@@ -742,7 +774,7 @@ internal sealed class AppHost : IDisposable
             await _ui.InvokeAsync(() =>
             {
                 History.Add(recipe.Name, files, result);
-                if (result.Success) ShowToast(Loc.Format("watch.done", Path.GetFileName(files[0])), result.Note, null, result.Outputs.Count > 0 ? [(Loc["result.open"], () => Explorer.Reveal(result.Outputs[0]))] : [], TimeSpan.FromSeconds(6));
+                if (result.Success) ShowToast(Loc.Format("watch.done", Path.GetFileName(files[0])), NoteText.Localize(result.Note, Loc), null, result.Outputs.Count > 0 ? [(Loc["result.open"], () => Explorer.Reveal(result.Outputs[0]))] : [], TimeSpan.FromSeconds(6));
                 else FileLog.Error($"watched folder recipe '{recipe.Name}' failed: {result.Error}");
             });
         }

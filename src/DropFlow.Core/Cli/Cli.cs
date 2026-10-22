@@ -35,6 +35,7 @@ public static class CliParser
           dropflow recipe list [--json]
           dropflow recipe run <name> <files...> [--out <folder>] [--json]
           dropflow engines [--json]
+          dropflow doctor [--json]                                          (version, Windows, engines and their versions, encoders, models, WebView2)
           dropflow models list | download <id> [--yes] | delete <id>     (AI models; nothing downloads without --yes)
           dropflow version
 
@@ -154,6 +155,9 @@ public sealed class CliRunner(
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
+    /// <summary>The CLI speaks English; notes that are resource keys are printed in their English wording.</summary>
+    private static readonly Lazy<Localization.JsonLocalizer> English = new(() => Localization.JsonLocalizer.Load("en"));
+
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken ct = default)
     {
         var parsed = CliParser.Parse(args);
@@ -185,7 +189,7 @@ public sealed class CliRunner(
                 var ext = cat.Inputs.FirstOrDefault(i => registry.Supports(Operation.Convert(target), i));
                 if (ext is not null) rows.Add(new { kind = "convert", category = cat.Id, id = Operation.Convert(target), inputs = cat.Inputs.Where(i => registry.Supports(Operation.Convert(target), i)).ToArray() });
             }
-            foreach (var tool in catalog.Tools.Where(t => t.Cat == cat.Id))
+            foreach (var tool in catalog.Tools.Where(t => t.AppliesTo(cat.Id)))
             {
                 var inputs = cat.Inputs.Where(i => registry.Supports(tool.Id, i)).ToArray();
                 if (inputs.Length > 0) rows.Add(new { kind = "tool", category = cat.Id, id = tool.Id, name = tool.En, multi = tool.Multi, inputs });
@@ -266,11 +270,12 @@ public sealed class CliRunner(
             return 1;
         }
 
-        if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(new { success = result.Success, outputs = result.Outputs, error = result.Error, note = result.Note }, Json));
+        var note = Localization.NoteText.Localize(result.Note, English.Value);
+        if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(new { success = result.Success, outputs = result.Outputs, error = result.Error, note }, Json));
         else
         {
             foreach (var o in result.Outputs) await stdout.WriteLineAsync(o);
-            if (result.Note is not null) await stderr.WriteLineAsync(result.Note);
+            if (note is not null) await stderr.WriteLineAsync(note);
             if (!result.Success) await stderr.WriteLineAsync($"Failed: {result.Error}");
         }
         return result.Success ? 0 : 1;

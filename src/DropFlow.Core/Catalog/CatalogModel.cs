@@ -26,9 +26,17 @@ public sealed record CatalogTool(
     bool Multi = false,
     string? Tg = null,
     int? MinFiles = null,
-    int? MaxFiles = null)
+    int? MaxFiles = null,
+    IReadOnlyList<string>? AlsoIn = null)
 {
     public string Name(string language) => language == "ar" ? Ar : En;
+
+    /// <summary>
+    /// True when the tool belongs on the wheel of input category <paramref name="categoryId"/>: its own <see cref="Cat"/>, or one listed in
+    /// <see cref="AlsoIn"/> ("Trim silence" is an audio tool that also works on the sound of a video).
+    /// </summary>
+    public bool AppliesTo(string? categoryId) =>
+        categoryId is not null && (Cat == categoryId || (AlsoIn?.Contains(categoryId) ?? false));
 
     /// <summary>
     /// How many files the tool needs before the wheel offers it. A <see cref="Multi"/> tool (merge, join, collage) defaults to 2;

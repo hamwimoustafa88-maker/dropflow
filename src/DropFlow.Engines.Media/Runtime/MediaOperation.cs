@@ -60,7 +60,7 @@ internal sealed class MediaOperationConverter(MediaOperation operation, MediaSer
             progress.Report(new JobProgress(0));
             var outputs = await operation.ExecuteAsync(ctx).ConfigureAwait(false);
             progress.Report(new JobProgress(1));
-            return ConversionResult.Ok(outputs, Elapsed());
+            return ConversionResult.Ok(outputs, Elapsed(), ctx.Note);
         }
         catch (OperationCanceledException)
         {

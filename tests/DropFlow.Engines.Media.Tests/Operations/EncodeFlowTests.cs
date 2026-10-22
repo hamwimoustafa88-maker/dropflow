@@ -176,8 +176,8 @@ public class EncodeFlowTests
         Assert.Equal(pass2.WorkingDirectory, refine.WorkingDirectory);
         Assert.NotEqual(result.Outputs.Single(), refine.Output);                       // written aside first
         var corrected = int.Parse(refine.After("-b:v")!.TrimEnd('k'));
-        // miss = 1,200,000 - 975,000 = 225,000 bytes less video over 30 s
-        var expected = (firstKbps * 1000.0 * 30 / 8 - 225_000) * 8 / 30 / 1000;
+        // too big: the bitrate is scaled by (target / actual) x 0.95 = (1,000,000 / 1,200,000) x 0.95
+        var expected = firstKbps * (1_000_000.0 / 1_200_000) * 0.95;
         Assert.InRange(corrected, expected - 2, expected + 2);
         Assert.True(corrected < firstKbps);
         Assert.Equal(980_000, new FileInfo(result.Outputs.Single()).Length);           // the better file won
@@ -200,30 +200,55 @@ public class EncodeFlowTests
     }
 
     [Fact]
-    public async Task Corrections_stop_after_two_attempts_and_the_result_is_still_delivered_with_a_note()
+    public async Task A_file_still_too_big_after_three_corrections_is_a_clear_failure_and_is_removed()
     {
         using var h = new MediaHarness();
-        WriteSizes(h, 1_120_000, 1_060_000, 1_020_000);
-        var (result, log) = await Encode(h, h.Video("v.mp4", seconds: 30), TargetOneMb);
-        Assert.True(result.Success, result.Error);
-        Assert.Equal(4, h.Runner.Calls.Count);                                     // pass 1, pass 2, two corrections
-        Assert.Equal(1_020_000, new FileInfo(result.Outputs.Single()).Length);
-        Assert.Contains(log.Reports, r => r.Message?.Contains("above the 1 MB target", StringComparison.Ordinal) == true);
-    }
-
-    [Fact]
-    public async Task A_correction_that_does_not_help_is_discarded()
-    {
-        using var h = new MediaHarness();
-        WriteSizes(h, 1_100_000, 1_400_000);
+        WriteSizes(h, 1_120_000, 1_060_000, 1_040_000, 1_020_000);
         var (result, _) = await Encode(h, h.Video("v.mp4", seconds: 30), TargetOneMb);
-        Assert.True(result.Success, result.Error);
-        Assert.Equal(3, h.Runner.Calls.Count);                                     // no second correction after a worse result
-        Assert.Equal(1_100_000, new FileInfo(result.Outputs.Single()).Length);
+        Assert.False(result.Success);
+        Assert.Equal(5, h.Runner.Calls.Count);                                     // pass 1, pass 2, three corrections
+        Assert.Contains("over the 1 MB target", result.Error);
+        Assert.Contains("3 attempts", result.Error);
+        Assert.DoesNotContain(h.Tree(), p => p.Contains("encoded", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task A_failing_correction_keeps_the_first_result()
+    public async Task Every_correction_of_an_overshoot_lowers_the_bitrate_further()
+    {
+        using var h = new MediaHarness();
+        WriteSizes(h, 1_100_000, 1_400_000, 1_050_000, 980_000);
+        var (result, _) = await Encode(h, h.Video("v.mp4", seconds: 30), TargetOneMb);
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(5, h.Runner.Calls.Count);
+        var rates = h.Runner.Calls.Skip(1).Select(c => int.Parse(c.After("-b:v")!.TrimEnd('k'))).ToList();
+        Assert.True(rates[1] < rates[0] && rates[2] < rates[1] && rates[3] < rates[2], string.Join(", ", rates));
+        // a worse attempt (1.4 MB) never replaces the file; the final one fits
+        Assert.Equal(980_000, new FileInfo(result.Outputs.Single()).Length);
+    }
+
+    [Fact]
+    public async Task A_failing_correction_of_an_undershoot_keeps_the_first_result()
+    {
+        using var h = new MediaHarness();
+        var runs = 0;
+        h.Runner.OnFfmpeg = (call, _, _) =>
+        {
+            if (call.After("-pass") == "1") return Task.FromResult<ProcessResult?>(null);
+            if (++runs == 1)
+            {
+                File.WriteAllBytes(call.Output, new byte[600_000]);
+                return Task.FromResult<ProcessResult?>(new ProcessResult(0, "", "", TimeSpan.Zero, false, false));
+            }
+            return Task.FromResult<ProcessResult?>(FakeToolRunner.Fail("Error while encoding"));
+        };
+        var (result, _) = await Encode(h, h.Video("v.mp4", seconds: 30), TargetOneMb);
+        Assert.True(result.Success, result.Error);                                // 0.6 MB is within the limit
+        Assert.Equal(600_000, new FileInfo(result.Outputs.Single()).Length);
+    }
+
+    [Fact]
+    public async Task A_failing_correction_of_an_overshoot_is_a_failure_because_the_file_would_not_fit()
     {
         using var h = new MediaHarness();
         var runs = 0;
@@ -238,8 +263,9 @@ public class EncodeFlowTests
             return Task.FromResult<ProcessResult?>(FakeToolRunner.Fail("Error while encoding"));
         };
         var (result, _) = await Encode(h, h.Video("v.mp4", seconds: 30), TargetOneMb);
-        Assert.True(result.Success, result.Error);
-        Assert.Equal(1_200_000, new FileInfo(result.Outputs.Single()).Length);
+        Assert.False(result.Success);
+        Assert.Contains("1.2 MB, over the 1 MB target", result.Error);
+        Assert.Empty(result.Outputs);
     }
 
     [Fact]

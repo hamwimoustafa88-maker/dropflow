@@ -93,8 +93,12 @@ public class ModuleTests
                 if (Converters.Any(c => c.Supports(tool, ext))) Assert.Contains(ext, videoIn);
 
         foreach (var tool in Ids.Where(i => i.StartsWith("aud.", StringComparison.Ordinal)))
+        {
+            // A tool the catalog also lists for other categories ("alsoIn") may accept their inputs too, and nothing else.
+            var allowed = audioIn.Concat(Catalog.Tool(tool)?.AlsoIn?.SelectMany(c => Catalog.Category(c)!.Inputs) ?? []).ToHashSet();
             foreach (var ext in every)
-                if (Converters.Any(c => c.Supports(tool, ext))) Assert.Contains(ext, audioIn);
+                if (Converters.Any(c => c.Supports(tool, ext))) Assert.Contains(ext, allowed);
+        }
     }
 
     [Fact]
@@ -103,7 +107,9 @@ public class ModuleTests
         var videoTools = Ids.Where(i => i.StartsWith("vid.", StringComparison.Ordinal)).ToList();
         foreach (var tool in videoTools)
         {
-            foreach (var ext in new[] { "mp4", "mov", "mkv", "webm", "avi", "wmv", "flv", "m4v" })
+            // Lossless rotation lives in the container's display matrix, which AVI, WMV and FLV cannot store.
+            var inputs = tool == "vid.rotate" ? new[] { "mp4", "mov", "mkv", "webm", "m4v" } : ["mp4", "mov", "mkv", "webm", "avi", "wmv", "flv", "m4v"];
+            foreach (var ext in inputs)
                 Assert.True(Converters.Any(c => c.Supports(tool, ext)), $"{tool} .{ext}");
             Assert.DoesNotContain(Converters, c => c.Supports(tool, "gif"));   // gif is an image to the catalog
             Assert.DoesNotContain(Converters, c => c.Supports(tool, "mp3"));
@@ -112,7 +118,8 @@ public class ModuleTests
         {
             foreach (var ext in Catalog.Category("audio")!.Inputs)
                 Assert.True(Converters.Any(c => c.Supports(tool, ext)), $"{tool} .{ext}");
-            Assert.DoesNotContain(Converters, c => c.Supports(tool, "mp4"));
+            var alsoVideo = Catalog.Tool(tool)?.AlsoIn?.Contains("video") == true;
+            Assert.Equal(alsoVideo, Converters.Any(c => c.Supports(tool, "mp4")));
         }
     }
 
@@ -224,7 +231,9 @@ public class ModuleTests
         Assert.Equal(["times", "every"], Keys("vid.snapshot"));
         Assert.Equal(["points", "segment", "reencode"], Keys("vid.split"));
         Assert.Equal(["mode"], Keys("vid.join"));
-        Assert.Equal(["x", "y", "w", "h", "mode", "strength", "color", "start", "end"], Keys("vid.redact"));
+        Assert.Equal(["boxes", "x", "y", "w", "h", "mode", "strength", "color", "start", "end"], Keys("vid.redact"));
+        Assert.Equal(["rotate"], Keys("vid.rotate"));
+        Assert.Equal(["silenceDb", "ends"], Keys("aud.trim-silence"));
         Assert.Equal(["sizeMb", "audioBitrate", "codec", "preset"], Keys("vid.target-size"));
         Assert.Equal(["subtitle", "fontSize", "position"], Keys("vid.burn-subs"));
         Assert.Equal(["bitrate", "format"], Keys("aud.compress"));
@@ -305,6 +314,6 @@ public class ModuleTests
     public void The_module_contains_one_subtitle_converter_and_the_ffmpeg_operations()
     {
         Assert.Single(Converters, c => c is SubtitleConverter);
-        Assert.Equal(22, Converters.Count); // 1 conversion family + 12 video tools + 8 audio tools + subtitles
+        Assert.Equal(24, Converters.Count); // 1 conversion family + 13 video tools + 9 audio tools + subtitles
     }
 }

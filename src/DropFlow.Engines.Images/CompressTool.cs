@@ -7,13 +7,12 @@ namespace DropFlow.Engines.Images;
 /// <c>img.compress</c> — make images smaller while keeping the format.
 /// Options: <c>mode</c> preset|percent|targetKb · <c>preset</c> smallest|balanced|best · <c>percent</c> (size reduction, 5-95) ·
 /// <c>targetKb</c> · <c>maxWidth</c> (0 = keep) · <c>stripMetadata</c>.
-/// Lossy formats search for the best quality that meets the target and then shrink the picture in steps if they must.
-/// If the result would not be smaller, nothing is written and a note says so.
+/// Lossy formats search for the best quality that meets the target and then shrink the picture in steps if they must (<see cref="QualitySearch"/>).
+/// A result that would not be smaller than the original is never kept: nothing is written and the note <c>note.img.alreadySmall</c> says so.
 /// </summary>
 internal sealed class CompressTool() : ImageTool("img.compress")
 {
     private static readonly IReadOnlySet<string> Supported = new HashSet<string> { "jpg", "png", "webp", "heic", "avif", "tiff", "bmp" };
-    private static readonly double[] Scales = [1.0, 0.85, 0.7, 0.55, 0.4];
 
     public override bool Supports(string operation, string inputExtension) =>
         Operations.Contains(operation) && Supported.Contains(inputExtension);
@@ -52,13 +51,14 @@ internal sealed class CompressTool() : ImageTool("img.compress")
 
         var encoded = Encode(image, outExt, mode == "preset" ? PresetQuality(job.GetString("preset")) : null, target, ct);
 
-        if (encoded.Length >= originalSize && ext != "bmp")
+        // Never keep a "compressed" copy that is not smaller than the original (BMP to PNG included).
+        if (encoded.Length >= originalSize)
         {
-            note = "Already optimal — the original was kept (the result would not be smaller).";
+            note = Core.Localization.NoteText.Key("note.img.alreadySmall");
             return [];
         }
         if (target is { } t && encoded.Length > t)
-            note = $"Could not reach the target size; smallest achievable is {encoded.Length / 1024} KB.";
+            note = Core.Localization.NoteText.Key("note.img.targetNotReached", encoded.Length / 1024);
 
         var output = ImageIo.OutputFor(input, outExt, "compressed", job.OutputDirectory);
         return [ImageIo.SaveBytes(encoded, output)];
@@ -93,37 +93,80 @@ internal sealed class CompressTool() : ImageTool("img.compress")
         if (target is null)
             return Render(image, fixedQuality ?? 75u, reduceColors: fixedQuality is 40u);
 
-        byte[]? best = null;
-        foreach (var scale in Scales)
+        // One scaled copy per round, reused by every quality step of that round.
+        MagickImage? scaled = null;
+        var scaledFor = double.NaN;
+        MagickImage At(double scale)
         {
-            ct.ThrowIfCancellationRequested();
-            using var scaled = (MagickImage)image.Clone();
-            if (scale < 1) scaled.Resize((uint)Math.Max(1, scaled.Width * scale), 0);
+            if (scale == scaledFor && scaled is not null) return scaled;
+            scaled?.Dispose();
+            scaled = (MagickImage)image.Clone();
+            if (scale < 1) scaled.Resize((uint)Math.Max(1, Math.Round(image.Width * scale)), 0);
+            scaledFor = scale;
+            return scaled;
+        }
+        try
+        {
+            return lossy
+                ? QualitySearch.Lossy((scale, quality) => Render(At(scale), quality, false), target.Value, ct).Data
+                : QualitySearch.Lossless((scale, reduced) => Render(At(scale), null, reduced), target.Value, ct).Data;
+        }
+        finally
+        {
+            scaled?.Dispose();
+        }
+    }
+}
 
-            if (lossy)
+/// <summary>
+/// The search behind "compress to a target size": for lossy formats, a binary search on quality (10..95) in <see cref="QualitySteps"/> steps for the
+/// highest quality that fits; if none fits, the picture is shrunk by <see cref="ShrinkFactor"/> and the search repeats, at most <see cref="MaxRounds"/>
+/// rounds. Lossless formats try full colour, then 256 colours, per round. Returns the fitting result, or the smallest one seen.
+/// The renderer is a parameter so the strategy is tested without encoding pictures.
+/// </summary>
+internal static class QualitySearch
+{
+    public const int QualitySteps = 7;
+    public const int MaxRounds = 8;
+    public const double ShrinkFactor = 0.8;
+    private const uint MinQuality = 10, MaxQuality = 95;
+
+    public static (byte[] Data, bool Fits) Lossy(Func<double, uint, byte[]> render, long target, CancellationToken ct)
+    {
+        byte[]? smallest = null;
+        var scale = 1.0;
+        for (var round = 0; round < MaxRounds; round++, scale *= ShrinkFactor)
+        {
+            uint lo = MinQuality, hi = MaxQuality;
+            byte[]? fit = null;
+            for (var step = 0; step < QualitySteps && lo <= hi; step++)
             {
-                // Largest quality whose output fits: binary search over 10..95.
-                uint lo = 10, hi = 95;
-                byte[]? fit = null;
-                while (lo <= hi)
-                {
-                    var mid = (lo + hi) / 2;
-                    var data = Render(scaled, mid, false);
-                    if (data.Length <= target) { fit = data; lo = mid + 1; }
-                    else { if (mid == 0) break; hi = mid - 1; }
-                }
-                if (fit is not null) return fit;
-                best = Render(scaled, 10, false);
+                ct.ThrowIfCancellationRequested();
+                var mid = (lo + hi) / 2;
+                var data = render(scale, mid);
+                if (smallest is null || data.Length < smallest.Length) smallest = data;
+                if (data.Length <= target) { fit = data; lo = mid + 1; }
+                else hi = mid - 1;
             }
-            else
+            if (fit is not null) return (fit, true);
+        }
+        return (smallest!, false);
+    }
+
+    public static (byte[] Data, bool Fits) Lossless(Func<double, bool, byte[]> render, long target, CancellationToken ct)
+    {
+        byte[]? smallest = null;
+        var scale = 1.0;
+        for (var round = 0; round < MaxRounds; round++, scale *= ShrinkFactor)
+        {
+            foreach (var reduced in new[] { false, true })
             {
-                var lossless = Render(scaled, null, false);
-                if (lossless.Length <= target) return lossless;
-                var reduced = Render(scaled, null, true);
-                if (reduced.Length <= target) return reduced;
-                best = reduced;
+                ct.ThrowIfCancellationRequested();
+                var data = render(scale, reduced);
+                if (smallest is null || data.Length < smallest.Length) smallest = data;
+                if (data.Length <= target) return (data, true);
             }
         }
-        return best ?? Render(image, 10, false);
+        return (smallest!, false);
     }
 }

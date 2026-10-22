@@ -71,6 +71,38 @@ public class LocalizationTests
     }
 
     [Fact]
+    public void Notes_that_are_resource_keys_are_translated_with_their_arguments()
+    {
+        var ar = JsonLocalizer.Load("ar");
+        var en = JsonLocalizer.Load("en");
+        Assert.Equal(en["note.img.alreadySmall"], NoteText.Localize("note.img.alreadySmall", en));
+        Assert.Equal(ar["note.img.alreadySmall"], NoteText.Localize("note.img.alreadySmall", ar));
+        Assert.Contains("412", NoteText.Localize(NoteText.Key("note.img.targetNotReached", 412), ar));
+        Assert.Matches(@"[؀-ۿ]", NoteText.Localize(NoteText.Key("note.img.targetNotReached", 412), ar)!);
+    }
+
+    [Fact]
+    public void Plain_notes_unknown_keys_and_joined_notes_are_handled()
+    {
+        var en = JsonLocalizer.Load("en");
+        Assert.Null(NoteText.Localize(null, en));
+        Assert.Equal("Visible stamp only.", NoteText.Localize("Visible stamp only.", en));
+        Assert.Equal("note.does.not.exist", NoteText.Localize("note.does.not.exist", en));
+        // the job queue joins the notes of several files with "; "
+        Assert.Equal($"{en["note.img.alreadySmall"]}; plain", NoteText.Localize("note.img.alreadySmall; plain", en));
+    }
+
+    [Fact]
+    public void Every_note_key_the_engines_use_exists_in_both_languages()
+    {
+        foreach (var key in new[] { "note.img.alreadySmall", "note.img.targetNotReached", "note.img.rotatedLossless", "note.media.noEdgeSilence" })
+        {
+            Assert.True(En.ContainsKey(key), key);
+            Assert.True(Ar.ContainsKey(key), key);
+        }
+    }
+
+    [Fact]
     public void The_resource_text_of_every_catalog_tool_exists_in_both_languages()
     {
         foreach (var tool in ToolCatalog.LoadEmbedded().Tools.Concat(ToolCatalog.LoadEmbedded().Actions))

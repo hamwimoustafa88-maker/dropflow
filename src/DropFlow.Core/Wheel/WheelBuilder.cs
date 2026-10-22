@@ -149,7 +149,7 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
     private List<Wedge> BuildTools(string? categoryId, List<string> extensions, int fileCount, string language)
     {
         var wedges = new List<Wedge>();
-        foreach (var tool in catalog.Tools.Where(t => t.Cat == "general" || (categoryId is not null && t.Cat == categoryId)))
+        foreach (var tool in catalog.Tools.Where(t => t.Cat == "general" || t.AppliesTo(categoryId)))
         {
             if (!tool.Accepts(fileCount)) continue;
             var converters = extensions.Select(e => registry.Find(tool.Id, e)).ToList();

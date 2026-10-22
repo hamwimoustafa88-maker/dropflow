@@ -9,8 +9,8 @@ namespace DropFlow.Engines.Media;
 /// Entry point of the media engine project. <see cref="Create(IEngineProvider)"/> returns every converter this project provides:
 /// <list type="bullet">
 /// <item><b>Conversions</b> <c>convert:{mp3 m4a wav flac ogg opus aiff wma aac mp4 mkv webm avi wmv gif mov}</c> for the audio and video categories (FFmpeg).</item>
-/// <item><b>Video tools</b> vid.compress, vid.metadata, vid.mute, vid.trim, vid.crop, vid.speed, vid.snapshot, vid.split, vid.join (multi), vid.redact, vid.target-size, vid.burn-subs (FFmpeg).</item>
-/// <item><b>Audio tools</b> aud.compress, aud.metadata, aud.normalize, aud.trim, aud.channels, aud.visualize, aud.bleep, aud.merge (multi) (FFmpeg).</item>
+/// <item><b>Video tools</b> vid.compress, vid.metadata, vid.mute, vid.trim, vid.crop, vid.rotate (lossless), vid.speed, vid.snapshot, vid.split, vid.join (multi), vid.redact, vid.target-size, vid.burn-subs (FFmpeg).</item>
+/// <item><b>Audio tools</b> aud.compress, aud.metadata, aud.normalize, aud.trim, aud.trim-silence (also the sound of videos), aud.channels, aud.visualize, aud.bleep, aud.merge (multi) (FFmpeg).</item>
 /// <item><b>Subtitles</b> <c>convert:srt|vtt|ass|txt</c> from srt, vtt, ass (pure C#, no engine).</item>
 /// </list>
 /// Not implemented here: <c>vid.transcribe</c> / <c>aud.transcribe</c> (AI project) and <c>vid.encoder</c> (the Encoder window, which uses
@@ -35,6 +35,7 @@ public static class MediaModule
             new VideoMuteOperation(),
             new VideoTrimOperation(),
             new VideoCropOperation(),
+            new VideoRotateOperation(),
             new VideoSpeedOperation(),
             new VideoSnapshotOperation(),
             new VideoSplitOperation(),
@@ -47,6 +48,7 @@ public static class MediaModule
             new AudioMetadataOperation(),
             new AudioNormalizeOperation(),
             new AudioTrimOperation(),
+            new AudioTrimSilenceOperation(),
             new AudioChannelsOperation(),
             new AudioVisualizeOperation(),
             new AudioBleepOperation(),

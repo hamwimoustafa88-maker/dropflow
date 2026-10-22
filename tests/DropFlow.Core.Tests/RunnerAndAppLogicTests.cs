@@ -38,15 +38,90 @@ public class OperationRunnerTests
     }
 
     private static (OperationRunner Runner, Prompts Prompts, Installer Installer, ToolRegistry Registry, JobQueue Queue, MutableEngines Engines) Rig(
-        IConverter converter, bool installWorks = true)
+        IConverter converter, bool installWorks = true, IOptionsEditor? editor = null)
     {
         var registry = new ToolRegistry().Register(converter);
         var queue = new JobQueue(registry, Catalog);
         var engines = new MutableEngines();
         var installer = new Installer(e => { if (installWorks) engines.Install(e); }, installWorks);
         var prompts = new Prompts();
-        var runner = new OperationRunner(registry, queue, engines, installer, prompts, _ => 100, op => "Title:" + op);
+        var runner = new OperationRunner(registry, queue, engines, installer, prompts, _ => 100, op => "Title:" + op, editor);
         return (runner, prompts, installer, registry, queue, engines);
+    }
+
+    /// <summary>A dedicated editor window for one operation (a trim timeline, say) that answers with option values.</summary>
+    private sealed class Editor(string operation, IReadOnlyDictionary<string, object?>? answer, Prompts? log = null) : IOptionsEditor
+    {
+        public List<string> Opened { get; } = [];
+        public bool CanEdit(string op, IReadOnlyList<string> files) => op == operation;
+        public Task<IReadOnlyDictionary<string, object?>?> EditAsync(string op, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
+        {
+            Opened.Add($"{op} '{title}' {string.Join("|", files)} {options.Count}");
+            log?.Log.Add("editor " + op);
+            return Task.FromResult(answer);
+        }
+    }
+
+    [Fact]
+    public async Task A_dedicated_editor_replaces_the_options_form_and_its_values_travel_with_the_job()
+    {
+        ConversionJob? seen = null;
+        var converter = new FakeConverter(["vid.trim"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
+            options: [new ToolOption("start", ToolOptionKind.Text, "0"), new ToolOption("end", ToolOptionKind.Text, "")]);
+        var editor = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "1.5", ["end"] = "4" });
+        var (runner, prompts, _, _, _, _) = Rig(converter, editor: editor);
+
+        var batch = await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4"));
+        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal([@"vid.trim 'Title:vid.trim' C:\a.mp4 2"], editor.Opened);
+        Assert.DoesNotContain(prompts.Log, l => l.StartsWith("options"));
+        Assert.Equal("1.5", seen!.GetString("start"));
+        Assert.Equal("4", seen.GetString("end"));
+    }
+
+    [Fact]
+    public async Task Closing_the_editor_without_running_starts_nothing()
+    {
+        var converter = new FakeConverter(["vid.trim"], options: [new ToolOption("start", ToolOptionKind.Text, "0")]);
+        var (runner, _, _, _, queue, _) = Rig(converter, editor: new Editor("vid.trim", null));
+
+        Assert.Null(await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Empty(queue.Batches);
+    }
+
+    [Fact]
+    public async Task The_engine_is_installed_before_the_editor_opens_because_its_previews_need_it()
+    {
+        var converter = new FakeConverter(["vid.trim"], engine: EngineId.Ffmpeg, options: [new ToolOption("start", ToolOptionKind.Text, "0")]);
+        var prompts = new Prompts();
+        var registry = new ToolRegistry().Register(converter);
+        var queue = new JobQueue(registry, Catalog);
+        var engines = new MutableEngines();
+        var editor = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "2" }, prompts);
+        var runner = new OperationRunner(registry, queue, engines, new Installer(engines.Install), prompts, _ => 100, op => op, editor);
+
+        Assert.NotNull(await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Equal(["confirm Ffmpeg 100MB", "editor vid.trim"], prompts.Log);
+
+        // declined: the editor never opens
+        var declinedPrompts = new Prompts { InstallAnswer = false };
+        var declinedEditor = new Editor("vid.trim", new Dictionary<string, object?>(), declinedPrompts);
+        var declined = new OperationRunner(registry, queue, new MutableEngines(), new Installer(), declinedPrompts, _ => 100, op => op, declinedEditor);
+        Assert.Null(await declined.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Empty(declinedEditor.Opened);
+    }
+
+    [Fact]
+    public async Task Operations_without_an_editor_still_use_the_form()
+    {
+        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
+        var editor = new Editor("vid.trim", new Dictionary<string, object?>());
+        var (runner, prompts, _, _, _, _) = Rig(converter, editor: editor);
+
+        Assert.NotNull(await runner.RunAsync(Sel("img.compress", @"C:\a.png")));
+        Assert.Equal(["options img.compress 'Title:img.compress' 1"], prompts.Log);
+        Assert.Empty(editor.Opened);
     }
 
     private static WheelSelection Sel(string op, params string[] files) =>

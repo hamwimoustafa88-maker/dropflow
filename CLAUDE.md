@@ -9,7 +9,7 @@ The repository is public and open to contributors; the DropFlow name/logo are re
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
 multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
-are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.1.0 is live (installer 263 MB, unsigned). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
+are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.2.0 is live (Windows x64 + ARM64, macOS, Linux, Android; unsigned except Android). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
 installed (new terminals may need a restart to see it on PATH). The dev machine now has FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and
 four AI models, and the installer ships FFmpeg, qpdf and Tesseract (+ Arabic data) inside (ADR-0012): users never download a program.
 `tools/fetch-engines.ps1` fetches them at build time (never commit binaries); engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`
@@ -112,6 +112,17 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — v0.2.0 released (owner: "merge to main, push, run build-cross, then release"): all four `build-cross.yml` jobs (Linux x64/arm64, macOS arm64,
+  Windows 11 ARM64) green after fixing what they found — real product bugs: phone-share kept a single-download file reserved until TCP gave up when a
+  client left without a reset (new `PhoneShareOptions.StallTimeout`, 60 s, resets the connection and releases the claim; deterministic test fails without
+  it), OCR/speech inner progress used `Progress<T>` (async) so a late report could move the bar back after Done (`InlineProgress<T>` in Core), `subtitles`
+  filter missing in an FFmpeg build now gives a clear message; plus portable tests (no powershell.exe, short pipe names, `[FfmpegFact]`,
+  `[MacOsUnverifiedFact]` for the macOS phone-share stop test). ARM64 workflow now drops other-processor runtime folders (Whisper.net x64/x86 DLLs failed the
+  ARM64 check). Release run: windows job published; `attach-other-platforms` failed (no checkout for gh) so `attach-release-assets.yml` (manual, by run id)
+  uploaded the ARM64/macOS/Linux/Android files; release.yml fixed with GH_REPO. Website: footer cut to logo + Privacy + Terms + one repo link + one WhatsApp
+  button (glyph), WhatsApp also in About, the closing CTA and the legal pages; Privacy/Terms redesigned (display title, summary card, sticky contents, bold
+  numbered headings); READMEs updated. Android APK built by CI carries the expected certificate (SHA-256 91:B2:CE…87:41). Still unverified: any real drag,
+  macOS/Android/ARM64 on hardware, the macOS phone-share stop behaviour. — .github/workflows/*, src/DropFlow.Engines.Archive/Sharing, src/DropFlow.Core/Operations/InlineProgress.cs, web/**, docs/status.md
 - 2026-10-22 — Site polish (owner: "footer has too many buttons, use WhatsApp with its logo in several places; redesign privacy + terms; update the GitHub README"):
   footer is now logo + line, Privacy, Terms, ONE "Open source" link and ONE WhatsApp button; Issues / security / code-signing policy / licence moved to the
   Developers section. New reusable `WhatsAppButton` (solid / outline / icon, green `--wa*` tokens) also in About, the closing CTA and the legal pages (no floating

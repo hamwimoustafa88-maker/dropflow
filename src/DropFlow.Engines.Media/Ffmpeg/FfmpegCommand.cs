@@ -49,6 +49,17 @@ internal static partial class FfmpegErrors
             .Where(l => l.Length > 0)
             .ToList();
 
+        // Pass 0: a filter this FFmpeg build does not have. FFmpeg names it first and then complains generically
+        // ("Error opening filters!"), so the generic line must not hide it. Builds differ (a macOS or minimal build may lack libass).
+        foreach (var line in lines)
+        {
+            if (UnknownFilter().Match(line) is not { Success: true } filter) continue;
+            var name = filter.Groups[1].Value;
+            return name.Equals("subtitles", StringComparison.OrdinalIgnoreCase) || name.Equals("ass", StringComparison.OrdinalIgnoreCase)
+                ? $"This FFmpeg build has no '{name}' filter (it was built without libass), so subtitles cannot be burned into the picture. Use an FFmpeg build that includes libass."
+                : $"This FFmpeg build has no '{name}' filter, which this tool needs. Use a full FFmpeg build.";
+        }
+
         // Pass 1: specific causes, searching from the end (FFmpeg ends with the generic "Conversion failed!").
         for (var i = lines.Count - 1; i >= 0; i--)
         {
@@ -122,6 +133,9 @@ internal static partial class FfmpegErrors
 
     [GeneratedRegex(@"Unknown encoder '([^']+)'", RegexOptions.IgnoreCase)]
     private static partial Regex UnknownEncoder();
+
+    [GeneratedRegex(@"No such filter: '([^']+)'", RegexOptions.IgnoreCase)]
+    private static partial Regex UnknownFilter();
 
     [GeneratedRegex(@"out of range|invalid|cannot|can't|unable|not found|unrecognized|unsupported|does not|failed|error", RegexOptions.IgnoreCase)]
     private static partial Regex CauseHint();

@@ -1102,6 +1102,25 @@ public class VideoBurnSubsTests
     }
 
     [Fact]
+    public async Task An_ffmpeg_without_the_subtitles_filter_fails_with_a_message_naming_the_missing_capability()
+    {
+        // The shape of a real macOS/minimal build: FFmpeg names the missing filter first, then complains generically.
+        using var h = new MediaHarness();
+        var input = h.Video("episode.mp4");
+        await File.WriteAllTextAsync(Path.Combine(h.Dir, "episode.srt"), Srt);
+        h.Runner.OnFfmpeg = (_, _, _) => Task.FromResult<ProcessResult?>(FakeToolRunner.Fail(
+            "[AVFilterGraph @ 0x7f8a] No such filter: 'subtitles'\nError initializing filters!\nError opening output files: Filter not found"));
+
+        var result = await h.Run("vid.burn-subs", input);
+
+        Assert.False(result.Success);
+        Assert.Contains("'subtitles' filter", result.Error);
+        Assert.Contains("libass", result.Error);
+        Assert.DoesNotContain("Filter not found", result.Error);
+        Assert.False(File.Exists(Path.Combine(h.Dir, "episode (subtitled).mp4")));
+    }
+
+    [Fact]
     public async Task Ass_files_keep_their_own_styling_and_get_no_style_override()
     {
         using var h = new MediaHarness();

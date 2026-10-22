@@ -104,7 +104,7 @@ public class ParsersAgainstRealOutputTests
         Assert.InRange(double.Parse(stats.InputI, System.Globalization.CultureInfo.InvariantCulture), -40, -10);
     }
 
-    [EngineFact(EngineId.Ffmpeg)]
+    [FfmpegFact(FfmpegFeature.Filter, "subtitles")]
     public async Task The_filter_escaper_produces_graphs_that_the_real_ffmpeg_accepts_for_hostile_paths()
     {
         using var dir = new TempDir();

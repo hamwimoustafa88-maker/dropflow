@@ -262,7 +262,7 @@ public class VideoToolIntegrationTests
         Assert.InRange((await Probe(result.Outputs.Single())).DurationSeconds!.Value, 29.5, 30.5);
     }
 
-    [EngineFact(EngineId.Ffmpeg)]
+    [FfmpegFact(FfmpegFeature.Filter, "subtitles")]
     public async Task Burn_subs_draws_text_for_srt_with_arabic_and_a_hostile_file_name()
     {
         using var dir = new TempDir();
@@ -289,7 +289,7 @@ public class VideoToolIntegrationTests
         Assert.NotEqual(FrameAt(a.Outputs.Single(), "4.5"), FrameAt(b.Outputs.Single(), "4.5"));
     }
 
-    [EngineFact(EngineId.Ffmpeg)]
+    [FfmpegFact(FfmpegFeature.Filter, "subtitles")]
     public async Task Burn_subs_finds_a_sidecar_next_to_the_video()
     {
         using var dir = new TempDir();

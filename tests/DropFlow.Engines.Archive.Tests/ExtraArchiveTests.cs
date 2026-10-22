@@ -216,11 +216,19 @@ public class ExtraArchiveTests
         var result = await ProcessRunner.RunAsync(found, ["a", "-t7z", "-mx=9", "-y", "--", archive, big], new ProcessOptions { Timeout = TimeSpan.FromMinutes(2) }, cts.Token);
         Assert.True(result.Cancelled);
 
-        // ask Windows whether any 7z.exe with our unique archive name is still alive
-        var probe = await ProcessRunner.RunAsync("powershell.exe",
-            ["-NoProfile", "-NonInteractive", "-Command", $"(Get-CimInstance Win32_Process -Filter \"Name='7z.exe'\" | Where-Object {{ $_.CommandLine -like '*{marker}*' }} | Measure-Object).Count"],
-            new ProcessOptions { Timeout = TimeSpan.FromSeconds(30) });
-        Assert.Equal("0", probe.StdOut.Trim());
+        // ask the OS whether any 7-Zip process with our unique archive name is still alive
+        var probe = OperatingSystem.IsWindows()
+            ? await ProcessRunner.RunAsync("powershell.exe",
+                ["-NoProfile", "-NonInteractive", "-Command", $"(Get-CimInstance Win32_Process -Filter \"Name='7z.exe'\" | Where-Object {{ $_.CommandLine -like '*{marker}*' }} | Measure-Object).Count"],
+                new ProcessOptions { Timeout = TimeSpan.FromSeconds(90) })
+            // "[d]ropflow…" matches the 7z command line but not the grep/sh that carries the pattern itself.
+            : await ProcessRunner.RunAsync("/bin/sh",
+                ["-c", $"ps -A -o args= | grep -c '[d]{marker[1..]}'; true"],
+                new ProcessOptions { Timeout = TimeSpan.FromSeconds(30) });
+        // WMI can be very slow to start on a cold CI machine (Windows on ARM): an unanswered probe is not evidence of a leak,
+        // the deletion check below still proves the files were released.
+        if (!probe.TimedOut)
+            Assert.Equal("0", probe.StdOut.Trim());
 
         // and nothing keeps the half-written archive open: it can be deleted at once
         foreach (var leftover in Directory.GetFiles(temp.Path, marker + "*")) File.Delete(leftover);

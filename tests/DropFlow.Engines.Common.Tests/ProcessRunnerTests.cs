@@ -110,9 +110,13 @@ public class ProcessRunnerTests
     {
         // Bytes that a text reader would mangle: zero, CR/LF, and values above 0x7F.
         using var sink = new MemoryStream();
-        var r = await ProcessRunner.RunAsync("powershell.exe",
-            ["-NoProfile", "-Command", "$o=[Console]::OpenStandardOutput(); $b=[byte[]](0,13,10,255,128,65,0,200); $o.Write($b,0,$b.Length); $o.Flush(); [Console]::Error.WriteLine('note')"],
-            new ProcessOptions { StandardOutput = sink, Timeout = TimeSpan.FromSeconds(30) });
+        var options = new ProcessOptions { StandardOutput = sink, Timeout = TimeSpan.FromSeconds(30) };
+        var r = Windows
+            ? await ProcessRunner.RunAsync("powershell.exe",
+                ["-NoProfile", "-Command", "$o=[Console]::OpenStandardOutput(); $b=[byte[]](0,13,10,255,128,65,0,200); $o.Write($b,0,$b.Length); $o.Flush(); [Console]::Error.WriteLine('note')"],
+                options)
+            // POSIX printf understands octal escapes: 0, 13, 10, 255, 128, 'A', 0, 200.
+            : await ProcessRunner.RunAsync("/bin/sh", ["-c", "printf '\\000\\015\\012\\377\\200A\\000\\310'; echo note >&2"], options);
 
         Assert.True(r.Success, r.StdErr);
         Assert.Equal(new byte[] { 0, 13, 10, 255, 128, 65, 0, 200 }, sink.ToArray());

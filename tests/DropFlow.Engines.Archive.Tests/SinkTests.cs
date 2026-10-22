@@ -189,7 +189,12 @@ public class SinkTests
         if (found is null) return; // not installed here: the EngineFact tests report themselves as skipped
 
         Assert.True(File.Exists(found));
-        Assert.Equal("7z.exe", Path.GetFileName(found), ignoreCase: true);
+        // Windows ships 7z.exe; the official Linux/macOS build is 7zz and p7zip installs 7z or 7za (EngineLocator tries them in that order).
+        var name = Path.GetFileName(found);
+        if (OperatingSystem.IsWindows())
+            Assert.Equal("7z.exe", name, ignoreCase: true);
+        else
+            Assert.Contains(name, new[] { "7zz", "7z", "7za" });
     }
 
     [EngineFact(EngineId.SevenZip)]

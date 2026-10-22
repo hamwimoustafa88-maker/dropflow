@@ -1,0 +1,109 @@
+name: Windows ARM64 installer
+
+# Builds DropFlow for Windows on ARM64: the app published self-contained for win-arm64, the helper programs that have a pinned
+# ARM64 build (tools/fetch-engines.ps1 -Arch arm64: FFmpeg and qpdf; Tesseract has no Windows ARM64 build and is skipped unless
+# x64-engine-fallback is true, which bundles the x64 build to run under Windows 11's x64 emulation), and a Velopack installer on
+# its own update channel, win-arm64, so x64 and ARM64 users each get their own updates. The result, DropFlow-win-arm64-Setup.exe
+# plus the channel's update feed, is uploaded as the workflow artifact "win-arm64-release"; publishing it is left to the caller.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build, e.g. 0.1.3 or v0.1.3'
+        type: string
+        required: true
+      x64-engine-fallback:
+        description: 'Bundle x64 builds (emulated) of engines that have no ARM64 build'
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      artifact-name:
+        description: 'Name of the uploaded artifact'
+        value: ${{ jobs.build.outputs.artifact-name }}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, e.g. 0.1.3'
+        required: true
+      x64-engine-fallback:
+        description: 'Bundle x64 builds (emulated) of engines that have no ARM64 build'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Cross-publishing to win-arm64 works on the x64 runner; the ARM64 tests themselves run in build-cross.yml on windows-11-arm.
+    runs-on: windows-latest
+    timeout-minutes: 60
+    outputs:
+      artifact-name: win-arm64-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version
+        id: v
+        shell: pwsh
+        run: |
+          $v = '${{ inputs.version }}'.Trim().TrimStart('v')
+          if ($v -notmatch '^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') { throw "Not a version: '${{ inputs.version }}'" }
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Publish the app for win-arm64 (self-contained)
+        run: >
+          dotnet publish src/DropFlow.App -c Release -r win-arm64 --self-contained
+          -p:Version=${{ steps.v.outputs.version }} -o publish/app-arm64
+
+      - name: Check that the native libraries are ARM64 (PDFium, SkiaSharp, ONNX Runtime, Magick.NET, Whisper)
+        shell: pwsh
+        run: |
+          # PE machine type at the COFF header: 0xAA64 = ARM64, 0x8664 = x64
+          function Machine($path) {
+            $b = [IO.File]::ReadAllBytes($path); $pe = [BitConverter]::ToInt32($b, 0x3C)
+            '{0:X4}' -f [BitConverter]::ToUInt16($b, $pe + 4)
+          }
+          $natives = Get-ChildItem publish/app-arm64 -Recurse -File -Include pdfium.dll, libSkiaSharp.dll, onnxruntime.dll, Magick.Native-Q8-arm64.dll, whisper.dll
+          if (-not $natives) { throw "No native libraries found in the publish folder." }
+          $bad = @()
+          foreach ($n in $natives) { $m = Machine $n.FullName; "$($n.Name): $m"; if ($m -ne 'AA64') { $bad += $n.Name } }
+          if ($bad) { throw "Not ARM64: $($bad -join ', ')" }
+
+      - name: Bundle the ARM64 helper programs
+        shell: pwsh
+        run: |
+          $fallback = '${{ inputs.x64-engine-fallback }}' -eq 'true'
+          ./tools/fetch-engines.ps1 -Arch arm64 -OutDir tools/engines-arm64 -AllowX64Emulation:$fallback
+          Copy-Item tools/engines-arm64 publish/app-arm64/engines -Recurse
+          Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/app-arm64
+          if (Test-Path tools/engines-arm64/SKIPPED.txt) { "::warning::Not bundled for ARM64: $(Get-Content tools/engines-arm64/SKIPPED.txt -Raw)" }
+
+      - name: Install Velopack's packer
+        run: dotnet tool install -g vpk
+
+      - name: Fetch the previous ARM64 release so deltas can be built (the first one has none)
+        continue-on-error: true
+        run: vpk download github --repoUrl ${{ github.server_url }}/${{ github.repository }} --channel win-arm64 --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack the installer and the win-arm64 update feed
+        run: >
+          vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }}
+          --packDir publish/app-arm64 --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico
+          --runtime win-arm64 --channel win-arm64
+
+      - name: Check the installer name
+        shell: pwsh
+        run: |
+          if (-not (Test-Path Releases/DropFlow-win-arm64-Setup.exe)) { Get-ChildItem Releases; throw "DropFlow-win-arm64-Setup.exe was not produced." }
+          Get-ChildItem Releases | ForEach-Object { "{0,-50} {1,10:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-arm64-release
+          path: Releases
+          if-no-files-found: error

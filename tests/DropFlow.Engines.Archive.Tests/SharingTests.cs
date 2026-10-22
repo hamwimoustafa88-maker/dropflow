@@ -574,7 +574,7 @@ public class SharingTests : IDisposable
     {
         // A phone that drops off the Wi-Fi sends no reset: the server only learns the client is gone because no bytes are accepted any more.
         var data = Kit.Noise(40_000_000, 4);
-        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(2) });
+        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(6) });
         var started = new TaskCompletionSource();
         server.DownloadStarted += (_, _) => started.TrySetResult();
 
@@ -607,7 +607,7 @@ public class SharingTests : IDisposable
     public async Task A_cut_off_single_download_can_be_retried_but_a_finished_one_cannot()
     {
         var data = Kit.Noise(40_000_000, 3);
-        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(2) });
+        var server = Start([File_("big.bin", data)], new PhoneShareOptions { LoopbackOnly = true, SingleDownload = true, StopWhenFinished = false, StallTimeout = TimeSpan.FromSeconds(6) });
 
         // Start the download and abandon it after a few bytes. This client has a tiny receive buffer: on a fast machine the kernel's loopback
         // buffers can swallow all 40 MB, and the server (which counts a file as delivered when its last byte went out) would then rightly

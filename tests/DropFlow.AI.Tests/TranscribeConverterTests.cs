@@ -358,8 +358,8 @@ public class TranscribeConverterTests
         using var models = ModelsWith(dir, "ggml-small");
         var fake = new FakeTranscriber((_, _, _, _) => Task.FromResult(Speech()));
         var mp3 = dir.WriteText("song.mp3", "not really an mp3");
-        // whoami.exe stands in for ffmpeg: it rejects the arguments with a non-zero exit and produces no wav, like a corrupt input would.
-        var cmd = Path.Combine(Environment.SystemDirectory, "whoami.exe");
+        // whoami.exe (Windows) or false (macOS/Linux) stands in for ffmpeg: it exits non-zero and produces no wav, like a corrupt input would.
+        var cmd = OperatingSystem.IsWindows() ? Path.Combine(Environment.SystemDirectory, "whoami.exe") : new[] { "/usr/bin/false", "/bin/false" }.First(File.Exists);
         var engines = new FakeEngines((EngineId.Ffmpeg, cmd));
 
         var result = await Converter(models, fake, engines).RunAsync(Job(mp3), NoProgress, default);

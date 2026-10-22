@@ -27,10 +27,32 @@ public sealed class ModelFactAttribute : FactAttribute
             Skip = $"Model '{modelId}' is not downloaded ({manager.PathOf(modelId)}). Download it through the app's model manager to run this test.";
     }
 
+    /// <summary>The test also makes its audio with the Windows text-to-speech voices (<see cref="SpokenAudio"/>).</summary>
+    public bool NeedsWindowsSpeech
+    {
+        get => _needsWindowsSpeech;
+        set
+        {
+            _needsWindowsSpeech = value;
+            if (value && !OperatingSystem.IsWindows()) Skip = "Windows only: the spoken-audio fixture uses the text-to-speech voices built into Windows.";
+        }
+    }
+
+    private bool _needsWindowsSpeech;
+
     public static ModelManager OpenManager()
     {
         var dir = Environment.GetEnvironmentVariable("DROPFLOW_MODELS_DIR");
         return new ModelManager(string.IsNullOrEmpty(dir) ? null : dir);
+    }
+}
+
+/// <summary>A fact that needs Windows itself (a Windows-only API or tool); skipped, visibly, elsewhere.</summary>
+public sealed class WindowsFactAttribute : FactAttribute
+{
+    public WindowsFactAttribute(string why)
+    {
+        if (!OperatingSystem.IsWindows()) Skip = $"Windows only: {why}.";
     }
 }
 
@@ -39,6 +61,11 @@ public sealed class OcrFactAttribute : FactAttribute
 {
     public OcrFactAttribute(string language = "en")
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Skip = "Windows OCR exists on Windows only (macOS and Linux use Tesseract; see the [EngineFact(EngineId.Tesseract)] tests).";
+            return;
+        }
         if (!new OcrLanguageService().IsInstalled(language))
         {
             var hint = OcrLanguageService.InstallHint(language);
@@ -222,6 +249,27 @@ public static class Hashing
         var data = new byte[length];
         new Random(seed).NextBytes(data);
         return data;
+    }
+}
+
+/// <summary>Writes exact test pictures with Magick.NET (works on every OS, unlike GDI+).</summary>
+public static class TestPng
+{
+    /// <summary>A PNG whose every pixel is <paramref name="pixel"/>(x, y), stored losslessly with 8 bits per channel.</summary>
+    public static string FromPixels(string path, int width, int height, Func<int, int, System.Drawing.Color> pixel)
+    {
+        var data = new byte[width * height * 4];
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                var c = pixel(x, y);
+                var i = (y * width + x) * 4;
+                (data[i], data[i + 1], data[i + 2], data[i + 3]) = (c.R, c.G, c.B, c.A);
+            }
+        using var image = new ImageMagick.MagickImage(data, new ImageMagick.PixelReadSettings((uint)width, (uint)height, ImageMagick.StorageType.Char, ImageMagick.PixelMapping.RGBA));
+        image.Depth = 8;
+        image.Write(path, ImageMagick.MagickFormat.Png32);
+        return path;
     }
 }
 

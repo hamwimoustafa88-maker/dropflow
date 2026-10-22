@@ -167,14 +167,10 @@ public class BackgroundRemovalPipelineTests
     /// <summary>Black photo with a white ellipse in the middle.</summary>
     private static string Photo(string path, int width = 160, int height = 100)
     {
-        using var bitmap = new Bitmap(width, height);
-        using (var g = Graphics.FromImage(bitmap))
-        {
-            g.Clear(Color.Black);
-            g.FillEllipse(Brushes.White, width / 2 - 30, height / 2 - 25, 60, 50);
-        }
-        bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
-        return path;
+        // the ellipse of FillEllipse(width/2-30, height/2-25, 60, 50): centre (width/2, height/2), radii 30 and 25, no anti-aliasing
+        double cx = width / 2.0, cy = height / 2.0;
+        return TestPng.FromPixels(path, width, height, (x, y) =>
+            Math.Pow((x + 0.5 - cx) / 30, 2) + Math.Pow((y + 0.5 - cy) / 25, 2) <= 1 ? Color.White : Color.Black);
     }
 
     private static ConversionJob Job(string input, Dictionary<string, object?>? options = null, string? outDir = null) => new([input], "img.remove-bg", options, outDir);
@@ -271,12 +267,7 @@ public class BackgroundRemovalPipelineTests
         using var dir = new TempDir();
         using var models = ModelsWith(dir, 320, 320, "u2netp");
         var input = dir.Combine("holey.png");
-        using (var bitmap = new Bitmap(100, 100))
-        {
-            using (var g = Graphics.FromImage(bitmap)) { g.Clear(Color.White); }
-            for (var x = 0; x < 20; x++) for (var y = 0; y < 100; y++) bitmap.SetPixel(x, y, Color.FromArgb(0, 255, 255, 255)); // fully transparent strip
-            bitmap.Save(input, System.Drawing.Imaging.ImageFormat.Png);
-        }
+        TestPng.FromPixels(input, 100, 100, (x, _) => x < 20 ? Color.FromArgb(0, 255, 255, 255) : Color.White); // fully transparent strip
         using var sessions = new OnnxSessionCache();
         var result = await new BackgroundRemovalConverter(models, sessions).RunAsync(Job(input, new() { ["edge"] = "hard" }), new Progress<JobProgress>(), default);
 

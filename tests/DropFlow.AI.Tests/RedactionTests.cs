@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Drawing.Imaging;
 using DropFlow.AI.Imaging;
 using DropFlow.AI.Models;
 using DropFlow.AI.Ocr;
@@ -66,13 +65,8 @@ public class RedactionRendererTests
     /// <summary>A noisy 200x120 image, so "unchanged" and "changed" are unmistakable pixel by pixel.</summary>
     private static string NoisePng(string path)
     {
-        using var bitmap = new Bitmap(200, 120, PixelFormat.Format32bppArgb);
         var rng = new Random(42);
-        for (var y = 0; y < 120; y++)
-            for (var x = 0; x < 200; x++)
-                bitmap.SetPixel(x, y, Color.FromArgb(255, 40 + rng.Next(200), 40 + rng.Next(200), 40 + rng.Next(200)));
-        bitmap.Save(path, ImageFormat.Png);
-        return path;
+        return TestPng.FromPixels(path, 200, 120, (_, _) => Color.FromArgb(255, 40 + rng.Next(200), 40 + rng.Next(200), 40 + rng.Next(200)));
     }
 
     private static string Redact(string source, string output, RedactStyle style, params PixelRect[] regions)
@@ -335,17 +329,14 @@ public class RedactAutoConverterTests
     /// <summary>A smooth gradient: no pixel is black, and neighbours differ, so every redacted pixel is a visible change.</summary>
     private static string GradientPng(string path, int width = 320, int height = 240)
     {
-        using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-        for (var y = 0; y < height; y++)
-            for (var x = 0; x < width; x++)
-                bitmap.SetPixel(x, y, Color.FromArgb(255, 40 + x * 200 / width, 40 + y * 200 / height, 130));
-        bitmap.Save(path, ImageFormat.Png);
-        return path;
+        return TestPng.FromPixels(path, width, height, (x, y) => Color.FromArgb(255, 40 + x * 200 / width, 40 + y * 200 / height, 130));
     }
 
     private static ConversionJob Job(string input, Dictionary<string, object?>? options = null, string? outDir = null) => new([input], "img.redact-auto", options, outDir);
 
-    private static RedactAutoConverter Converter(ModelManager models, OcrService ocr, OnnxSessionCache sessions) => new(models, ocr, sessions);
+    /// <summary>The converter with the UltraFace (ONNX) finder, so these tests drive the model path on every OS.</summary>
+    private static RedactAutoConverter Converter(ModelManager models, OcrService ocr, OnnxSessionCache sessions) =>
+        new(models, ocr, sessions, new UltraFaceFinder(models, new FaceDetector(sessions)));
 
     private static int Diffs(string a, string b, Rectangle area)
     {
@@ -562,7 +553,7 @@ public class RedactAutoConverterTests
         using var sessions = new OnnxSessionCache();
         var logo = new Rectangle(700, 120, 120, 40);
         var image = TextImage.Render(dir.Combine("memo.png"), "Confidential 12345", fontSize: 60, width: 900, height: 200,
-            decorate: g => g.FillRectangle(Brushes.Crimson, logo));
+            boxes: [(logo, Color.Crimson)]);
         var ocr = new OcrService(new FakeEngines());
         var converter = Converter(models, ocr, sessions);
 
@@ -642,3 +633,138 @@ public class RedactAutoConverterTests
         Assert.Equal(50, options["padding"].Max);
     }
 }
+
+/// <summary>Who finds the faces: the platform default, the fallback chain, and Windows' own detector.</summary>
+public class FaceFinderTests
+{
+    private sealed class Fixed(string name, string? unavailable, params FaceBox[] faces) : IFaceFinder
+    {
+        public int Calls;
+        public string Name => name;
+        public string? Unavailable() => unavailable;
+        public Task<IReadOnlyList<FaceBox>> FindAsync(IMagickImage<byte> image, CancellationToken ct) { Calls++; return Task.FromResult<IReadOnlyList<FaceBox>>(faces); }
+    }
+
+    private static string Gradient(string path) => TestPng.FromPixels(path, 320, 240, (x, y) => Color.FromArgb(255, 40 + x * 200 / 320, 40 + y * 200 / 240, 130));
+
+    private static OcrService NoOcr() => new(new FakeEngines(), new OcrLanguageService(new NoPacks()), new NeverOcr(), new NoTesseract());
+
+    private sealed class NoPacks : IWindowsOcrLanguageSource { public IReadOnlyList<string> InstalledTags() => []; }
+
+    private sealed class NeverOcr : IWindowsOcr
+    {
+        public Task<OcrResult> RecognizeAsync(string pngPath, string? languageTag, CancellationToken ct) => throw new InvalidOperationException("no OCR in these tests");
+    }
+
+    private sealed class NoTesseract : ITesseractOcr
+    {
+        public bool IsInstalled => false;
+        public Task<IReadOnlyList<string>> LanguagesAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<OcrResult> RecognizeAsync(string pngPath, IReadOnlyList<string> languages, CancellationToken ct) => throw new InvalidOperationException();
+    }
+
+    [Fact]
+    public void The_first_available_finder_runs_and_a_missing_model_is_reported_only_when_nothing_can_run()
+    {
+        var ready = new Fixed("ready", null);
+        var missing = new Fixed("model", "Model 'ultraface-rfb-320' is not installed.");
+        var broken = new Fixed("os", "not on this PC");
+
+        Assert.Same(ready, new FirstAvailableFaceFinder(broken, ready, missing).Current);
+        Assert.Null(new FirstAvailableFaceFinder(broken, ready).Unavailable());
+        var none = new FirstAvailableFaceFinder(broken, missing);
+        Assert.Null(none.Current);
+        Assert.Equal("ultraface-rfb-320", AiFailures.TryParseMissingModel(none.Unavailable()));   // the app can offer the download
+        Assert.Throws<ArgumentException>(() => new FirstAvailableFaceFinder());
+    }
+
+    [Fact]
+    public async Task The_converter_uses_the_injected_finder_and_covers_its_box()
+    {
+        using var dir = new TempDir();
+        using var models = new ModelManager(dir.Combine("models"));   // no model installed: the injected finder needs none
+        var finder = new Fixed("test", null, new FaceBox(100, 80, 40, 30, 0.9));
+        var input = Gradient(dir.Combine("p.png"));
+
+        var result = await new RedactAutoConverter(models, NoOcr(), faces: finder)
+            .RunAsync(new ConversionJob([input], "img.redact-auto", new Dictionary<string, object?> { ["target"] = "faces", ["padding"] = 0 }), new Progress<JobProgress>(), default);
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(1, finder.Calls);
+        using var after = new TextImage.Reader(result.Outputs[0]);
+        Assert.Equal(Color.FromArgb(255, 0, 0, 0), after.Pixel(110, 90));
+        Assert.NotEqual(Color.FromArgb(255, 0, 0, 0), after.Pixel(10, 10));
+    }
+
+    [Fact]
+    public async Task An_unavailable_finder_fails_the_job_with_its_reason()
+    {
+        using var dir = new TempDir();
+        using var models = new ModelManager(dir.Combine("models"));
+        var input = Gradient(dir.Combine("p.png"));
+
+        var result = await new RedactAutoConverter(models, NoOcr(), faces: new Fixed("x", "no detector here"))
+            .RunAsync(new ConversionJob([input], "img.redact-auto", new Dictionary<string, object?> { ["target"] = "faces" }), new Progress<JobProgress>(), default);
+
+        Assert.False(result.Success);
+        Assert.Equal("no detector here", result.Error);
+    }
+
+#if WINDOWS
+    [Fact]
+    public void On_windows_the_default_is_windows_face_detection_with_the_model_as_fallback()
+    {
+        using var dir = new TempDir();
+        using var models = new ModelManager(dir.Combine("models"));
+        var chain = Assert.IsType<FirstAvailableFaceFinder>(new RedactAutoConverter(models, NoOcr()).Faces);
+        Assert.IsType<WindowsFaceFinder>(chain.Finders[0]);
+        Assert.IsType<UltraFaceFinder>(chain.Finders[1]);
+    }
+
+    [WindowsFaceFact]
+    public async Task Windows_face_detection_needs_no_model_and_runs_end_to_end()
+    {
+        using var dir = new TempDir();
+        using var models = new ModelManager(dir.Combine("models"));   // UltraFace is NOT installed
+        var input = Gradient(dir.Combine("landscape.png"));
+
+        var converter = new RedactAutoConverter(models, NoOcr());
+        Assert.Null(converter.Faces.Unavailable());
+
+        // A gradient has no faces: the built-in detector ran (no "model not installed" error) and found nothing.
+        var result = await converter.RunAsync(new ConversionJob([input], "img.redact-auto", new Dictionary<string, object?> { ["target"] = "faces" }), new Progress<JobProgress>(), default);
+        Assert.False(result.Success);
+        Assert.Contains("Nothing to redact", result.Error);
+        Assert.Null(AiFailures.TryParseMissingModel(result.Error));
+    }
+
+    [WindowsFaceFact]
+    public async Task Windows_face_detection_maps_boxes_back_from_a_downscaled_picture()
+    {
+        using var image = new MagickImage(MagickColors.White, 5000, 3000);   // larger than MaxSide: scaled down for the detector
+        var faces = await new WindowsFaceFinder().FindAsync(image, default);
+        Assert.Empty(faces);   // a blank page has no faces, and the large picture is accepted
+    }
+#else
+    [Fact]
+    public void Without_windows_the_default_is_the_ultraface_model()
+    {
+        using var dir = new TempDir();
+        using var models = new ModelManager(dir.Combine("models"));
+        var faces = new RedactAutoConverter(models, NoOcr()).Faces;
+        Assert.IsType<UltraFaceFinder>(faces);
+        Assert.Equal("ultraface-rfb-320", AiFailures.TryParseMissingModel(faces.Unavailable()));
+    }
+#endif
+}
+
+#if WINDOWS
+/// <summary>Skipped, visibly, when this Windows has no face-analysis component.</summary>
+public sealed class WindowsFaceFactAttribute : FactAttribute
+{
+    public WindowsFaceFactAttribute()
+    {
+        if (!WindowsFaceFinder.IsSupported) Skip = "Windows face detection (Windows.Media.FaceAnalysis) is not available on this PC.";
+    }
+}
+#endif

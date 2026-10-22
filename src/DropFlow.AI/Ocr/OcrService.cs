@@ -10,7 +10,8 @@ public enum OcrEnginePreference { Auto, Windows, Tesseract }
 /// <summary>What this PC can do right now.</summary>
 /// <param name="WindowsTags">Installed Windows OCR packs.</param>
 /// <param name="TesseractLanguages">Installed traineddata names; empty when Tesseract is missing.</param>
-public sealed record OcrCapabilities(IReadOnlyList<string> WindowsTags, bool TesseractInstalled, IReadOnlyList<string> TesseractLanguages);
+/// <param name="WindowsOcrExists">False on macOS and Linux: the messages then point to Tesseract only.</param>
+public sealed record OcrCapabilities(IReadOnlyList<string> WindowsTags, bool TesseractInstalled, IReadOnlyList<string> TesseractLanguages, bool WindowsOcrExists = true);
 
 /// <param name="WindowsTag">The Windows pack to use; null means "the user's profile languages, then English".</param>
 /// <param name="TesseractLanguages">Traineddata names, e.g. ["ara", "eng"].</param>
@@ -41,8 +42,10 @@ public static class OcrPlanner
                 if (langs.Count > 0)
                     return Ok(new OcrPlan(OcrEngineKind.Tesseract, null, langs, $"Tesseract ({string.Join('+', langs)})"));
             }
-            return Fail("No OCR language is available. Install the English OCR pack for Windows (administrator PowerShell: "
-                + OcrLanguages.Find("en")!.WindowsInstallCommand + ") or install Tesseract.");
+            return Fail(caps.WindowsOcrExists
+                ? "No OCR language is available. Install the English OCR pack for Windows (administrator PowerShell: "
+                  + OcrLanguages.Find("en")!.WindowsInstallCommand + ") or install Tesseract."
+                : "No OCR language is available. " + TesseractInstallHint);
         }
 
         var windowsMissing = requested.Where(l => !HasWindowsPack(l, caps)).ToList();
@@ -76,9 +79,14 @@ public static class OcrPlanner
         return Ok(new OcrPlan(OcrEngineKind.Tesseract, null, langs, $"Tesseract ({string.Join('+', langs)})"));
     }
 
+    /// <summary>How to get Tesseract with English and Arabic on macOS and Linux (shown where Windows OCR does not exist).</summary>
+    public const string TesseractInstallHint =
+        "Install Tesseract with English and Arabic data (macOS: brew install tesseract tesseract-lang; Debian/Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-ara).";
+
     private static string WindowsMissingMessage(IReadOnlyList<OcrLanguage> missing, OcrCapabilities caps)
     {
         if (missing.Count == 0) return "";
+        if (!caps.WindowsOcrExists) return "Windows OCR exists on Windows only.";
         var items = missing.Select(l => l.WindowsInstallCommand is { } cmd
             ? $"{l.DisplayName}: run in an administrator PowerShell: {cmd}"
             : $"{l.DisplayName}: Windows has no OCR pack for it");
@@ -88,7 +96,9 @@ public static class OcrPlanner
     private static string TesseractMissingMessage(IReadOnlyList<OcrLanguage> missing, OcrCapabilities caps)
     {
         if (!caps.TesseractInstalled)
-            return "Tesseract is not installed, so it cannot be used as a fallback (install it from the engine installer; choose the Arabic language data for Arabic).";
+            return caps.WindowsOcrExists
+                ? "Tesseract is not installed, so it cannot be used as a fallback (install it from the engine installer; choose the Arabic language data for Arabic)."
+                : "Tesseract is not installed. " + TesseractInstallHint;
         if (missing.Count == 0) return "";
         return "Tesseract lacks language data: " + string.Join(", ", missing.Select(l => $"{l.Tesseract} ({l.DisplayName})"))
             + ". Add the .traineddata files to Tesseract's tessdata folder.";
@@ -116,11 +126,13 @@ public sealed class OcrService
     private readonly OcrLanguageService _languages;
     private readonly IWindowsOcr _windows;
     private readonly ITesseractOcr _tesseract;
+    private readonly bool _systemOcrExists;
 
     public OcrService(IEngineProvider engines, OcrLanguageService? languages = null, IWindowsOcr? windows = null, ITesseractOcr? tesseract = null)
     {
         _languages = languages ?? new OcrLanguageService();
-        _windows = windows ?? new WindowsOcr();
+        _windows = windows ?? AiPlatform.CreateSystemOcr();
+        _systemOcrExists = AiPlatform.HasSystemOcr || windows is not null;   // an injected engine (Apple Vision, a test fake) counts
         _tesseract = tesseract ?? new TesseractOcr(engines);
     }
 
@@ -129,7 +141,7 @@ public sealed class OcrService
     public async Task<OcrCapabilities> GetCapabilitiesAsync(CancellationToken cancellationToken)
     {
         var tess = _tesseract.IsInstalled ? await _tesseract.LanguagesAsync(cancellationToken).ConfigureAwait(false) : [];
-        return new OcrCapabilities(_languages.InstalledTags(), _tesseract.IsInstalled, tess);
+        return new OcrCapabilities(_languages.InstalledTags(), _tesseract.IsInstalled, tess, _systemOcrExists);
     }
 
     /// <summary>Resolves the request without running anything (the UI uses it to show what will happen).</summary>
@@ -147,7 +159,7 @@ public sealed class OcrService
         if (plan.Plan is null) throw new OcrUnavailableException(plan.Error!);
 
         using var work = WorkDirectory.Create(asciiOnly: true);
-        var maxDimension = plan.Plan.Engine == OcrEngineKind.Windows ? (int)Math.Min(Windows.Media.Ocr.OcrEngine.MaxImageDimension, 8000u) : 8000;
+        var maxDimension = plan.Plan.Engine == OcrEngineKind.Windows ? Math.Min(AiPlatform.SystemOcrMaxImageDimension, 8000) : 8000;
         var prepared = OcrImagePreparer.Prepare(imagePath, work.File("input.png"), maxDimension);
 
         var result = plan.Plan.Engine == OcrEngineKind.Windows

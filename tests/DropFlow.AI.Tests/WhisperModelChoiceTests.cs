@@ -89,4 +89,26 @@ public class WhisperModelChoiceTests
         var ram = WhisperModelChoice.GetAvailableRamBytes();
         Assert.InRange(ram, 64L * 1024 * 1024, 4096L * Gb);
     }
-}
+
+    [Fact]
+    public void Linux_free_memory_is_read_from_MemAvailable()
+    {
+        const string meminfo = "MemTotal:       16314172 kB\nMemFree:          812344 kB\nMemAvailable:    9876543 kB\nBuffers:          123 kB\n";
+        Assert.Equal(9876543L * 1024, WhisperModelChoice.ParseMemInfo(meminfo));
+        Assert.Null(WhisperModelChoice.ParseMemInfo("MemTotal: 1 kB\n"));
+    }
+
+    [Fact]
+    public void MacOS_free_memory_counts_free_inactive_and_speculative_pages()
+    {
+        const string vmStat = """
+            Mach Virtual Memory Statistics: (page size of 16384 bytes)
+            Pages free:                               10000.
+            Pages active:                            200000.
+            Pages inactive:                           30000.
+            Pages speculative:                         5000.
+            Pages wired down:                         90000.
+            """;
+        Assert.Equal((10000L + 30000 + 5000) * 16384, WhisperModelChoice.ParseVmStat(vmStat));
+        Assert.Null(WhisperModelChoice.ParseVmStat("no numbers here"));
+    }}

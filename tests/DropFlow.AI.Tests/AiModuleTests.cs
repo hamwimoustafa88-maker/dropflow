@@ -148,6 +148,10 @@ public class AiModuleTests
             ["img.redact-auto"] = "Model 'ultraface-rfb-320'",
             ["pdf.ocr"] = "Tesseract is not installed",
         };
+#if WINDOWS
+        // Windows detects faces itself (no model): the job still fails cleanly, because the sample picture has no faces.
+        if (DropFlow.AI.Imaging.WindowsFaceFinder.IsSupported) expectedMissing["img.redact-auto"] = "Nothing to redact";
+#endif
 
         foreach (var c in converters)
             foreach (var op in c.Operations.Where(samples.ContainsKey))
@@ -165,7 +169,11 @@ public class AiModuleTests
         var custom = new NullRasterizer();
         var converters = AiModule.Create(new FakeEngines(), new ModelManager(dir.Combine("models")), custom);
         Assert.Same(custom, converters.OfType<PdfOcrConverter>().Single().Rasterizer);
+#if WINDOWS
         Assert.IsType<WindowsPdfPageRasterizer>(Create(dir).OfType<PdfOcrConverter>().Single().Rasterizer);
+#else
+        Assert.IsType<PdfiumPageRasterizer>(Create(dir).OfType<PdfOcrConverter>().Single().Rasterizer);
+#endif
     }
 
     private sealed class NullRasterizer : IPageRasterizer
@@ -307,7 +315,7 @@ public class SpokenAudioTests
 {
     private const string Sentence = "Hello world. This is a test of speech recognition.";
 
-    [Fact]
+    [WindowsFact("the speech fixture uses the text-to-speech voices built into Windows")]
     public async Task The_speech_fixture_produces_audible_whisper_ready_audio()
     {
         using var dir = new TempDir();
@@ -322,7 +330,7 @@ public class SpokenAudioTests
         Assert.True(rms > 0.01, $"the synthesised speech is silent (rms {rms:0.0000})");
     }
 
-    [ModelFact("ggml-tiny")]
+    [ModelFact("ggml-tiny", NeedsWindowsSpeech = true)]
     public async Task Real_whisper_tiny_transcribes_spoken_english_into_an_srt_file()
     {
         using var dir = new TempDir();

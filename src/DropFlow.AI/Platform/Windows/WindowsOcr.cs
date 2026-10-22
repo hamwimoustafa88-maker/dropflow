@@ -6,16 +6,6 @@ using Windows.Storage;
 
 namespace DropFlow.AI.Ocr;
 
-/// <summary>An expected OCR failure (missing language pack, missing engine, unreadable image). The converters turn it into a failed result.</summary>
-public sealed class OcrUnavailableException(string message, Exception? inner = null) : Exception(message, inner);
-
-public interface IWindowsOcr
-{
-    /// <param name="pngPath">An upright, opaque image (see <see cref="OcrImagePreparer"/>).</param>
-    /// <param name="languageTag">BCP-47 tag of an installed pack, or null for the user's profile languages.</param>
-    Task<OcrResult> RecognizeAsync(string pngPath, string? languageTag, CancellationToken cancellationToken);
-}
-
 /// <summary>Windows 10/11 built-in OCR (<c>Windows.Media.Ocr</c>): on-device, no download, languages come from installed OCR packs.</summary>
 public sealed class WindowsOcr : IWindowsOcr
 {
@@ -64,5 +54,21 @@ public sealed class WindowsOcr : IWindowsOcr
         return OcrEngine.TryCreateFromUserProfileLanguages()
             ?? OcrEngine.TryCreateFromLanguage(new Language("en-US"))
             ?? OcrEngine.AvailableRecognizerLanguages.Select(OcrEngine.TryCreateFromLanguage).FirstOrDefault(e => e is not null);
+    }
+}
+
+/// <summary>Reads the real list from <c>Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages</c>.</summary>
+public sealed class WindowsOcrLanguageSource : IWindowsOcrLanguageSource
+{
+    public IReadOnlyList<string> InstalledTags()
+    {
+        try
+        {
+            return OcrEngine.AvailableRecognizerLanguages.Select(l => l.LanguageTag).ToList();
+        }
+        catch (Exception ex) when (ex is COMException or InvalidOperationException or PlatformNotSupportedException)
+        {
+            return [];
+        }
     }
 }

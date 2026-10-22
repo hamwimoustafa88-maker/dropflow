@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window themes only; everything inside is Compose + Material 3 (ui/Theme.kt). -->
+    <style name="Theme.DropFlow" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/df_bg</item>
+        <item name="android:colorPrimary">@color/df_primary</item>
+        <item name="android:colorAccent">@color/df_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- The wheel floats over the app that shared the files; Compose draws its own dim scrim. -->
+    <style name="Theme.DropFlow.Translucent" parent="Theme.DropFlow">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+    </style>
+</resources>

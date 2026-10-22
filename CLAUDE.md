@@ -26,6 +26,8 @@ when a program is missing.
 - Web: Next.js + TypeScript + Tailwind + next-intl on Vercel (https://dropflow.scouthub.dev); in-browser pdf-lib, pdf.js, fflate
   (ffmpeg.wasm was removed: GPL)
 - Tests: xUnit with plain `Assert` (desktop — FluentAssertions 8+ is commercially licensed, do not add it), Vitest + Playwright (web) · Installer: Velopack
+- Android (`android/`): Kotlin + Jetpack Compose / Material 3, AGP 9.4.1, Gradle 9.8.2 wrapper, compile/target SDK 36, minSdk 29;
+  Media3 (Transformer/ExoPlayer), PdfBox-Android, ZXing, AndroidX exifinterface/heifwriter/documentfile; JUnit 4 JVM tests. No internet permission.
 
 ## Repository map
 | Path | Responsibility |
@@ -48,6 +50,7 @@ when a program is missing.
 | tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
 | tests/*.Tests | xUnit tests, one project per src project. `DropFlow.App.Tests` is cross-module: catalog conformance of every converter, no overlapping converters, option-label coverage in ar/en, the known-gaps ratchet, Encoder and phone-share windows |
 | web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
+| android/ | Android app: share target `WheelActivity` → wheel (`ui/WheelView`, pure `wheel/WheelGeometry`) → `work/WorkService` (foreground) → `ops/*` → MediaStore (`work/Publisher`). Tool table `catalog/AndroidTools.kt`; labels generated from catalog/tools.json at build time (`generateCatalog`). See docs/android.md |
 | tests/ | Desktop tests; tests/samples holds one sample per format |
 | tools/ | Scripts that download engine binaries (never commit binaries) |
 | docs/ | plan.md, feature-catalog.md (generated), adr/, reference/ (Tangerine baseline + screenshots), archive/ |
@@ -57,6 +60,8 @@ when a program is missing.
 - Desktop: `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.Spike` (single test: `dotnet test --filter "FullyQualifiedName~Name"`)
 - Look at a window without clicking: `DropFlow.exe --snapshot-window <edit|annotate|crop|redact|background|qr|metadata|welcome|settings|encoder|history> out.png [--lang ar|en] [--dark] [--page N] [files…]` or `--snapshot-wheel <convert|tools|actions> out.png <files…>` (2x PNG, exits)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
+- Android: `cd android && ./gradlew testDebugUnitTest assembleDebug assembleRelease` (`gradlew.bat` on Windows; release signing from
+  `DROPFLOW_KEYSTORE*` env vars or `dropflow.*` Gradle properties, see android/README.md; CI: `.github/workflows/build-android.yml`)
 
 ## Architecture rules
 - Every tool is declared in catalog/tools.json, implements `IConverter` (desktop) / a worker module (web),
@@ -127,6 +132,12 @@ After every change to the project (code, docs, decisions, dependencies), before 
   units, `BackgroundComposer`, `RedactRenderer`, `QrDesigner`, `ImageMetadata`. First-run welcome guide (practice photo, live keycaps, wheel tick)
   also in the tray; `DropFlow.exe --snapshot-window|--snapshot-wheel` renders windows to PNG at 2x for ar/en layout checks.
   — src/DropFlow.App/Views/Editors/**, Views/WelcomeWindow.cs, Services/{Snapshots,PracticePhoto,RedactDetection}.cs, src/DropFlow.Engines.{Images,Archive}, Core/Runner
+- 2026-10-22 — Native Android app (owner approved the AndroidX/Media3/PdfBox-Android/ZXing list): share target with DropFlow's radial
+  wheel (Convert/Tools/Actions, tap or slide-and-lift, haptics, LTR geometry with RTL labels), foreground work service, MediaStore output
+  under Pictures|Movies|Music|Download/DropFlow, ~35 entries mapped to catalog ids (labels generated from catalog/tools.json), zip-slip guard,
+  ar/en with in-app switch, adaptive icon from icon.svg, no internet permission. 46 JVM tests pass, debug + signed release build, lint clean;
+  NOT run on a device yet (none available). Release key kept outside the repo (%USERPROFILE%\.dropflow). Reusable CI workflow
+  build-android.yml (fails instead of publishing unsigned). — android/**, .github/workflows/build-android.yml, docs/android.md, THIRD-PARTY-NOTICES.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

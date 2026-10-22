@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DropFlow identity (web/src/app/globals.css and web/src/app/icon.svg). Compose reads the same values in ui/Theme.kt. -->
+<resources>
+    <color name="df_navy">#070B1C</color>
+    <color name="df_primary">#4338CA</color>
+    <color name="df_accent">#0E7490</color>
+    <color name="df_bg">#F7F8FC</color>
+</resources>

@@ -41,3 +41,13 @@ tests/samples/large/
 # Installer build output (installer/build.ps1)
 /publish/
 /Releases/
+
+# Android (android/): Gradle and build outputs, local SDK path, signing material (never committed)
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/captures/
+*.jks
+*.keystore

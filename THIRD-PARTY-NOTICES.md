@@ -96,6 +96,28 @@ such a tool runs (OCR and the cut-out show a one-time note with the download siz
 `self`, `blob:`, `data:` and `https:` (the last one only so the user can paste a link to a file); a static test asserts that exactly one
 module (`src/engine/lib/fetch-link.ts`) may call `fetch`, with GET, no credentials and no body, and that nothing else uses XHR/WebSocket/beacon.
 
+## Android app (`android/`, Gradle; approved by the owner 2026-10-22)
+
+| Component | Version | License | Used for |
+|---|---|---|---|
+| AndroidX core-ktx | 1.18.0 | Apache-2.0 | Compat helpers, FileProvider, notifications (1.19 needs compileSdk 37, not installed) |
+| AndroidX activity-compose | 1.12.4 | Apache-2.0 | Compose activities, result contracts (pickers, permissions) |
+| AndroidX lifecycle-runtime-ktx, lifecycle-service | 2.10.0 | Apache-2.0 | ViewModel/lifecycle scopes, the foreground work service |
+| Jetpack Compose BOM (ui, foundation, material3) | 2026.06.01 | Apache-2.0 | All UI, Material 3 |
+| AndroidX exifinterface | 1.4.2 | Apache-2.0 | Lossless GPS/EXIF removal, JPEG rotation by orientation tag |
+| AndroidX heifwriter | 1.1.0 | Apache-2.0 | HEIC output (only when the phone has an HEVC encoder) |
+| AndroidX documentfile | 1.1.0 | Apache-2.0 | "Copy to a folder" through the system folder picker |
+| kotlinx-coroutines-android | 1.11.0 | Apache-2.0 | Background work |
+| Media3 transformer, effect, common, muxer, exoplayer, ui | 1.11.1 | Apache-2.0 | Video/audio conversion, trimming, compression on the hardware codecs; preview player in the trim editor |
+| PdfBox-Android (com.tom-roush) | 2.0.27.0 | Apache-2.0 | Merge, split, rotate, metadata removal, image recompression, text extraction |
+| ZXing core | 3.5.4 | Apache-2.0 | Reading and creating QR codes |
+| Bouncy Castle bcprov, bcpkix, bcutil (jdk15to18) — transitive, from PdfBox-Android | 1.72 | MIT-style (Bouncy Castle Licence) | Pulled in by PdfBox-Android for PDF encryption support; DropFlow never removes protection |
+| Guava, failureaccess, listenablefuture — transitive, from Media3 | (as resolved) | Apache-2.0 | Media3 internals |
+| jsr305, error_prone_annotations, j2objc-annotations, checker-qual, jspecify — transitive annotations | (as resolved) | BSD-3-Clause / Apache-2.0 / MIT | Compile-time annotations only |
+
+Build tools (not shipped): Android Gradle Plugin 9.4.1 (Apache-2.0), Kotlin 2.4.21 + Compose compiler plugin (Apache-2.0),
+Gradle 9.8.2 through the wrapper (Apache-2.0). The app has no internet permission (removed explicitly in the manifest).
+
 ## Tests
 
 | Component | License |
@@ -105,6 +127,7 @@ module (`src/engine/lib/fetch-link.ts`) may call `fetch`, with GET, no credentia
 | System.Drawing.Common 10.0.13 (renders OCR test images) | MIT |
 | `tests/samples/heic/RGB_8__128x128.heic` (HEIC fixture from bigcat88/pillow_heif, not shipped) | BSD-3-Clause, see `tests/samples/README.md` |
 | veraPDF (optional PDF/A validator, run only when `DROPFLOW_VERAPDF` is set; never bundled or committed) | GPL-3.0 / MPL-2.0 |
+| JUnit 4.13.2 (+ Hamcrest 1.3), Android JVM unit tests only, not in the APK | EPL-1.0 (Hamcrest BSD-3-Clause) |
 
 ## Notes
 - Fonts are not code; OFL 1.1 permits redistribution with the software.

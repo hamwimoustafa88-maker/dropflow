@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only DropFlow's private working copies can be shared through FileProvider (for Share / Open with). -->
+<paths>
+    <cache-path name="inputs" path="inputs/" />
+    <cache-path name="jobs" path="jobs/" />
+</paths>

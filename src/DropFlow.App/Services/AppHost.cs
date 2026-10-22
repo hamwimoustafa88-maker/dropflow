@@ -187,7 +187,6 @@ internal sealed class AppHost : IDisposable
     public UiKit Kit { get; }
     public IFileDisposer Disposer { get; }
 
-    /// <summary>The visual editors that replace the generic options form for their tools.</summary>
     public WheelSession Session { get; private set; } = null!;
     public WheelPresenter Presenter { get; private set; } = null!;
     private WheelBuilder Builder => _builder ??= new WheelBuilder(Catalog, Registry, Engines);

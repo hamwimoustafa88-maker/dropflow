@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later. Themed-icon layer (Android 13+): the same petals in one colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="1.3636"
+        android:scaleY="1.3636"
+        android:translateX="21.27"
+        android:translateY="21.27">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M 24.63 15.02 L 25.53 2.05 A 22 22 0 0 1 42.24 11.70 L 31.46 18.97 A 9 9 0 0 0 24.63 15.02 Z M 32.09 20.05 L 43.77 14.36 A 22 22 0 0 1 43.77 33.64 L 32.09 27.95 A 9 9 0 0 0 32.09 20.05 Z M 31.46 29.03 L 42.24 36.30 A 22 22 0 0 1 25.53 45.95 L 24.63 32.98 A 9 9 0 0 0 31.46 29.03 Z M 23.37 32.98 L 22.47 45.95 A 22 22 0 0 1 5.76 36.30 L 16.54 29.03 A 9 9 0 0 0 23.37 32.98 Z M 15.91 27.95 L 4.23 33.64 A 22 22 0 0 1 4.23 14.36 L 15.91 20.05 A 9 9 0 0 0 15.91 27.95 Z M 16.54 18.97 L 5.76 11.70 A 22 22 0 0 1 22.47 2.05 L 23.37 15.02 A 9 9 0 0 0 16.54 18.97 Z" />
+    </group>
+</vector>

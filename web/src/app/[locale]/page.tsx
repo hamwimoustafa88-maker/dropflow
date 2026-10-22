@@ -16,7 +16,8 @@ import { Link } from "@/i18n/navigation";
 import { exploreCategories, stats } from "@/lib/catalog";
 import type { Locale } from "@/i18n/routing";
 import { jsonLdString, softwareJsonLd } from "@/lib/seo";
-import { CONTRIBUTING_URL, ISSUES_URL, LICENSE_URL, REPO_URL, SECURITY_URL, SIGNING_POLICY_URL, WHATSAPP_URL } from "@/lib/site";
+import { REPO_URL } from "@/lib/site";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -93,52 +94,49 @@ function Cta() {
     <section className="relative overflow-x-clip">
       <div aria-hidden="true" className="hero-glow absolute inset-0 opacity-70" />
       <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 lg:py-32">
-        <h2 className="reveal text-gradient text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
+        <h2 className="reveal text-gradient pb-3 text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
         <div className="mt-10">
           <Downloads center />
+        </div>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-3">
+          <p className="text-lg font-medium text-muted">{t("ask")}</p>
+          <WhatsAppButton variant="outline" testId="cta-whatsapp" />
         </div>
       </div>
     </section>
   );
 }
 
-// Project links in the footer: plain links to GitHub (contact = the issues page; the site has no e-mail or form).
-const FOOTER_LINKS = [
-  ["github", REPO_URL],
-  ["issues", ISSUES_URL],
-  ["contributing", CONTRIBUTING_URL],
-  ["security", SECURITY_URL],
-  ["signing", SIGNING_POLICY_URL],
-  ["whatsapp", WHATSAPP_URL],
-] as const;
-
+// The footer is deliberately small: logo + one line, Privacy, Terms, ONE "Open source" link and ONE contact button (WhatsApp).
+// Issues, contributing, security, code-signing policy and the licence live in the Developers section (#developers).
 function Footer() {
   const t = useTranslations("footer");
-  const link = "inline-flex min-h-11 items-center transition-colors duration-200 hover:text-fg";
+  const link = "inline-flex min-h-11 items-center rounded-full px-3.5 font-medium transition-colors duration-200 hover:bg-surface-2 hover:text-fg";
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-8 text-sm text-muted sm:px-6">
-        <Logo />
-        <nav aria-label={t("legal")} className="flex flex-wrap items-center gap-x-5" data-testid="footer-nav">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto_auto] md:items-center md:gap-8">
+        <div className="grid justify-items-start gap-1.5">
+          <Logo />
+          <p className="text-sm text-muted" data-testid="footer-tagline">
+            {t("tagline")}
+          </p>
+        </div>
+        <nav aria-label={t("legal")} className="-mx-3.5 flex flex-wrap items-center text-sm text-muted md:mx-0" data-testid="footer-nav">
           <Link href="/privacy" prefetch={false} className={link} data-testid="footer-privacy">
             {t("privacy")}
           </Link>
           <Link href="/terms" prefetch={false} className={link} data-testid="footer-terms">
             {t("terms")}
           </Link>
-          {FOOTER_LINKS.map(([key, href]) => (
-            <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={link} data-testid={`footer-${key}`}>
-              {t(key)}
-            </a>
-          ))}
-        </nav>
-        <p className="flex flex-wrap items-center gap-x-3">
-          <span data-testid="footer-credit">{t("credit")}</span>
-          <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className={link} data-testid="footer-license">
-            {t("license")}
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={link} data-testid="footer-github">
+            {t("opensource")}
           </a>
-        </p>
+        </nav>
+        <WhatsAppButton testId="footer-whatsapp" className="justify-self-start md:justify-self-end" />
       </div>
+      <p className="border-t border-border/70 px-4 py-4 text-center text-xs text-muted sm:px-6" data-testid="footer-credit">
+        {t("credit")}
+      </p>
     </footer>
   );
 }

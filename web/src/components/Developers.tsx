@@ -1,13 +1,20 @@
 import { useTranslations } from "next-intl";
 import { CHECKSUMS_FILE, downloadUrl } from "@/lib/downloads";
-import { CONTRIBUTING_URL, RELEASES_URL, REPO_URL } from "@/lib/site";
+import { CONTRIBUTING_URL, ISSUES_URL, LICENSE_URL, RELEASES_URL, REPO_URL, SECURITY_URL, SIGNING_POLICY_URL } from "@/lib/site";
 import { CopyCode } from "./CopyCode";
 import { GitHubMark } from "./GitHubLink";
 
 // "Download from GitHub (for developers)": the open-source card and the build-from-source steps in ONE section.
 // Plain links and copyable commands; nothing is fetched. Commands are code, not copy: they are the same in every language.
 const POINTS = ["license", "stack", "issues"] as const;
-const NEEDS = ["dotnet", "node", "android"] as const;
+// Project pages that used to crowd the footer: bugs, security, code-signing policy and the licence file.
+const MORE = [
+  ["issues", ISSUES_URL],
+  ["security", SECURITY_URL],
+  ["signing", SIGNING_POLICY_URL],
+  ["license", LICENSE_URL],
+] as const;
+const NEEDS =["dotnet", "node", "android"] as const;
 const RUN = [
   ["windows", "dotnet run --project src/DropFlow.App"],
   ["desktop", "dotnet run --project src/DropFlow.Desktop"],
@@ -75,6 +82,21 @@ export function Developers() {
               </svg>
               {t("checksums")}
             </a>
+            <ul aria-label={t("moreLabel")} className="mt-3 flex flex-wrap gap-2" data-testid="dev-links">
+              {MORE.map(([key, href]) => (
+                <li key={key}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid={`dev-${key}`}
+                    className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-muted transition-colors duration-200 hover:border-primary hover:text-fg"
+                  >
+                    {t(`more.${key}`)}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
           <ul className="grid gap-3">
             {POINTS.map((p) => (

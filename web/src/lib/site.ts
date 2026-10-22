@@ -19,6 +19,8 @@ export const SIGNING_POLICY_URL = "https://github.com/hamwimoustafa88-maker/drop
 export const GPL_URL = "https://www.gnu.org/licenses/gpl-3.0.html";
 /** Contact for anything that is not a bug or a security report (shown on the legal pages and in the footer). */
 export const WHATSAPP_URL = "https://wa.me/96170863903";
+/** The same number as shown to people (always left-to-right, even inside Arabic text). */
+export const WHATSAPP_NUMBER = "+961 70 863 903";
 
 /** Links a legal-page section can show, by key (labels are in messages `legal.links.<key>`). */
 export const LEGAL_LINKS = {

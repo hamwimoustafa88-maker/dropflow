@@ -13,7 +13,8 @@ namespace DropFlow.AI.Tests;
 /// <summary>The module as the app sees it: one list of converters, truthful about what it can and cannot do.</summary>
 public class AiModuleTests
 {
-    private static readonly string[] AllOperations = ["aud.transcribe", "vid.transcribe", "img.ocr", "pdf.ocr", "img.remove-bg", "img.redact-auto"];
+    private static readonly string[] AllOperations =
+        ["aud.transcribe", "vid.transcribe", "img.ocr", "pdf.ocr", "img.remove-bg", "img.redact-auto", "txt.translate", "img.translate", "pdf.translate"];
 
     private static IReadOnlyList<IConverter> Create(TempDir dir) => AiModule.Create(new FakeEngines(), new ModelManager(dir.Combine("models")));
 
@@ -46,6 +47,10 @@ public class AiModuleTests
         Assert.IsType<PdfOcrConverter>(registry.Find("pdf.ocr", "pdf"));
         Assert.IsType<DropFlow.AI.Imaging.BackgroundRemovalConverter>(registry.Find("img.remove-bg", "jpg"));
         Assert.IsType<DropFlow.AI.Imaging.RedactAutoConverter>(registry.Find("img.redact-auto", "webp"));
+        Assert.IsType<DropFlow.AI.Translation.TextTranslateConverter>(registry.Find("txt.translate", "srt"));
+        Assert.IsType<DropFlow.AI.Translation.TextTranslateConverter>(registry.Find("txt.translate", "md"));
+        Assert.IsType<DropFlow.AI.Translation.ImageTranslateConverter>(registry.Find("img.translate", "png"));
+        Assert.IsType<DropFlow.AI.Translation.PdfTranslateConverter>(registry.Find("pdf.translate", "pdf"));
 
         Assert.Null(registry.Find("aud.transcribe", "mp4"));
         Assert.Null(registry.Find("vid.transcribe", "gif"));
@@ -53,6 +58,10 @@ public class AiModuleTests
         Assert.Null(registry.Find("pdf.ocr", "png"));
         Assert.Null(registry.Find("img.remove-bg", "mp3"));
         Assert.Null(registry.Find("img.redact-auto", "docx"));
+        Assert.Null(registry.Find("txt.translate", "docx"));
+        Assert.Null(registry.Find("txt.translate", "ass"));
+        Assert.Null(registry.Find("img.translate", "pdf"));
+        Assert.Null(registry.Find("pdf.translate", "png"));
         Assert.Equal(AllOperations.Order(), registry.ImplementedOperations.Order());
     }
 
@@ -66,11 +75,12 @@ public class AiModuleTests
 
         foreach (var op in AllOperations)
         {
-            var category = catalog.Tool(op)!.Cat!;
-            var allowed = catalog.Category(category)!.Inputs;
+            var tool = catalog.Tool(op)!;
+            // a tool belongs to one category and may also be offered on the wheels of its "alsoIn" categories
+            var allowed = new[] { tool.Cat! }.Concat(tool.AlsoIn ?? []).SelectMany(c => catalog.Category(c)!.Inputs).ToHashSet();
             foreach (var ext in everyExtension)
                 if (registry.Supports(op, ext))
-                    Assert.True(allowed.Contains(ext), $"{op} claims .{ext} but the catalog category '{category}' does not list it");
+                    Assert.True(allowed.Contains(ext), $"{op} claims .{ext} but the catalog categories of the tool do not list it");
         }
     }
 
@@ -86,6 +96,8 @@ public class AiModuleTests
         Assert.Equal(EngineId.None, byOp["img.ocr"].EngineFor("img.ocr"));       // Windows OCR needs no install
         Assert.Equal(EngineId.None, byOp["img.remove-bg"].EngineFor("img.remove-bg"));
         Assert.Equal(EngineId.None, byOp["img.redact-auto"].EngineFor("img.redact-auto"));
+        foreach (var translate in new[] { "txt.translate", "img.translate", "pdf.translate" })
+            Assert.Equal(EngineId.None, byOp[translate].EngineFor(translate));       // the models come through the model manager, nothing else is installed
 
         foreach (var (op, converter) in byOp)
         {
@@ -139,6 +151,8 @@ public class AiModuleTests
             ["img.remove-bg"] = Samples.Png(dir.Combine("p.png")),
             ["img.redact-auto"] = Samples.Png(dir.Combine("q.png")),
             ["pdf.ocr"] = Samples.Pdf(dir.Combine("d.pdf")),
+            ["txt.translate"] = dir.WriteText("t.srt", "1\n00:00:01,000 --> 00:00:02,000\nHello there\n"),
+            ["pdf.translate"] = Samples.Pdf(dir.Combine("e.pdf"), text: _ => "Hello there everyone"),
         };
         var expectedMissing = new Dictionary<string, string>
         {
@@ -147,6 +161,8 @@ public class AiModuleTests
             ["img.remove-bg"] = "Model 'u2netp'",
             ["img.redact-auto"] = "Model 'ultraface-rfb-320'",
             ["pdf.ocr"] = "Tesseract is not installed",
+            ["txt.translate"] = "Model 'opus-mt-en-ar'",
+            ["pdf.translate"] = "Model 'opus-mt-en-ar'",
         };
 #if WINDOWS
         // Windows detects faces itself (no model): the job still fails cleanly, because the sample picture has no faces.

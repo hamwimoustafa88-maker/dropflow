@@ -1,7 +1,7 @@
 {
   "stats": {
     "conversions": 428,
-    "tools": 66,
+    "tools": 69,
     "actions": 7,
     "categories": 10
   },
@@ -517,6 +517,18 @@
       "platforms": [
         "windows",
         "web"
+      ],
+      "phase": 5
+    },
+    {
+      "id": "img.translate",
+      "cat": "image",
+      "wheel": "tools",
+      "en": "Translate text in the picture",
+      "ar": "ترجمة النص داخل الصورة",
+      "engine": "onnx",
+      "platforms": [
+        "windows"
       ],
       "phase": 5
     },
@@ -1092,6 +1104,33 @@
       "en": "Make PDF searchable (OCR)",
       "ar": "جعل PDF قابلاً للبحث (OCR)",
       "engine": "ocr",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5
+    },
+    {
+      "id": "pdf.translate",
+      "cat": "pdf",
+      "wheel": "tools",
+      "en": "Translate PDF text",
+      "ar": "ترجمة نص PDF",
+      "engine": "onnx",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 5
+    },
+    {
+      "id": "txt.translate",
+      "cat": "subtitle",
+      "alsoIn": [
+        "document"
+      ],
+      "wheel": "tools",
+      "en": "Translate (English / Arabic)",
+      "ar": "ترجمة (إنجليزي / عربي)",
+      "engine": "onnx",
       "platforms": [
         "windows"
       ],

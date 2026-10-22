@@ -29,11 +29,14 @@
   <ItemGroup>
     <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+    <!-- pdf.translate reads the text layer through PdfTextReader (PdfPig reading order, headings, lists, tables). -->
+    <ProjectReference Include="..\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="15.0.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
     <!-- PDFium page rendering for pdf.ocr where Windows.Data.Pdf does not exist (also usable on Windows). -->
     <PackageReference Include="PDFtoImage" Version="5.4.0" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />

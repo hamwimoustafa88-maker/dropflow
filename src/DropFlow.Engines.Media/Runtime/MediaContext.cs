@@ -31,6 +31,12 @@ internal sealed class MediaContext
     public CancellationToken Ct { get; }
     public OutputPathResolver Paths { get; } = new();
 
+    /// <summary>
+    /// Something the user should know about a successful run (for example "nothing to trim", which writes no file). A resource key such as
+    /// <c>note.media.noEdgeSilence</c> is translated by the app; see <c>DropFlow.Core.Operations.NoteText</c>.
+    /// </summary>
+    public string? Note { get; set; }
+
     public string Input => Job.Inputs[0];
     public string InputExtension => Path.GetExtension(Input).TrimStart('.').ToLowerInvariant();
     public string InputStem => Path.GetFileNameWithoutExtension(Input);
@@ -286,12 +292,21 @@ internal sealed class MediaContext
     internal const double TargetBandLow = 0.95;
     internal const double TargetBandHigh = 1.0;
     private const double TargetAim = 0.975;
-    private const int MaxSizeCorrections = 2;
+    /// <summary>A file over the target is re-encoded with its bitrate scaled by (target / actual) times this margin.</summary>
+    internal const double OvershootMargin = 0.95;
+    internal const int MaxSizeCorrections = 3;
 
     /// <summary>
     /// Measures the finished file and, if it is outside <see cref="TargetBandLow"/>..<see cref="TargetBandHigh"/> of the target, re-runs the final
-    /// pass with the video bitrate moved by exactly the miss (two-pass statistics from pass 1 are reused, so a correction costs one pass).
-    /// The corrected file replaces the first only when it is closer to the aim. A failed correction keeps the first result.
+    /// pass with a corrected video bitrate (two-pass statistics from pass 1 are reused, so a correction costs one pass), at most
+    /// <see cref="MaxSizeCorrections"/> times:
+    /// <list type="bullet">
+    /// <item><b>Too big</b> (the size is a promise: an upload limit): the bitrate is scaled by (target / actual) × <see cref="OvershootMargin"/>, and keeps
+    ///   going down on every attempt; a smaller file replaces the bigger one. If the file is <b>still</b> over the target after the last attempt the job
+    ///   fails with a clear message (and the file is removed) rather than delivering something that will not fit.</item>
+    /// <item><b>Far under</b> (below 95 %): the bitrate is raised by the miss (at most +50 % per step); the new file is kept only when it is closer to
+    ///   the aim. A failed correction keeps the smaller first result, which is still within the limit.</item>
+    /// </list>
     /// </summary>
     private async Task RefineTargetSizeAsync(EncoderPlan plan, double targetMb, string outputPath, double from, double to, double? expectedSecondsOverride)
     {
@@ -301,8 +316,10 @@ internal sealed class MediaContext
         var duration = plan.OutputDurationSeconds.Value;
         var seconds = expectedSecondsOverride ?? duration;
         var work = plan.IsTwoPass ? TempDirectory : null;
-        var bitrate = (double)plan.VideoBitrateKbps.Value;
+        var planned = (double)plan.VideoBitrateKbps.Value;
+        var bitrate = planned;
         var template = plan.Passes[^1];
+        var attempts = 0;
 
         for (var attempt = 0; attempt < MaxSizeCorrections; attempt++)
         {
@@ -310,35 +327,47 @@ internal sealed class MediaContext
             var ratio = actual / targetBytes;
             if (ratio is >= TargetBandLow and <= TargetBandHigh) break;
 
-            var nominalBytes = bitrate * 1000 * duration / 8;
-            var wantedKbps = (nominalBytes - (actual - targetBytes * TargetAim)) * 8 / duration / 1000;
-            if (wantedKbps < BitrateMath.MinVideoKbps) break;
-            var corrected = Math.Clamp(wantedKbps, bitrate * 0.5, bitrate * 1.5);
+            var over = ratio > TargetBandHigh;
+            double corrected;
+            if (over)
+            {
+                corrected = bitrate * (targetBytes / actual) * OvershootMargin;
+            }
+            else
+            {
+                var nominalBytes = bitrate * 1000 * duration / 8;
+                var wantedKbps = (nominalBytes - (actual - targetBytes * TargetAim)) * 8 / duration / 1000;
+                corrected = Math.Clamp(wantedKbps, bitrate * 0.5, bitrate * 1.5);
+            }
+            if (corrected < BitrateMath.MinVideoKbps) break;
 
             var candidate = Path.Combine(TempDirectory, $"refine{attempt}{Path.GetExtension(outputPath)}");
-            var args = ScaleBitrates(template, corrected / bitrate, outputPath, candidate);
+            var args = ScaleBitrates(template, corrected / planned, outputPath, candidate);
             var a = from + (to - from) * attempt / MaxSizeCorrections;
             var b = from + (to - from) * (attempt + 1) / MaxSizeCorrections;
             Progress.Report(new JobProgress(a, $"The file is {actual / 1_000_000.0:0.##} MB, aiming for {targetMb:0.##} MB; adjusting."));
 
+            attempts++;
             var result = await RunFfmpegAsync(args, seconds, a, b, work, "Adjusting size").ConfigureAwait(false);
             if (!result.Success || !File.Exists(candidate) || new FileInfo(candidate).Length == 0) break; // keep what we have
 
             var newSize = new FileInfo(candidate).Length;
-            if (Math.Abs(newSize - targetBytes * TargetAim) < Math.Abs(actual - targetBytes * TargetAim))
-            {
-                File.Move(candidate, outputPath, overwrite: true);
-                bitrate = corrected;
-            }
-            else
-            {
-                break;
-            }
+            var better = over
+                ? newSize < actual
+                : Math.Abs(newSize - targetBytes * TargetAim) < Math.Abs(actual - targetBytes * TargetAim) && newSize <= targetBytes;
+            if (better) File.Move(candidate, outputPath, overwrite: true);
+            else File.Delete(candidate);
+
+            if (over) bitrate = corrected;          // still too big or not: the next attempt starts lower
+            else if (better) bitrate = corrected;
+            else break;
         }
 
-        var finalRatio = new FileInfo(outputPath).Length / targetBytes;
-        if (finalRatio > TargetBandHigh)
-            Progress.Report(new JobProgress(to, $"The result is {new FileInfo(outputPath).Length / 1_000_000.0:0.##} MB, slightly above the {targetMb:0.##} MB target."));
+        var finalSize = new FileInfo(outputPath).Length;
+        if (finalSize > targetBytes)
+            throw new MediaFailure(
+                $"The result is {finalSize / 1_000_000.0:0.##} MB, over the {targetMb:0.##} MB target even after {attempts} " +
+                $"{(attempts == 1 ? "attempt" : "attempts")} with a lower bitrate. Choose a larger size, a lower audio bitrate, or trim the video.");
         Progress.Report(new JobProgress(to));
     }
 

@@ -89,19 +89,44 @@ internal static partial class ToolFilters
     // ------------------------------------------------------------ redact
 
     /// <summary>
-    /// Blurs a rectangle, optionally only between two times. A simple filtergraph (one input, one output) so it can sit in
-    /// <c>-vf</c>. The blur radius is limited to a quarter of the box's short side because chroma planes are half size.
+    /// Hides each box by <b>pixelating, then blurring</b> it, each only inside its own time window. A plain blur can be partly undone
+    /// (deconvolution recovers large text), so the box is first scaled down to 1/16 of its size (averaging whole blocks of pixels away)
+    /// and back up with nearest-neighbour, and only then blurred to soften the blocks. One graph with one input and one output, so it
+    /// can sit in <c>-vf</c>: the source is split once, every box is cut from the untouched source, and the patches are overlaid in order.
+    /// The blur radius is limited to a quarter of the box's short side because chroma planes are half size.
     /// </summary>
-    public static string RedactBlur(PixelRect r, int strength, double? start, double? end)
+    public static string RedactBlur(IReadOnlyList<RedactBox> boxes, int strength)
     {
-        var radius = Math.Clamp(strength, 1, Math.Max(1, Math.Min(r.Width, r.Height) / 4));
-        return $"split[orig][part];[part]crop={r.Width}:{r.Height}:{r.X}:{r.Y},boxblur={radius}:2[blurred];" +
-               $"[orig][blurred]overlay={r.X}:{r.Y}{EnableBetween(start, end)}";
+        if (boxes.Count == 0) throw new ArgumentException("At least one box is required.", nameof(boxes));
+        var graph = new System.Text.StringBuilder($"split={boxes.Count + 1}[base]");
+        for (var i = 0; i < boxes.Count; i++) graph.Append($"[c{i}]");
+        graph.Append(';');
+
+        for (var i = 0; i < boxes.Count; i++)
+        {
+            var r = boxes[i].Rect;
+            var radius = Math.Clamp(strength, 1, Math.Max(1, Math.Min(r.Width, r.Height) / 4));
+            int smallW = Math.Max(2, Even(r.Width / 16)), smallH = Math.Max(2, Even(r.Height / 16));
+            graph.Append($"[c{i}]crop={r.Width}:{r.Height}:{r.X}:{r.Y},scale={smallW}:{smallH}:flags=area,scale={r.Width}:{r.Height}:flags=neighbor,boxblur={radius}:2[p{i}];");
+        }
+
+        for (var i = 0; i < boxes.Count; i++)
+        {
+            var r = boxes[i].Rect;
+            var below = i == 0 ? "[base]" : $"[o{i - 1}]";
+            graph.Append($"{below}[p{i}]overlay={r.X}:{r.Y}{EnableBetween(boxes[i].Start, boxes[i].End)}");
+            if (i < boxes.Count - 1) graph.Append($"[o{i}];");
+        }
+        return graph.ToString();
     }
 
-    /// <summary>Paints a solid rectangle, optionally only between two times.</summary>
-    public static string RedactSolid(PixelRect r, string color, double? start, double? end) =>
-        $"drawbox=x={r.X}:y={r.Y}:w={r.Width}:h={r.Height}:color={FilterEscaping.Value(color + "@1")}:t=fill{EnableBetween(start, end)}";
+    /// <summary>Paints a solid rectangle over each box, each only inside its own time window.</summary>
+    public static string RedactSolid(IReadOnlyList<RedactBox> boxes, string color)
+    {
+        if (boxes.Count == 0) throw new ArgumentException("At least one box is required.", nameof(boxes));
+        return string.Join(",", boxes.Select(b =>
+            $"drawbox=x={b.Rect.X}:y={b.Rect.Y}:w={b.Rect.Width}:h={b.Rect.Height}:color={FilterEscaping.Value(color + "@1")}:t=fill{EnableBetween(b.Start, b.End)}"));
+    }
 
     /// <summary><c>:enable='between(t,s,e)'</c>, or nothing when the whole timeline is wanted.</summary>
     public static string EnableBetween(double? start, double? end)

@@ -23,6 +23,26 @@ internal static class VideoToolArgs
         return a;
     }
 
+    // ------------------------------------------------------------ rotate (metadata only)
+
+    /// <summary>
+    /// Lossless rotation: <c>-display_rotation</c> is an <b>input</b> option that replaces the stream's display matrix (counter-clockwise degrees,
+    /// FFmpeg's convention; 0 clears it), and the streams are copied untouched. Players and editors turn the picture when they show it.
+    /// Verified with FFmpeg 9 for MP4, MOV, M4V, MKV and WebM: ffprobe reports the new rotation in the stream's side data.
+    /// </summary>
+    public static IReadOnlyList<string> RotateCopy(string input, string output, string extension, int counterClockwiseDegrees)
+    {
+        var a = FfmpegCommand.Global();
+        a.AddRange(["-display_rotation:v:0", counterClockwiseDegrees.ToString(System.Globalization.CultureInfo.InvariantCulture), "-i", input]);
+        a.AddRange(["-map", "0:v", "-map", "0:a?", "-map", "0:s?", "-c", "copy", "-map_metadata", "0", "-map_chapters", "0"]);
+        a.AddRange(ContainerFlags(extension));
+        a.Add(output);
+        return a;
+    }
+
+    /// <summary>The counter-clockwise angle (0, 90, 180, 270) a file shows at after turning it <paramref name="clockwise"/> degrees more.</summary>
+    public static int CombineRotation(int currentCounterClockwise, int clockwise) => (((currentCounterClockwise - clockwise) % 360) + 360) % 360;
+
     // ------------------------------------------------------------ metadata
 
     /// <summary>

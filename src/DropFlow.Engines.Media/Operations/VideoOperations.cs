@@ -272,6 +272,40 @@ internal sealed class VideoCropOperation : VideoToolBase
 }
 
 /// <summary>
+/// <b>vid.rotate</b> — turn the picture 90, 180 or 270 degrees clockwise <b>without re-encoding</b>: only the display rotation stored in the
+/// container changes (FFmpeg's <c>-display_rotation</c> input option with stream copy), so it is instant and lossless, and it adds to any rotation
+/// the file already has (turning back to upright clears it). Option: <c>rotate</c> (90 | 180 | 270, default 90). Offered only for containers that
+/// store a rotation: MP4, MOV, M4V, MKV, WebM (AVI, WMV and FLV cannot). Output: <c>name (rotated).ext</c>.
+/// </summary>
+internal sealed class VideoRotateOperation : VideoToolBase
+{
+    public static readonly IReadOnlyList<string> Angles = ["90", "180", "270"];
+    private static readonly string[] Containers = ["mp4", "mov", "mkv", "webm", "m4v"];
+
+    protected override string Id => "vid.rotate";
+
+    public override bool Supports(string operation, string inputExtension) => operation == Id && Containers.Contains(inputExtension);
+
+    public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
+    [
+        new("rotate", ToolOptionKind.Choice, "90", Choices: Angles),
+    ];
+
+    public override async Task<IReadOnlyList<string>> ExecuteAsync(MediaContext ctx)
+    {
+        var clockwise = int.Parse(ctx.Choice("rotate", "90", Angles), System.Globalization.CultureInfo.InvariantCulture);
+        var info = await ctx.ProbeAsync(ctx.Input).ConfigureAwait(false);
+        var video = info.Video ?? throw new MediaFailure("The file has no video stream.");
+
+        var output = ctx.NewFile(ctx.InputExtension, "rotated");
+        var args = VideoToolArgs.RotateCopy(ctx.Input, output, ctx.InputExtension, VideoToolArgs.CombineRotation(video.Rotation, clockwise));
+        await ctx.RunFfmpegOrFailAsync(args, info.DurationSeconds, label: "Rotating").ConfigureAwait(false);
+        MediaContext.RequireOutput(output);
+        return [output];
+    }
+}
+
+/// <summary>
 /// <b>vid.speed</b> — faster or slower playback, pitch kept. Option: <c>speed</c> (0.25-4, default 2). Video timestamps are rescaled
 /// (<c>setpts</c>) and audio is time-stretched with a chain of <c>atempo</c> stages (each within 0.5-2, so 4x is two stages). Output: <c>name (speed 2x).ext</c>.
 /// </summary>
@@ -485,9 +519,13 @@ internal sealed class VideoJoinOperation : VideoToolBase
 }
 
 /// <summary>
-/// <b>vid.redact</b> — hide a rectangle. Options: <c>x</c>, <c>y</c>, <c>w</c>, <c>h</c> (pixels of the displayed picture; <c>w</c>/<c>h</c> required), <c>mode</c> (blur | solid, default blur),
-/// <c>strength</c> (blur radius 2-60, default 20), <c>color</c> (solid fill: name or #RRGGBB, default black), <c>start</c> and <c>end</c> (time range; both empty = the whole video).
-/// Audio is copied. Output: <c>name (redacted).ext</c>.
+/// <b>vid.redact</b> — hide one or many rectangles, each for its own stretch of time.
+/// Options: <c>boxes</c> (the list of areas, see <see cref="RedactBoxes"/>: compact text <c>x,y,w,h@start-end; …</c> or the visual editor's JSON
+/// <c>[{"x":..,"y":..,"w":..,"h":..,"start":..,"end":..}]</c>), and, kept for older recipes and the plain form, one area as <c>x</c>, <c>y</c>, <c>w</c>, <c>h</c>
+/// with <c>start</c>/<c>end</c> (it is added to the list when <c>w</c> and <c>h</c> are set). Pixels are those of the displayed picture. <c>mode</c> (blur | solid,
+/// default blur): blur <b>pixelates first</b> (1/16 size, nearest-neighbour back up) and then blurs, so the hidden text cannot be recovered by sharpening;
+/// <c>strength</c> (blur radius 2-60, default 20), <c>color</c> (solid fill: name or #RRGGBB, default black). The output carries <b>no metadata</b>
+/// from the original (title, GPS, device, chapters). Audio is copied. Output: <c>name (redacted).ext</c>.
 /// </summary>
 internal sealed class VideoRedactOperation : VideoToolBase
 {
@@ -495,10 +533,11 @@ internal sealed class VideoRedactOperation : VideoToolBase
 
     public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
     [
+        new("boxes", ToolOptionKind.Text, ""),
         new("x", ToolOptionKind.Number, 0, Min: 0, Max: 16384),
         new("y", ToolOptionKind.Number, 0, Min: 0, Max: 16384),
-        new("w", ToolOptionKind.Number, 0, Min: 0, Max: 16384, Required: true),
-        new("h", ToolOptionKind.Number, 0, Min: 0, Max: 16384, Required: true),
+        new("w", ToolOptionKind.Number, 0, Min: 0, Max: 16384),
+        new("h", ToolOptionKind.Number, 0, Min: 0, Max: 16384),
         new("mode", ToolOptionKind.Choice, "blur", Choices: ["blur", "solid"]),
         new("strength", ToolOptionKind.Number, 20, Min: 2, Max: 60),
         new("color", ToolOptionKind.Text, "black"),
@@ -512,32 +551,52 @@ internal sealed class VideoRedactOperation : VideoToolBase
         var video = info.Video ?? throw new MediaFailure("The file has no video stream.");
         int frameW = video.DisplayWidth ?? 0, frameH = video.DisplayHeight ?? 0;
 
-        var x = ctx.Int("x", 0, 0);
-        var y = ctx.Int("y", 0, 0);
+        var boxes = new List<RedactBox>();
         var w = ctx.Int("w", 0, 0);
         var h = ctx.Int("h", 0, 0);
-        if (w <= 0 || h <= 0) throw new MediaFailure("Enter the width and height of the area to hide.");
-        if (frameW > 0 && frameH > 0 && (x + w > frameW || y + h > frameH))
-            throw new MediaFailure($"The area ({w}x{h} at {x},{y}) does not fit inside the {frameW}x{frameH} picture.");
+        if (w > 0 && h > 0)
+        {
+            var start = ctx.Time("start");
+            var end = ctx.Time("end");
+            if (start is not null && end is not null && end <= start) throw new MediaFailure("The end time must be after the start time.");
+            boxes.Add(new RedactBox(new PixelRect(ctx.Int("x", 0, 0), ctx.Int("y", 0, 0), w, h), start, end));
+        }
+        try
+        {
+            boxes.AddRange(RedactBoxes.Parse(ctx.Text("boxes")));
+        }
+        catch (FormatException ex)
+        {
+            throw new MediaFailure(ex.Message);
+        }
+        if (boxes.Count == 0) throw new MediaFailure("Enter the width and height of the area to hide, or a list of areas.");
+        if (boxes.Count > RedactBoxes.MaxBoxes) throw new MediaFailure($"At most {RedactBoxes.MaxBoxes} areas can be hidden in one run.");
 
-        var start = ctx.Time("start");
-        var end = ctx.Time("end");
-        if (start is not null && end is not null && end <= start) throw new MediaFailure("The end time must be after the start time.");
+        var even = new List<RedactBox>(boxes.Count);
+        for (var i = 0; i < boxes.Count; i++)
+        {
+            var r = boxes[i].Rect;
+            if (frameW > 0 && frameH > 0 && (r.X + r.Width > frameW || r.Y + r.Height > frameH))
+                throw new MediaFailure(boxes.Count == 1
+                    ? $"The area ({r.Width}x{r.Height} at {r.X},{r.Y}) does not fit inside the {frameW}x{frameH} picture."
+                    : $"Box {i + 1} ({r.Width}x{r.Height} at {r.X},{r.Y}) does not fit inside the {frameW}x{frameH} picture.");
+            even.Add(boxes[i] with { Rect = new PixelRect(ToolFilters.Even(r.X), ToolFilters.Even(r.Y), Math.Max(2, ToolFilters.Even(r.Width)), Math.Max(2, ToolFilters.Even(r.Height))) });
+        }
 
-        var rect = new PixelRect(ToolFilters.Even(x), ToolFilters.Even(y), Math.Max(2, ToolFilters.Even(w)), Math.Max(2, ToolFilters.Even(h)));
         string filter;
         if (ctx.Choice("mode", "blur", ["blur", "solid"]) == "blur")
         {
-            filter = ToolFilters.RedactBlur(rect, ctx.Int("strength", 20, 2, 60), start, end);
+            filter = ToolFilters.RedactBlur(even, ctx.Int("strength", 20, 2, 60));
         }
         else
         {
             var color = ctx.Text("color", "black");
             if (!ToolFilters.IsValidColor(color)) throw new MediaFailure($"'{color}' is not a colour. Use a name such as black or a code such as #FF0000.");
-            filter = ToolFilters.RedactSolid(rect, color.StartsWith('#') ? "0x" + color[1..] : color, start, end);
+            filter = ToolFilters.RedactSolid(even, color.StartsWith('#') ? "0x" + color[1..] : color);
         }
 
-        var settings = Reencode(ctx, 18) with { AudioCodec = AudioCodec.Copy, VideoFilters = [filter] };
+        // Redaction is for privacy: nothing from the original's tags (location, device, names, chapters) is carried over.
+        var settings = Reencode(ctx, 18) with { AudioCodec = AudioCodec.Copy, VideoFilters = [filter], KeepMetadata = false };
         var output = ctx.NewFile(ReencodeExtension(ctx), "redacted");
         await ctx.EncodeAsync(settings, info, output).ConfigureAwait(false);
         return [output];

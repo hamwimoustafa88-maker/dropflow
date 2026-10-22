@@ -218,6 +218,79 @@ internal sealed class AudioTrimOperation : AudioToolBase
 }
 
 /// <summary>
+/// <b>aud.trim-silence</b> — removes silence at the start and/or the end of a recording (never in the middle). Works on audio files and, because the
+/// catalog also lists it for videos, on the sound of a video. Options: <c>silenceDb</c> (what counts as silence, -90..-10 dB, default -45),
+/// <c>ends</c> (both | start | end, default both). 0.1 s of silence is kept next to the sound.
+/// <list type="bullet">
+/// <item><b>Audio</b>: <c>silenceremove</c> on the start, and on the end by reversing (see <see cref="SilenceTrim"/>); sample-accurate, re-encoded at high
+///   quality in the same format. Files longer than 10 minutes are measured first and cut with <c>atrim</c> to keep memory flat.</item>
+/// <item><b>Video</b>: the sound is measured with <c>silencedetect</c> and the whole file is cut to that range by <b>stream copy</b> (picture and sound
+///   stay in sync and nothing is re-encoded). Like <c>vid.trim</c> without re-encoding, the cut starts on a keyframe, so up to one keyframe
+///   interval of the leading silence can remain.</item>
+/// </list>
+/// When there is no silence at the chosen ends, nothing is written and the note <c>note.media.noEdgeSilence</c> says so. Output: <c>name (trimmed).ext</c>.
+/// </summary>
+internal sealed class AudioTrimSilenceOperation : AudioToolBase
+{
+    public static readonly IReadOnlyList<string> EndChoices = ["both", "start", "end"];
+
+    protected override string Id => "aud.trim-silence";
+
+    public override bool Supports(string operation, string inputExtension) =>
+        operation == Id && (AudioFormats.IsAudioExtension(inputExtension) || VideoToolBase.Inputs.Contains(inputExtension));
+
+    public override IReadOnlyList<ToolOption> OptionsFor(string operation) =>
+    [
+        new("silenceDb", ToolOptionKind.Number, -45, Min: -90, Max: -10),
+        new("ends", ToolOptionKind.Choice, "both", Choices: EndChoices),
+    ];
+
+    public override async Task<IReadOnlyList<string>> ExecuteAsync(MediaContext ctx)
+    {
+        var threshold = ctx.Number("silenceDb", -45, -90, -10);
+        var ends = ctx.Choice("ends", "both", EndChoices) switch { "start" => SilenceEnds.Start, "end" => SilenceEnds.End, _ => SilenceEnds.Both };
+        var isVideo = VideoToolBase.Inputs.Contains(ctx.InputExtension);
+
+        var info = isVideo ? await ctx.ProbeAsync(ctx.Input).ConfigureAwait(false) : await ctx.TryProbeAsync(ctx.Input).ConfigureAwait(false);
+        if (info is not null && !info.HasAudio) throw new MediaFailure("The file has no audio stream.");
+        var duration = info?.DurationSeconds;
+
+        if (!isVideo && SilenceTrim.UsesReversal(duration))
+        {
+            var output = ctx.NewFile(ctx.InputExtension, "trimmed");
+            await EncodeAudioAsync(ctx, output, ctx.InputExtension, info, null, AudioQuality.High, SilenceTrim.RemoveFilter(threshold, ends), duration, label: "Trimming silence").ConfigureAwait(false);
+            return [output];
+        }
+
+        // Measure, then cut: videos (so the picture stays in sync) and long audio (so nothing is held in memory).
+        if (duration is not > 0) throw new MediaFailure("The length of the file is unknown, so silence at its end cannot be found.");
+        var scan = await ctx.RunFfmpegAsync(AudioToolArgs.Analyze(ctx.Input, SilenceDetect.Filter(threshold, SilenceTrim.KeepSeconds)), duration, 0, 0.5, label: "Looking for silence").ConfigureAwait(false);
+        if (!scan.Success) throw new MediaFailure(FfmpegErrors.Summarize(scan.StdErr, scan.ExitCode));
+
+        var sound = SilenceDetect.EdgeTrim(SilenceDetect.Parse(scan.StdErr), duration.Value, SilenceTrim.KeepSeconds)
+                    ?? throw new MediaFailure("The whole file is silent at this threshold, so there is nothing to keep.");
+        if (SilenceTrim.KeepRange(sound, duration.Value, ends) is not { } keep)
+        {
+            ctx.Note = "note.media.noEdgeSilence";
+            return [];
+        }
+
+        var target = ctx.NewFile(ctx.InputExtension, "trimmed");
+        var length = (keep.End ?? duration.Value) - keep.Start;
+        if (isVideo)
+        {
+            await ctx.RunFfmpegOrFailAsync(VideoToolArgs.TrimCopy(ctx.Input, target, ctx.InputExtension, keep.Start, keep.End), length, 0.5, 1, label: "Cutting").ConfigureAwait(false);
+            MediaContext.RequireOutput(target);
+        }
+        else
+        {
+            await EncodeAudioAsync(ctx, target, ctx.InputExtension, info, null, AudioQuality.High, SilenceTrim.AtrimFilter(keep.Start, keep.End), length, 0.5, 1, "Trimming silence").ConfigureAwait(false);
+        }
+        return [target];
+    }
+}
+
+/// <summary>
 /// <b>aud.channels</b> — convert between mono and stereo. Option: <c>channels</c> (mono | stereo, default mono). Mono to stereo duplicates the signal at full level;
 /// stereo to mono averages left and right; surround files are down-mixed. A file that already has the wanted layout fails with a message.
 /// Output: <c>name (mono).ext</c> or <c>name (stereo).ext</c>.

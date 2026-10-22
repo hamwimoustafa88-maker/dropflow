@@ -868,7 +868,8 @@ public class VideoRedactTests
         var result = await h.Run("vid.redact", h.Video("v.mp4"), MediaHarness.Opts(("x", 100), ("y", 50), ("w", 300), ("h", 200)));
         Assert.True(result.Success, result.Error);
         var a = h.Runner.Calls.Single().Args;
-        Assert.StartsWith("split[orig][part];[part]crop=300:200:100:50,boxblur=20:2[blurred];[orig][blurred]overlay=100:50,", Args.After(a, "-vf"));
+        // Pixelate (1/16 size, nearest-neighbour back up), then blur: a plain blur of large text can be sharpened back.
+        Assert.StartsWith("split=2[base][c0];[c0]crop=300:200:100:50,scale=18:12:flags=area,scale=300:200:flags=neighbor,boxblur=20:2[p0];[base][p0]overlay=100:50,", Args.After(a, "-vf"));
         Assert.True(Args.HasPair(a, "-c:a", "copy"));
         Assert.EndsWith("v (redacted).mp4", result.Outputs.Single());
     }

@@ -68,6 +68,52 @@ internal static partial class SilenceDetect
     private static partial Regex EndRegex();
 }
 
+/// <summary>Which ends of a recording "trim silence" works on.</summary>
+internal enum SilenceEnds { Both, Start, End }
+
+/// <summary>
+/// Filters for <c>aud.trim-silence</c>. The start is trimmed with <c>silenceremove</c>; the end is trimmed by reversing the sound, trimming its
+/// (new) start and reversing back, because <c>silenceremove</c>'s own "stop" mode also cuts pauses in the middle. 0.1 s of silence is kept next
+/// to the sound so the first and last syllables are not clipped. <c>areverse</c> holds the whole decoded track in memory, so recordings longer
+/// than <see cref="MaxReverseSeconds"/> are measured with <c>silencedetect</c> first and cut with <c>atrim</c> instead (same result, constant memory).
+/// </summary>
+internal static class SilenceTrim
+{
+    /// <summary>10 minutes of 48 kHz stereo float is about 230 MB in memory; longer files take the measure-then-cut path.</summary>
+    public const double MaxReverseSeconds = 600;
+    public const double KeepSeconds = 0.1;
+
+    public static bool UsesReversal(double? durationSeconds) => durationSeconds is not > MaxReverseSeconds;
+
+    public static string RemoveFilter(double thresholdDb, SilenceEnds ends)
+    {
+        var remove = $"silenceremove=start_periods=1:start_threshold={TimeSpec.Num(thresholdDb, 2)}dB:start_silence={TimeSpec.Num(KeepSeconds, 3)}";
+        return ends switch
+        {
+            SilenceEnds.Start => remove,
+            SilenceEnds.End => $"areverse,{remove},areverse",
+            _ => $"{remove},areverse,{remove},areverse",
+        };
+    }
+
+    /// <summary>The range to keep after applying <paramref name="ends"/> to the measured sound range, or null when nothing would be removed.</summary>
+    public static (double Start, double? End)? KeepRange((double Start, double End) sound, double duration, SilenceEnds ends)
+    {
+        var start = ends == SilenceEnds.End ? 0 : sound.Start;
+        double? end = ends == SilenceEnds.Start || sound.End >= duration - 0.01 ? null : sound.End;
+        if (start <= 0.01 && end is null) return null;
+        return (start <= 0.01 ? 0 : start, end);
+    }
+
+    public static string AtrimFilter(double start, double? end)
+    {
+        var parts = new List<string>();
+        if (start > 0) parts.Add($"start={TimeSpec.Num(start, 3)}");
+        if (end is { } e) parts.Add($"end={TimeSpec.Num(e, 3)}");
+        return $"atrim={string.Join(":", parts)},asetpts=PTS-STARTPTS";
+    }
+}
+
 /// <summary>A silent stretch. <see cref="End"/> is null when the silence runs to the end of the file.</summary>
 internal readonly record struct SilenceInterval(double Start, double? End);
 

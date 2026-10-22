@@ -53,6 +53,14 @@ public sealed record AppSettings
 
     /// <summary>Items added to a wheel with "+ Add", per wheel and kind of input. Removed from the wheel or in Settings.</summary>
     public WheelPins PinnedItems { get; init; } = WheelPins.None;
+
+    /// <summary>
+    /// When true (default) a key tap opens the wheel only while files are really being dragged: the shell's drag picture (a visible
+    /// <c>SysDragImage</c> window) is on screen, an OLE drag holds the mouse, or the wheel already received the files. This keeps Shift+drag
+    /// text selection and window moves from opening the wheel. The escape hatch for a system where that check never succeeds: set it to
+    /// false (Settings, or <c>"RequireFileDrag": false</c> in settings.json); every rejected tap is written to the log.
+    /// </summary>
+    public bool RequireFileDrag { get; init; } = true;
 }
 
 /// <summary>Reads and writes settings as JSON. A corrupt file falls back to defaults and is kept as ".bad" for inspection.</summary>

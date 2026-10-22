@@ -41,6 +41,11 @@ for (const t of [...cat.tools, ...cat.actions]) {
   ids.add(t.id);
   for (const f of ["en", "ar", "engine", "platforms", "phase"]) if (t[f] === undefined) fail(`${t.id}: missing ${f}`);
   if (t.cat && t.cat !== "general" && !cats.has(t.cat)) fail(`${t.id}: unknown category ${t.cat}`);
+  // "alsoIn": other input categories whose wheel also offers the tool (e.g. trimming the silence of a video's sound).
+  if (t.alsoIn !== undefined) {
+    if (!Array.isArray(t.alsoIn) || t.alsoIn.length === 0) fail(`${t.id}: alsoIn must be a non-empty list`);
+    else for (const c of t.alsoIn) if (!cats.has(c) || c === t.cat) fail(`${t.id}: alsoIn has an unknown or duplicate category ${c}`);
+  }
 }
 const covered = new Set([...cat.tools, ...cat.actions].map((t) => t.tg).filter(Boolean));
 for (const k of TG_TOOLS) if (!covered.has(k)) fail(`parity: Tangerine tool not covered: ${k}`);
@@ -79,7 +84,7 @@ md += `\nWindows adaptations: Pages / Keynote / Numbers are **input-only**; AirD
 md += `## Tools and actions by phase\n\n`;
 for (const p of Object.keys(byPhase).sort((a, b) => a - b)) {
   md += `### Phase ${p}\n\n| ID | Tool | الأداة | Engine | Platforms | Tangerine |\n|---|---|---|---|---|---|\n`;
-  for (const t of byPhase[p]) md += `| ${t.id} | ${t.en}${t.multi ? " *(multi-file)*" : ""} | ${t.ar} | ${t.engine} | ${t.platforms.join(", ")} | ${t.tg ? "✓ " + t.tg : "— (DropFlow extra)"} |\n`;
+  for (const t of byPhase[p]) md += `| ${t.id} | ${t.en}${t.multi ? " *(multi-file)*" : ""}${t.alsoIn ? ` *(also for ${t.alsoIn.join(", ")})*` : ""} | ${t.ar} | ${t.engine} | ${t.platforms.join(", ")} | ${t.tg ? "✓ " + t.tg : "— (DropFlow extra)"} |\n`;
   md += "\n";
 }
 writeFileSync(join(root, "docs", "feature-catalog.md"), md);

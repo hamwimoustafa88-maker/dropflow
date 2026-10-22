@@ -1,7 +1,7 @@
 {
   "stats": {
     "conversions": 428,
-    "tools": 63,
+    "tools": 66,
     "actions": 7,
     "categories": 10
   },
@@ -389,6 +389,18 @@
       "tg": "image:EDIT"
     },
     {
+      "id": "img.rotate",
+      "cat": "image",
+      "wheel": "tools",
+      "en": "Rotate images (lossless for JPEG)",
+      "ar": "تدوير الصور (بلا فقدان لصور JPEG)",
+      "engine": "magick",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 4
+    },
+    {
       "id": "img.annotate",
       "cat": "image",
       "wheel": "tools",
@@ -577,6 +589,18 @@
       "tg": "video:CROP"
     },
     {
+      "id": "vid.rotate",
+      "cat": "video",
+      "wheel": "tools",
+      "en": "Rotate videos (lossless)",
+      "ar": "تدوير الفيديو بلا فقدان للجودة",
+      "engine": "ffmpeg",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 3
+    },
+    {
       "id": "vid.speed",
       "cat": "video",
       "wheel": "tools",
@@ -745,6 +769,21 @@
       ],
       "phase": 3,
       "tg": "audio:TRIM"
+    },
+    {
+      "id": "aud.trim-silence",
+      "cat": "audio",
+      "alsoIn": [
+        "video"
+      ],
+      "wheel": "tools",
+      "en": "Trim silence at the ends",
+      "ar": "حذف الصمت من البداية والنهاية",
+      "engine": "ffmpeg",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 3
     },
     {
       "id": "aud.channels",

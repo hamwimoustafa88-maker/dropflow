@@ -54,6 +54,27 @@ public class WheelBuilderTests
     }
 
     [Fact]
+    public void A_tool_also_listed_for_another_category_appears_on_both_wheels()
+    {
+        // "Trim silence" is an audio tool that the catalog also offers for videos (it trims the video's sound track).
+        var registry = new ToolRegistry().Register(new FakeConverter(["aud.trim-silence"]));
+        Assert.Contains(Builder(registry).Build([@"C:\a.mp3"], "en", Actions).Tools, w => w.Id == "aud.trim-silence");
+        Assert.Contains(Builder(registry).Build([@"C:\a.mp4"], "en", Actions).Tools, w => w.Id == "aud.trim-silence");
+        Assert.DoesNotContain(Builder(registry).Build([@"C:\a.png"], "en", Actions).Tools, w => w.Id == "aud.trim-silence");
+    }
+
+    [Fact]
+    public void Catalog_tools_say_which_categories_they_apply_to()
+    {
+        var trim = Catalog.Tool("aud.trim-silence")!;
+        Assert.True(trim.AppliesTo("audio"));
+        Assert.True(trim.AppliesTo("video"));
+        Assert.False(trim.AppliesTo("image"));
+        Assert.True(Catalog.Tool("vid.rotate")!.AppliesTo("video"));
+        Assert.False(Catalog.Tool("vid.rotate")!.AppliesTo("audio"));
+    }
+
+    [Fact]
     public void Multi_file_tools_need_at_least_two_files()
     {
         var registry = new ToolRegistry().Register(new FakeConverter(["pdf.merge", "pdf.split"]));

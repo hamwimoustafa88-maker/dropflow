@@ -114,7 +114,7 @@ internal sealed class WelcomeWindow : Window
             2 => Preferences(),
             _ => Done(),
         };
-        _back.Visibility = Page == 0 ? Visibility.Hidden : Visibility.Visible;
+        _back.Visibility = Page == 0 ? Visibility.Collapsed : Visibility.Visible;
         _skip.Visibility = Page == PageCount - 1 ? Visibility.Collapsed : Visibility.Visible;
         _next.Content = _ui.Loc[Page == PageCount - 1 ? "welcome.finish" : "welcome.next"];
         _dots.Children.Clear();

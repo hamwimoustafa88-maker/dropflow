@@ -168,7 +168,7 @@ internal sealed class AppHost : IDisposable
         Kit = new UiKit(WheelTheme.FromSystem(), Loc);
         _modelDownloads = new ModelDownloadService(ui, Kit, Models);
         _redact = new RedactDetection(Models, Engines);
-        Editors = new OptionsEditors(new ImageEditors(Kit, _redact));
+        Editors = new CompositeOptionsEditor(new ImageEditors(Kit, _redact));
         Disposer = new RecycleBinDisposer();
 
         _requests = new RequestBatcher(_scheduler, files => _ui.BeginInvoke(() => OpenWheelFor(files, null)));

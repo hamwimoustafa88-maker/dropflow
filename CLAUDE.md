@@ -55,6 +55,7 @@ when a program is missing.
 ## Commands
 - Catalog: `node catalog/build.mjs` (run after any edit to catalog/tools.json; must print OK)
 - Desktop: `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.Spike` (single test: `dotnet test --filter "FullyQualifiedName~Name"`)
+- Look at a window without clicking: `DropFlow.exe --snapshot-window <edit|annotate|crop|redact|background|qr|metadata|welcome|settings|encoder|history> out.png [--lang ar|en] [--dark] [--page N] [files…]` or `--snapshot-wheel <convert|tools|actions> out.png <files…>` (2x PNG, exits)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
 
 ## Architecture rules
@@ -101,6 +102,14 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — Visual image editors (docs/deferred C6 direction): Edit photo, Annotate, Crop, Redact (+ face/text detect when the model/OCR is
+  already installed), Add background, QR creator (shapes, gradient, logo, live ZXing scan check, PNG/SVG) and Metadata (lossless JPEG) open from
+  the wheel instead of the generic form through `IOptionsEditor` (Core, same design as the media editors) and fill the converters' options; the
+  generic form stays for CLI/recipes. Shared preview framework in `Views/Editors/Common` (debounced latest-only renders, preview ≤1400 px with
+  scale-aware effects, hold to see the original). Engines: `PhotoEditor` (img.edit, 20 adjustments), annotate pen/highlight/magnifier/relative
+  units, `BackgroundComposer`, `RedactRenderer`, `QrDesigner`, `ImageMetadata`. First-run welcome guide (practice photo, live keycaps, wheel tick)
+  also in the tray; `DropFlow.exe --snapshot-window|--snapshot-wheel` renders windows to PNG at 2x for ar/en layout checks.
+  — src/DropFlow.App/Views/Editors/**, Views/WelcomeWindow.cs, Services/{Snapshots,PracticePhoto,RedactDetection}.cs, src/DropFlow.Engines.{Images,Archive}, Core/Runner
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

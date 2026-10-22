@@ -38,15 +38,132 @@ public class OperationRunnerTests
     }
 
     private static (OperationRunner Runner, Prompts Prompts, Installer Installer, ToolRegistry Registry, JobQueue Queue, MutableEngines Engines) Rig(
-        IConverter converter, bool installWorks = true)
+        IConverter converter, bool installWorks = true, IOptionsEditor? editor = null)
     {
         var registry = new ToolRegistry().Register(converter);
         var queue = new JobQueue(registry, Catalog);
         var engines = new MutableEngines();
         var installer = new Installer(e => { if (installWorks) engines.Install(e); }, installWorks);
         var prompts = new Prompts();
-        var runner = new OperationRunner(registry, queue, engines, installer, prompts, _ => 100, op => "Title:" + op);
+        var runner = new OperationRunner(registry, queue, engines, installer, prompts, _ => 100, op => "Title:" + op, editor);
         return (runner, prompts, installer, registry, queue, engines);
+    }
+
+    /// <summary>A dedicated editor window for one operation (a trim timeline, say) that answers with option values.</summary>
+    private sealed class Editor(string operation, IReadOnlyDictionary<string, object?>? answer, Prompts? log = null, IReadOnlyList<string>? order = null) : IOptionsEditor
+    {
+        public List<string> Opened { get; } = [];
+        public bool CanEdit(string op, IReadOnlyList<string> files) => op == operation;
+        public Task<OptionsEdit?> EditAsync(string op, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
+        {
+            Opened.Add($"{op} '{title}' {string.Join("|", files)} {options.Count}");
+            log?.Log.Add("editor " + op);
+            return Task.FromResult(answer is null ? null : new OptionsEdit(answer, order));
+        }
+    }
+
+    [Fact]
+    public async Task An_editor_may_reorder_the_files_of_a_multi_file_tool()
+    {
+        ConversionJob? seen = null;
+        var converter = new FakeConverter(["vid.join"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
+            options: [new ToolOption("mode", ToolOptionKind.Choice, "auto", ["auto", "copy", "reencode"])]);
+        var editor = new Editor("vid.join", new Dictionary<string, object?> { ["mode"] = "auto" }, order: [@"C:\b.mp4", @"C:\a.mp4"]);
+        var (runner, _, _, _, _, _) = Rig(converter, editor: editor);
+
+        var batch = await runner.RunAsync(Sel("vid.join", @"C:\a.mp4", @"C:\b.mp4"));
+        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal([@"C:\b.mp4", @"C:\a.mp4"], seen!.Inputs);
+    }
+
+    [Fact]
+    public async Task An_editor_can_never_slip_in_a_file_that_was_not_selected()
+    {
+        var converter = new FakeConverter(["vid.join"], options: [new ToolOption("mode", ToolOptionKind.Text, "auto")]);
+        var editor = new Editor("vid.join", new Dictionary<string, object?>(), order: [@"C:\a.mp4", @"C:\secret.mp4"]);
+        var (runner, prompts, _, _, queue, _) = Rig(converter, editor: editor);
+
+        Assert.Null(await runner.RunAsync(Sel("vid.join", @"C:\a.mp4", @"C:\b.mp4")));
+        Assert.Empty(queue.Batches);
+        Assert.Contains(prompts.Log, l => l.StartsWith("error"));
+    }
+
+    [Fact]
+    public async Task A_composite_editor_asks_the_first_editor_that_handles_the_tool()
+    {
+        var trim = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "1" });
+        var crop = new Editor("img.crop", new Dictionary<string, object?>());
+        var both = new CompositeOptionsEditor(crop, trim);
+
+        Assert.True(both.CanEdit("vid.trim", [@"C:\a.mp4"]));
+        Assert.False(both.CanEdit("pdf.merge", [@"C:\a.pdf"]));
+        var edit = await both.EditAsync("vid.trim", "T", [@"C:\a.mp4"], []);
+        Assert.Equal("1", edit!.Values["start"]);
+        Assert.Single(trim.Opened);
+        Assert.Empty(crop.Opened);
+    }
+
+    [Fact]
+    public async Task A_dedicated_editor_replaces_the_options_form_and_its_values_travel_with_the_job()
+    {
+        ConversionJob? seen = null;
+        var converter = new FakeConverter(["vid.trim"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
+            options: [new ToolOption("start", ToolOptionKind.Text, "0"), new ToolOption("end", ToolOptionKind.Text, "")]);
+        var editor = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "1.5", ["end"] = "4" });
+        var (runner, prompts, _, _, _, _) = Rig(converter, editor: editor);
+
+        var batch = await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4"));
+        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal([@"vid.trim 'Title:vid.trim' C:\a.mp4 2"], editor.Opened);
+        Assert.DoesNotContain(prompts.Log, l => l.StartsWith("options"));
+        Assert.Equal("1.5", seen!.GetString("start"));
+        Assert.Equal("4", seen.GetString("end"));
+    }
+
+    [Fact]
+    public async Task Closing_the_editor_without_running_starts_nothing()
+    {
+        var converter = new FakeConverter(["vid.trim"], options: [new ToolOption("start", ToolOptionKind.Text, "0")]);
+        var (runner, _, _, _, queue, _) = Rig(converter, editor: new Editor("vid.trim", null));
+
+        Assert.Null(await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Empty(queue.Batches);
+    }
+
+    [Fact]
+    public async Task The_engine_is_installed_before_the_editor_opens_because_its_previews_need_it()
+    {
+        var converter = new FakeConverter(["vid.trim"], engine: EngineId.Ffmpeg, options: [new ToolOption("start", ToolOptionKind.Text, "0")]);
+        var prompts = new Prompts();
+        var registry = new ToolRegistry().Register(converter);
+        var queue = new JobQueue(registry, Catalog);
+        var engines = new MutableEngines();
+        var editor = new Editor("vid.trim", new Dictionary<string, object?> { ["start"] = "2" }, prompts);
+        var runner = new OperationRunner(registry, queue, engines, new Installer(engines.Install), prompts, _ => 100, op => op, editor);
+
+        Assert.NotNull(await runner.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Equal(["confirm Ffmpeg 100MB", "editor vid.trim"], prompts.Log);
+
+        // declined: the editor never opens
+        var declinedPrompts = new Prompts { InstallAnswer = false };
+        var declinedEditor = new Editor("vid.trim", new Dictionary<string, object?>(), declinedPrompts);
+        var declined = new OperationRunner(registry, queue, new MutableEngines(), new Installer(), declinedPrompts, _ => 100, op => op, declinedEditor);
+        Assert.Null(await declined.RunAsync(Sel("vid.trim", @"C:\a.mp4")));
+        Assert.Empty(declinedEditor.Opened);
+    }
+
+    [Fact]
+    public async Task Operations_without_an_editor_still_use_the_form()
+    {
+        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
+        var editor = new Editor("vid.trim", new Dictionary<string, object?>());
+        var (runner, prompts, _, _, _, _) = Rig(converter, editor: editor);
+
+        Assert.NotNull(await runner.RunAsync(Sel("img.compress", @"C:\a.png")));
+        Assert.Equal(["options img.compress 'Title:img.compress' 1"], prompts.Log);
+        Assert.Empty(editor.Opened);
     }
 
     private static WheelSelection Sel(string op, params string[] files) =>
@@ -167,66 +284,6 @@ public class OperationRunnerTests
 
         Assert.Equal(["options pdf.compress 'Title:pdf.compress' 1", "confirm Qpdf 100MB"], prompts.Log);
         Assert.Equal([EngineId.Qpdf], installer.Installed);
-    }
-
-    private sealed class Editor(IReadOnlyDictionary<string, object?>? answer, string handles = "img.compress") : IOptionsEditor
-    {
-        public List<string> Log { get; } = [];
-        public bool CanEdit(string operation, IReadOnlyList<string> files) => operation == handles;
-        public Task<IReadOnlyDictionary<string, object?>?> EditAsync(string operation, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
-        {
-            Log.Add($"edit {operation} {string.Join("|", files)} {options.Count}");
-            return Task.FromResult(answer);
-        }
-    }
-
-    private static OperationRunner WithEditor(IConverter converter, IOptionsEditor editor, out Prompts prompts, out JobQueue queue)
-    {
-        var registry = new ToolRegistry().Register(converter);
-        queue = new JobQueue(registry, Catalog);
-        prompts = new Prompts();
-        return new OperationRunner(registry, queue, new MutableEngines(), new Installer(), prompts, _ => 100, op => op, editor);
-    }
-
-    [Fact]
-    public async Task A_visual_editor_fills_the_options_instead_of_the_generic_form()
-    {
-        ConversionJob? seen = null;
-        var converter = new FakeConverter(["img.compress"], run: (job, _, _) => { seen = job; return Task.FromResult(ConversionResult.Ok([])); },
-            options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
-        var editor = new Editor(new Dictionary<string, object?> { ["quality"] = 42 });
-        var runner = WithEditor(converter, editor, out var prompts, out _);
-
-        var batch = await runner.RunAsync(Sel("img.compress", @"C:\a.png", @"C:\b.png"));
-        await batch!.Completion.WaitAsync(TimeSpan.FromSeconds(5));
-
-        Assert.Equal([@"edit img.compress C:\a.png|C:\b.png 1"], editor.Log);
-        Assert.Empty(prompts.Log);
-        Assert.Equal(42, seen!.GetInt("quality"));
-    }
-
-    [Fact]
-    public async Task Closing_the_editor_starts_nothing()
-    {
-        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
-        var runner = WithEditor(converter, new Editor(null), out var prompts, out var queue);
-
-        Assert.Null(await runner.RunAsync(Sel("img.compress", @"C:\a.png")));
-        Assert.Empty(queue.Batches);
-        Assert.Empty(prompts.Log);
-    }
-
-    [Fact]
-    public async Task Without_a_matching_editor_the_generic_form_is_still_used()
-    {
-        var converter = new FakeConverter(["img.compress"], options: [new ToolOption("quality", ToolOptionKind.Number, 70d)]);
-        var editor = new Editor(new Dictionary<string, object?>(), handles: "img.edit");
-        var runner = WithEditor(converter, editor, out var prompts, out _);
-
-        await runner.RunAsync(Sel("img.compress", @"C:\a.png"));
-
-        Assert.Empty(editor.Log);
-        Assert.Single(prompts.Log, l => l.StartsWith("options"));
     }
 
     private sealed class WindowTool(EngineId engine = EngineId.None) : IInteractiveTool

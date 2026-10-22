@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 using System.IO;
 using DropFlow.Core.Operations;
+using DropFlow.Core.Runner;
 
 namespace DropFlow.App.Views.Editors;
 
@@ -22,14 +23,14 @@ internal sealed class ImageEditors(UiKit ui, IRedactDetectors? detectors = null)
         return Pictures.Contains(ext) || (operation == "img.qr" && ext == "txt");
     }
 
-    public Task<IReadOnlyDictionary<string, object?>?> EditAsync(string operation, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
+    public async Task<OptionsEdit?> EditAsync(string operation, string title, IReadOnlyList<string> files, IReadOnlyList<ToolOption> options)
     {
         var window = Create(ui, operation, files, detectors);
         window.Show();
         window.Activate();
-        return window.Result;
+        var values = await window.Result;
+        return values is null ? null : new OptionsEdit(values);
     }
-
     /// <summary>The editor window for an operation (also used by snapshot mode).</summary>
     public static VisualEditorWindow Create(UiKit ui, string operation, IReadOnlyList<string> files, IRedactDetectors? detectors = null) => operation switch
     {

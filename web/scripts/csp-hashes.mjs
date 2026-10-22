@@ -44,7 +44,25 @@ if (process.argv.includes("--verify")) {
     console.error(`csp-hashes: the CSP of ${bad.join(", ")} does not match its final HTML; refusing to ship pages that would block their own scripts.`);
     process.exit(1);
   }
-  console.log(`csp-hashes: verified ${Object.keys(now).length} page policies against the final HTML`);
+  // The headers the build actually emitted (what Vercel and `next start` serve) must carry exactly these hashes.
+  const manifest = JSON.parse(readFileSync(join(process.cwd(), ".next", "routes-manifest.json"), "utf8"));
+  const served = {};
+  for (const rule of manifest.headers ?? [])
+    for (const h of rule.headers)
+      if (h.key.toLowerCase() === "content-security-policy" && ROUTES.includes(rule.source))
+        served[rule.source] = [...h.value.matchAll(/'sha256-[^']+'/g)].map((m) => m[0]).sort();
+  const wrong = ROUTES.filter((r) => served[r]?.length && JSON.stringify(served[r]) !== JSON.stringify(now[r]));
+  const absent = ROUTES.filter((r) => now[r] && !served[r]?.length);
+  if (wrong.length) {
+    console.error(`csp-hashes: the served CSP of ${wrong.join(", ")} lists hashes that do not match the page; refusing to ship.`);
+    process.exit(1);
+  }
+  if (absent.length) {
+    const msg = `csp-hashes: the served CSP of ${absent.join(", ")} carries no hashes (next.config.ts did not find csp-hashes.json); the pages fall back to 'unsafe-inline'.`;
+    if (process.env.CSP_REQUIRE_HASHES === "1") { console.error(msg); process.exit(1); }
+    console.warn(msg);
+  }
+  console.log(`csp-hashes: verified ${Object.keys(now).length} page policies; ${ROUTES.length - absent.length} served with hashes`);
 } else {
   writeFileSync(HASH_FILE, JSON.stringify(now, null, 1) + "\n");
   console.log(`csp-hashes: wrote hashes for ${Object.keys(now).length} pages`);

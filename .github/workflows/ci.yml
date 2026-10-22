@@ -57,5 +57,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run lint
       - run: npm run build
+        env:
+          CSP_REQUIRE_HASHES: "1" # the static pages must be served with their script hashes (scripts/csp-hashes.mjs)
       - name: Unit tests (when present)
         run: npm run --if-present test

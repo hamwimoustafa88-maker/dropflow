@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -66,7 +67,13 @@ const SECURITY_HEADERS = [
 // keeps the plain policy. With hashes present, browsers ignore 'unsafe-inline' for scripts.
 const LOCALES = ["ar", "en"];
 const HASHED_PAGES = ["", "/privacy", "/terms"];
-const CSP_HASHES: Record<string, string[]> = existsSync("csp-hashes.json") ? JSON.parse(readFileSync("csp-hashes.json", "utf8")) : {};
+// Looked up next to this file first: a build tool may evaluate the config with another working directory (Vercel did).
+const HASH_FILE = [
+  typeof __dirname !== "undefined" ? join(__dirname, "csp-hashes.json") : "",
+  join(process.cwd(), "csp-hashes.json"),
+  join(process.cwd(), "web", "csp-hashes.json"),
+].find((f) => f && existsSync(f));
+const CSP_HASHES: Record<string, string[]> = HASH_FILE ? JSON.parse(readFileSync(HASH_FILE, "utf8")) : {};
 const withHashes = (policy: string, route: string) =>
   CSP_HASHES[route]?.length
     ? policy.replace("script-src 'self' 'unsafe-inline'", `script-src 'self' 'unsafe-inline' ${CSP_HASHES[route].join(" ")}`)

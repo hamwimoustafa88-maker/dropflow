@@ -1,0 +1,101 @@
+name: Cross-platform tests
+
+# Builds and tests the shared libraries (Core, Engines.Common/Images/Media/Pdf/Archive, AI) on Linux x64 and arm64, macOS on
+# Apple Silicon and Windows 11 on ARM64, with the real helper programs where the runner can install them (FFmpeg, qpdf, Tesseract
+# with Arabic). Windows x64 is covered by ci.yml. Engine- and model-dependent tests skip visibly when a program or model is absent.
+# Call it from another workflow (`uses: ./.github/workflows/build-cross.yml`) or run it by hand from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      runners:
+        description: 'JSON list of runner labels, e.g. ["macos-latest"]'
+        required: false
+        default: '["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "windows-11-arm"]'
+  workflow_call:
+    inputs:
+      runners:
+        description: 'JSON list of runner labels'
+        type: string
+        required: false
+        default: '["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "windows-11-arm"]'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.runners || '["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "windows-11-arm"]') }}
+    runs-on: ${{ matrix.os }}
+    # A test that hangs must fail the job (with a dump from --blame-hang), never burn the 6-hour limit.
+    timeout-minutes: 75
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Helper programs (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg qpdf tesseract-ocr tesseract-ocr-eng tesseract-ocr-ara fonts-dejavu-core
+
+      - name: Helper programs (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg qpdf tesseract
+          # Homebrew's tesseract has English; add the Arabic model (tessdata_fast, Apache-2.0) instead of all 160 languages
+          curl -sL --fail -o "$(brew --prefix)/share/tessdata/ara.traineddata" https://github.com/tesseract-ocr/tessdata_fast/raw/refs/heads/main/ara.traineddata
+
+      - name: Machine
+        shell: bash
+        run: |
+          uname -a || true
+          dotnet --info | head -20
+          (ffmpeg -version | head -1) || echo "ffmpeg: not installed"
+          (qpdf --version | head -1) || echo "qpdf: not installed"
+          (tesseract --version 2>&1 | head -1 && tesseract --list-langs 2>&1 | tail -n +2 | tr '\n' ' ') || echo "tesseract: not installed"
+
+      - name: Test the shared libraries
+        shell: bash
+        run: |
+          status=0
+          for p in Core Engines.Common Engines.Images Engines.Media Engines.Pdf Engines.Archive AI; do
+            echo "::group::$p"
+            if ! dotnet test "tests/DropFlow.$p.Tests" -c Release \
+                 --blame-hang --blame-hang-timeout 10m \
+                 --logger "trx;LogFileName=$p.trx" --logger "console;verbosity=minimal"; then
+              echo "FAILED: $p" >> failures.txt
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ -f failures.txt ]; then cat failures.txt; fi
+          exit $status
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### ${{ matrix.os }}" >> "$GITHUB_STEP_SUMMARY"
+          for f in $(find tests -name '*.trx' -path '*TestResults*'); do
+            line=$(grep -o '<Counters [^>]*>' "$f" | head -1)
+            echo "- $(basename "$f" .trx): $line" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            **/TestResults/*.trx
+            **/TestResults/**/*.dmp
+            **/TestResults/**/Sequence_*.xml
+          if-no-files-found: ignore

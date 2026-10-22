@@ -102,16 +102,17 @@ internal static class VideoToolArgs
     /// overlap or repeat footage (the price: a clip can start slightly later than the exact time). With <paramref name="reencode"/> the
     /// caller builds the encode arguments and <see cref="SegmentOutput"/> supplies the muxer part instead.
     /// </summary>
-    public static IReadOnlyList<string> SplitCopy(string input, string outputPattern, string extension, IReadOnlyList<double>? splitTimes, double? segmentSeconds)
+    public static IReadOnlyList<string> SplitCopy(string input, string outputPattern, string extension, IReadOnlyList<double>? splitTimes, double? segmentSeconds, string? listFile = null)
     {
         var a = FfmpegCommand.Global();
         a.AddRange(["-i", input, "-map", "0:v?", "-map", "0:a?", "-c", "copy", "-sn", "-map_metadata", "0"]);
-        a.AddRange(SegmentOutput(outputPattern, extension, splitTimes, segmentSeconds, forceKeyframes: false));
+        a.AddRange(SegmentOutput(outputPattern, extension, splitTimes, segmentSeconds, forceKeyframes: false, listFile));
         return a;
     }
 
     /// <summary>Muxer options and output name for the segment muxer. Goes last on the command line.</summary>
-    public static IReadOnlyList<string> SegmentOutput(string outputPattern, string extension, IReadOnlyList<double>? splitTimes, double? segmentSeconds, bool forceKeyframes)
+    /// <param name="listFile">When set, FFmpeg also writes a CSV list there: each clip's file name, real start and end time (<c>-segment_list</c>).</param>
+    public static IReadOnlyList<string> SegmentOutput(string outputPattern, string extension, IReadOnlyList<double>? splitTimes, double? segmentSeconds, bool forceKeyframes, string? listFile = null)
     {
         var a = new List<string>();
         if (splitTimes is { Count: > 0 })
@@ -130,6 +131,7 @@ internal static class VideoToolArgs
             throw new ArgumentException("Give split times or a segment length.");
         }
         a.AddRange(["-reset_timestamps", "1", "-segment_start_number", "1"]);
+        if (listFile is not null) a.AddRange(["-segment_list", listFile, "-segment_list_type", "csv"]);
         if (extension == "m4v") a.AddRange(["-segment_format", "mp4"]);
         if (extension is "mp4" or "mov" or "m4v") a.AddRange(["-segment_format_options", "movflags=+faststart"]);
         a.Add(outputPattern);
@@ -145,6 +147,20 @@ internal static class VideoToolArgs
         foreach (var path in paths)
             sb.Append("file '").Append(path.Replace('\\', '/').Replace("'", "'\\''")).Append("'\n");
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Joins clips cut from one video (same codecs, so nothing is re-encoded) with the concat demuxer into the same container.
+    /// <c>+faststart</c> is only passed to the MP4 family, the only muxer that understands it.
+    /// </summary>
+    public static IReadOnlyList<string> ConcatCopy(string listFile, string output, string extension)
+    {
+        var a = FfmpegCommand.Global();
+        a.AddRange(["-f", "concat", "-safe", "0", "-i", listFile, "-map", "0:v?", "-map", "0:a?", "-c", "copy", "-map_metadata", "0"]);
+        if (extension is "mp4" or "mov" or "m4v") a.AddRange(["-movflags", "+faststart"]);
+        if (extension == "m4v") a.AddRange(["-f", "mp4"]);
+        a.Add(output);
+        return a;
     }
 
     public static IReadOnlyList<string> JoinCopy(string listFile, string output)

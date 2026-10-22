@@ -159,6 +159,30 @@ public class VideoToolIntegrationTests
     }
 
     [EngineFact(EngineId.Ffmpeg)]
+    public async Task Split_can_leave_a_clip_out_or_join_the_rest_into_one_file()
+    {
+        using var dir = new TempDir();
+        var input = await Video(Path.Combine(dir.Path, "مقطع.mp4"), seconds: 6);   // a keyframe every second
+
+        var clips = await Run("vid.split", input, Opts(("points", "2,4"), ("remove", "2")));
+        Assert.True(clips.Success, clips.Error);
+        var names = Directory.GetFiles(clips.Outputs.Single()).Select(Path.GetFileName).Order().ToList();
+        Assert.Equal(["مقطع part 001.mp4", "مقطع part 003.mp4"], names);
+
+        var joined = await Run("vid.split", input, Opts(("points", "2,4"), ("remove", "2"), ("output", "join")));
+        Assert.True(joined.Success, joined.Error);
+        Assert.EndsWith("مقطع (edited).mp4", joined.Outputs.Single());
+        var info = await Probe(joined.Outputs.Single());
+        Assert.InRange(info.DurationSeconds!.Value, 3.6, 4.4);   // 6 s minus the 2 s middle clip
+        Assert.True(info.HasAudio);
+        Assert.Equal("h264", info.Video!.CodecName);
+
+        var exact = await Run("vid.split", input, Opts(("points", "1.5,4.5"), ("remove", "1,3"), ("output", "join"), ("reencode", true)));
+        Assert.True(exact.Success, exact.Error);
+        Assert.InRange((await Probe(exact.Outputs.Single())).DurationSeconds!.Value, 2.8, 3.2);
+    }
+
+    [EngineFact(EngineId.Ffmpeg)]
     public async Task Join_copies_identical_clips_and_re_encodes_clips_of_different_sizes()
     {
         using var dir = new TempDir();
@@ -392,6 +416,27 @@ public class AudioToolIntegrationTests
 
         var same = await Run("aud.channels", mono, Opts(("channels", "mono")));
         Assert.False(same.Success);
+    }
+
+    [EngineFact(EngineId.Ffmpeg)]
+    public async Task A_side_gain_lowers_only_that_side()
+    {
+        using var dir = new TempDir();
+        var stereo = await Wav(Path.Combine(dir.Path, "s.wav"), seconds: 2, channels: 2);
+
+        var result = await Run("aud.channels", stereo, Opts(("channels", "stereo"), ("leftGain", -12)));
+
+        Assert.True(result.Success, result.Error);
+        async Task<double> MeanVolume(string pan)
+        {
+            var scan = await ProcessRunner.RunAsync(FfmpegExe, AudioToolArgs.Analyze(result.Outputs.Single(), pan + ",volumedetect"));
+            var m = System.Text.RegularExpressions.Regex.Match(scan.StdErr, @"mean_volume:\s*(-?[0-9.]+) dB");
+            Assert.True(m.Success, scan.StdErr);
+            return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        var left = await MeanVolume("pan=mono|c0=c0");
+        var right = await MeanVolume("pan=mono|c0=c1");
+        Assert.InRange(right - left, 11, 13);
     }
 
     [EngineFact(EngineId.Ffmpeg)]

@@ -411,6 +411,59 @@ public class AudioChannelsTests
     }
 
     [Fact]
+    public async Task Side_gains_make_stereo_to_stereo_a_balance_change_instead_of_a_refusal()
+    {
+        using var h = new MediaHarness();
+        var result = await h.Run("aud.channels", h.Audio("b.mp3", channels: 2), MediaHarness.Opts(("channels", "stereo"), ("leftGain", -6), ("rightGain", 0)));
+        Assert.True(result.Success, result.Error);
+        Assert.Equal("pan=stereo|c0=0.501187*c0|c1=c1", Args.After(h.Runner.Calls.Single().Args, "-af"));
+        Assert.EndsWith("b (stereo).mp3", result.Outputs.Single());
+    }
+
+    [Fact]
+    public async Task Side_gains_weight_each_side_of_a_mono_mix()
+    {
+        using var h = new MediaHarness();
+        await h.Run("aud.channels", h.Audio("song.mp3"), MediaHarness.Opts(("channels", "mono"), ("rightGain", -6)));
+        Assert.Equal("pan=mono|c0=0.5*c0+0.250594*c1", Args.After(h.Runner.Calls.Single().Args, "-af"));
+    }
+
+    [Fact]
+    public async Task Side_gains_set_the_level_of_each_new_side_from_mono()
+    {
+        using var h = new MediaHarness();
+        await h.Run("aud.channels", h.Audio("voice.wav", "pcm_s16le", channels: 1), MediaHarness.Opts(("channels", "stereo"), ("leftGain", 6)));
+        Assert.Equal("pan=stereo|c0=1.995262*c0|c1=c0", Args.After(h.Runner.Calls.Single().Args, "-af"));
+    }
+
+    [Fact]
+    public async Task Surround_with_side_gains_is_downmixed_first()
+    {
+        using var h = new MediaHarness();
+        await h.Run("aud.channels", h.Audio("film.flac", "flac", channels: 6), MediaHarness.Opts(("channels", "stereo"), ("leftGain", -6)));
+        Assert.Equal("aformat=channel_layouts=stereo,pan=stereo|c0=0.501187*c0|c1=c1", Args.After(h.Runner.Calls.Single().Args, "-af"));
+    }
+
+    [Fact]
+    public async Task Side_gains_cannot_change_a_mono_file_that_stays_mono()
+    {
+        using var h = new MediaHarness();
+        var result = await h.Run("aud.channels", h.Audio("a.mp3", channels: 1), MediaHarness.Opts(("channels", "mono"), ("leftGain", -6)));
+        Assert.False(result.Success);
+        Assert.Contains("already mono", result.Error);
+    }
+
+    [Fact]
+    public async Task A_side_gain_that_is_not_a_number_is_a_clear_failure()
+    {
+        using var h = new MediaHarness();
+        var result = await h.Run("aud.channels", h.Audio("b.mp3"), MediaHarness.Opts(("channels", "stereo"), ("leftGain", "loud")));
+        Assert.False(result.Success);
+        Assert.Contains("leftGain", result.Error);
+        Assert.Empty(h.Runner.Calls);
+    }
+
+    [Fact]
     public async Task Default_target_is_mono()
     {
         using var h = new MediaHarness();

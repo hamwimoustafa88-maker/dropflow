@@ -362,8 +362,14 @@ internal sealed class VideoSnapshotOperation : VideoToolBase
 
 /// <summary>
 /// <b>vid.split</b> — cut into clips inside a new folder <c>name (clips)</c>. Options: <c>points</c> (split times, "1:30, 3:00"), <c>segment</c> (clip length in seconds, used when
-/// <c>points</c> is empty), <c>reencode</c> (false by default). Stream copy (default) splits on the first keyframe at or after each point, so no footage is repeated or lost but a
-/// clip can start slightly late; <c>reencode</c> forces a keyframe at every point for exact cuts. Clips are named <c>name part 001.ext</c>. The result is the folder.
+/// <c>points</c> is empty), <c>reencode</c> (false by default), <c>remove</c> (clip numbers to leave out, counted from 1: "2, 4"), <c>output</c> (clips | join, default clips).
+/// Stream copy (default) splits on the first keyframe at or after each point, so no footage is repeated or lost but a clip can start slightly late; <c>reencode</c> forces a keyframe
+/// at every point for exact cuts. Clips are named <c>name part 001.ext</c> and keep their planned numbers when some are removed. With <c>output</c> = join the clips that are not removed
+/// are joined again by stream copy into <c>name (edited).ext</c> (cutting the removed parts out of the video). The result is the folder, or that file.
+/// <para>
+/// When clips are removed the segment muxer writes into the scratch folder with a CSV list (<c>-segment_list</c>) of where each clip really starts, and each produced clip is matched
+/// to its planned number by that start time, so keyframe drift cannot shift the numbering.
+/// </para>
 /// </summary>
 internal sealed class VideoSplitOperation : VideoToolBase
 {
@@ -374,7 +380,45 @@ internal sealed class VideoSplitOperation : VideoToolBase
         new("points", ToolOptionKind.Text, "", Required: false),
         new("segment", ToolOptionKind.Number, 0, Min: 0, Max: 86400),
         new("reencode", ToolOptionKind.Bool, false),
+        new("remove", ToolOptionKind.Text, ""),
+        new("output", ToolOptionKind.Choice, "clips", Choices: ["clips", "join"]),
     ];
+
+    /// <summary>"2, 4" to [2, 4]: whole numbers from 1, Arabic-Indic digits allowed, duplicates dropped. Throws <see cref="MediaFailure"/> on anything else.</summary>
+    internal static IReadOnlyList<int> ParseClipNumbers(string text)
+    {
+        var result = new SortedSet<int>();
+        foreach (var token in TimeSpec.NormalizeDigits(text).Split([',', ';', ' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!int.TryParse(token, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) || n < 1)
+                throw new MediaFailure($"'{token}' is not a clip number. Clips are numbered from 1.");
+            result.Add(n);
+        }
+        return [.. result];
+    }
+
+    /// <summary>The planned (1-based) clip a produced clip belongs to, from the time it really starts.</summary>
+    internal static int PlannedClip(double start, IReadOnlyList<double> points, double? segment)
+    {
+        const double tolerance = 0.05;
+        if (points.Count > 0) return 1 + points.Count(p => p <= start + tolerance);
+        return 1 + (int)Math.Floor((start + tolerance) / segment!.Value);
+    }
+
+    /// <summary>Reads FFmpeg's segment CSV list ("clip001.mp4,0.000000,60.000000" per line) into (file name, start).</summary>
+    internal static IReadOnlyList<(string File, double Start)> ParseSegmentList(string csv)
+    {
+        var list = new List<(string, double)>();
+        foreach (var line in csv.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = line.Split(',');
+            if (parts.Length < 3) continue;
+            var name = string.Join(",", parts[..^2]).Trim('"');
+            if (double.TryParse(parts[^2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var start))
+                list.Add((name, start));
+        }
+        return list;
+    }
 
     public override async Task<IReadOnlyList<string>> ExecuteAsync(MediaContext ctx)
     {
@@ -392,8 +436,13 @@ internal sealed class VideoSplitOperation : VideoToolBase
             throw new MediaFailure("Enter split times (for example 1:30, 3:00) or a clip length in seconds.");
         if (points.Any(p => p <= 0)) throw new MediaFailure("Split times must be greater than zero.");
 
+        var remove = ParseClipNumbers(ctx.Text("remove"));
+        var join = ctx.Choice("output", "clips", ["clips", "join"]) == "join";
+        if (join && remove.Count == 0) throw new MediaFailure("Choose the clips to remove before joining the rest, or save the clips instead.");
+
         var reencode = ctx.Flag("reencode");
-        var info = reencode ? await ctx.ProbeAsync(ctx.Input).ConfigureAwait(false) : await ctx.TryProbeAsync(ctx.Input).ConfigureAwait(false);
+        var needInfo = reencode || (remove.Count > 0 && points.Count == 0);
+        var info = needInfo ? await ctx.ProbeAsync(ctx.Input).ConfigureAwait(false) : await ctx.TryProbeAsync(ctx.Input).ConfigureAwait(false);
         var duration = info?.DurationSeconds;
         if (duration is > 0)
         {
@@ -403,27 +452,72 @@ internal sealed class VideoSplitOperation : VideoToolBase
                 throw new MediaFailure("The clip length is not shorter than the video, so there is nothing to split.");
         }
 
-        var ext = reencode ? ReencodeExtension(ctx) : ctx.InputExtension;
-        var folder = ctx.NewFolder("clips");
-        var pattern = FfmpegCommand.EscapePattern(Path.Combine(folder, ctx.InputStem + " part ")) + "%03d." + ext;
         double? segmentSeconds = points.Count == 0 ? segment : null;
-
-        IReadOnlyList<string> args;
-        if (!reencode)
+        if (remove.Count > 0)
         {
-            args = VideoToolArgs.SplitCopy(ctx.Input, pattern, ext, points, segmentSeconds);
-        }
-        else
-        {
-            var settings = Reencode(ctx, 20) with { FastStart = false }; // the segment muxer takes movflags through -segment_format_options instead
-            var plan = EncoderPlanner.Plan(settings, info!, new PlanContext { Encoders = await ctx.EncodersAsync().ConfigureAwait(false) });
-            if (!plan.Ok) throw new MediaFailure(plan.Error!);
-            args = [.. plan.Passes[0].Take(plan.Passes[0].Count - 1), .. VideoToolArgs.SegmentOutput(pattern, ext, points, segmentSeconds, forceKeyframes: true)];
+            int? planned = points.Count > 0 ? points.Count + 1 : duration is > 0 ? (int)Math.Ceiling(duration.Value / segment - 1e-6) : null;
+            if (planned is { } count && remove[^1] > count)
+                throw new MediaFailure($"There is no clip {remove[^1]}: the video is cut into {count} clips.");
+            if (planned is { } all && remove.Count >= all)
+                throw new MediaFailure("Every clip is marked for removal, so nothing would be left.");
         }
 
-        await ctx.RunFfmpegOrFailAsync(args, duration).ConfigureAwait(false);
-        if (!Directory.EnumerateFiles(folder).Any()) throw new MediaFailure("FFmpeg finished but produced no clips.");
-        return [folder];
+        var ext = reencode ? ReencodeExtension(ctx) : ctx.InputExtension;
+        if (remove.Count == 0)
+        {
+            var folder = ctx.NewFolder("clips");
+            var pattern = FfmpegCommand.EscapePattern(Path.Combine(folder, ctx.InputStem + " part ")) + "%03d." + ext;
+            await ctx.RunFfmpegOrFailAsync(await SegmentArgsAsync(ctx, info, reencode, pattern, ext, points, segmentSeconds, null).ConfigureAwait(false), duration).ConfigureAwait(false);
+            if (!Directory.EnumerateFiles(folder).Any()) throw new MediaFailure("FFmpeg finished but produced no clips.");
+            return [folder];
+        }
+
+        // Clips are removed: cut into the scratch folder with a list of where each clip really starts, then keep or join the rest.
+        var work = Path.Combine(ctx.TempDirectory, "clips");
+        Directory.CreateDirectory(work);
+        var listFile = Path.Combine(work, "clips.csv");
+        var scratchPattern = Path.Combine(work, "clip%03d." + ext);
+        var cutEnd = join ? 0.8 : 0.95;
+        await ctx.RunFfmpegOrFailAsync(await SegmentArgsAsync(ctx, info, reencode, scratchPattern, ext, points, segmentSeconds, listFile).ConfigureAwait(false), duration, 0, cutEnd).ConfigureAwait(false);
+        if (!File.Exists(listFile)) throw new MediaFailure("FFmpeg finished but did not report the clips it made.");
+
+        var kept = ParseSegmentList(await File.ReadAllTextAsync(listFile, ctx.Ct).ConfigureAwait(false))
+            .Select(s => (Path: Path.Combine(work, Path.GetFileName(s.File)), Number: PlannedClip(s.Start, points, segmentSeconds)))
+            .Where(s => File.Exists(s.Path) && !remove.Contains(s.Number))
+            .ToList();
+        if (kept.Count == 0) throw new MediaFailure("Every clip FFmpeg made is marked for removal, so nothing would be left.");
+
+        if (!join)
+        {
+            var folder = ctx.NewFolder("clips");
+            foreach (var (path, number) in kept)
+            {
+                var target = Path.Combine(folder, $"{ctx.InputStem} part {number:000}.{ext}");
+                for (var n = 2; File.Exists(target); n++) target = Path.Combine(folder, $"{ctx.InputStem} part {number:000}-{n}.{ext}");
+                File.Move(path, target);
+            }
+            ctx.Progress.Report(new JobProgress(1));
+            return [folder];
+        }
+
+        var output = ctx.NewFile(ext, "edited");
+        var concat = Path.Combine(work, "kept.txt");
+        await File.WriteAllTextAsync(concat, VideoToolArgs.ConcatList(kept.Select(k => k.Path)), new UTF8Encoding(false), ctx.Ct).ConfigureAwait(false);
+        var keptSeconds = duration is > 0 ? duration * kept.Count / (kept.Count + remove.Count) : null;
+        await ctx.RunFfmpegOrFailAsync(VideoToolArgs.ConcatCopy(concat, output, ext), keptSeconds, cutEnd, 1, label: "Joining").ConfigureAwait(false);
+        MediaContext.RequireOutput(output);
+        return [output];
+    }
+
+    private static async Task<IReadOnlyList<string>> SegmentArgsAsync(
+        MediaContext ctx, MediaInfo? info, bool reencode, string pattern, string ext, IReadOnlyList<double> points, double? segmentSeconds, string? listFile)
+    {
+        if (!reencode) return VideoToolArgs.SplitCopy(ctx.Input, pattern, ext, points, segmentSeconds, listFile);
+
+        var settings = Reencode(ctx, 20) with { FastStart = false }; // the segment muxer takes movflags through -segment_format_options instead
+        var plan = EncoderPlanner.Plan(settings, info!, new PlanContext { Encoders = await ctx.EncodersAsync().ConfigureAwait(false) });
+        if (!plan.Ok) throw new MediaFailure(plan.Error!);
+        return [.. plan.Passes[0].Take(plan.Passes[0].Count - 1), .. VideoToolArgs.SegmentOutput(pattern, ext, points, segmentSeconds, forceKeyframes: true, listFile)];
     }
 }
 

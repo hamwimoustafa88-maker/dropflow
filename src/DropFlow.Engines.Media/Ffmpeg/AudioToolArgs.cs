@@ -71,7 +71,31 @@ internal static class AudioToolArgs
     /// at full level (a plain <c>-ac 2</c> would attenuate each side by 3 dB); stereo to mono averages the channels.
     /// Surround sources use FFmpeg's standard down-mix via <c>aformat</c>.
     /// </summary>
-    public static string? ChannelsFilter(string target, int sourceChannels)
+    public static string? ChannelsFilter(string target, int sourceChannels) => ChannelsFilter(target, sourceChannels, 0, 0);
+
+    /// <summary>
+    /// Like <see cref="ChannelsFilter(string, int)"/> with a gain in dB for each side: the level of each source side going into a mono mix,
+    /// or the level of each output side for stereo (from mono, this sets how loud each new side is; stereo to stereo becomes a balance change).
+    /// Gains of 0 dB give exactly the plain conversion. A mono file staying mono has no sides, so it still needs no filter.
+    /// </summary>
+    public static string? ChannelsFilter(string target, int sourceChannels, double leftGainDb, double rightGainDb)
+    {
+        var gained = Math.Abs(leftGainDb) > 1e-9 || Math.Abs(rightGainDb) > 1e-9;
+        if (!gained) return PlainChannelsFilter(target, sourceChannels);
+
+        string Times(double factor, string channel) => Math.Abs(factor - 1) < 1e-9 ? channel : $"{TimeSpec.Num(factor, 6)}*{channel}";
+        var gl = Math.Pow(10, leftGainDb / 20);
+        var gr = Math.Pow(10, rightGainDb / 20);
+        var downmix = sourceChannels > 2 ? "aformat=channel_layouts=stereo," : "";
+
+        if (target == "mono")
+            return sourceChannels == 1 ? null : $"{downmix}pan=mono|c0={Times(0.5 * gl, "c0")}+{Times(0.5 * gr, "c1")}";
+        return sourceChannels == 1
+            ? $"pan=stereo|c0={Times(gl, "c0")}|c1={Times(gr, "c0")}"
+            : $"{downmix}pan=stereo|c0={Times(gl, "c0")}|c1={Times(gr, "c1")}";
+    }
+
+    private static string? PlainChannelsFilter(string target, int sourceChannels)
     {
         if (target == "mono")
             return sourceChannels switch

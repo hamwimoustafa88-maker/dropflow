@@ -84,6 +84,30 @@ public class ProcessRunnerTests
     }
 
     [Fact]
+    public async Task Binary_stdout_is_copied_byte_for_byte_into_the_given_stream()
+    {
+        // Bytes that a text reader would mangle: zero, CR/LF, and values above 0x7F.
+        using var sink = new MemoryStream();
+        var r = await ProcessRunner.RunAsync("powershell.exe",
+            ["-NoProfile", "-Command", "$o=[Console]::OpenStandardOutput(); $b=[byte[]](0,13,10,255,128,65,0,200); $o.Write($b,0,$b.Length); $o.Flush(); [Console]::Error.WriteLine('note')"],
+            new ProcessOptions { StandardOutput = sink, Timeout = TimeSpan.FromSeconds(30) });
+
+        Assert.True(r.Success, r.StdErr);
+        Assert.Equal(new byte[] { 0, 13, 10, 255, 128, 65, 0, 200 }, sink.ToArray());
+        Assert.Equal("", r.StdOut);
+        Assert.Equal("note", r.StdErr);
+    }
+
+    [Fact]
+    public async Task Cancelling_a_binary_run_kills_the_process()
+    {
+        using var sink = new MemoryStream();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(400));
+        var r = await ProcessRunner.RunAsync(Cmd, ["/c", "ping -n 20 127.0.0.1"], new ProcessOptions { StandardOutput = sink }, cts.Token);
+        Assert.True(r.Cancelled);
+    }
+
+    [Fact]
     public async Task A_missing_executable_throws_instead_of_hanging()
     {
         await Assert.ThrowsAnyAsync<Exception>(() => ProcessRunner.RunAsync(@"C:\definitely\missing.exe", []));

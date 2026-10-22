@@ -367,7 +367,11 @@ internal sealed class AppHost : IDisposable
             new UserPrompts(host._ui, host.Loc, msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; },
                 () => host.Settings.OfferEngineInstalls),
             EngineInfo.ApproxSizeMb,
-            op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op);
+            op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op,
+            // Dedicated editors (timelines, boxes on the picture) instead of the generic form; more editor families join this list.
+            new CompositeOptionsEditor(
+                new Views.Editors.Media.MediaEditors(host._ui, host.Kit, host.Engines,
+                    msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; })));
     }
 
     private void OnBatchChanged(BatchHandle batch)

@@ -222,7 +222,7 @@ public class ModuleTests
         Assert.Equal(["aspect", "x", "y", "w", "h"], Keys("vid.crop"));
         Assert.Equal(["speed"], Keys("vid.speed"));
         Assert.Equal(["times", "every"], Keys("vid.snapshot"));
-        Assert.Equal(["points", "segment", "reencode"], Keys("vid.split"));
+        Assert.Equal(["points", "segment", "reencode", "remove", "output"], Keys("vid.split"));
         Assert.Equal(["mode"], Keys("vid.join"));
         Assert.Equal(["x", "y", "w", "h", "mode", "strength", "color", "start", "end"], Keys("vid.redact"));
         Assert.Equal(["sizeMb", "audioBitrate", "codec", "preset"], Keys("vid.target-size"));
@@ -231,7 +231,7 @@ public class ModuleTests
         Assert.Equal(["title", "artist", "album", "comment", "strip"], Keys("aud.metadata"));
         Assert.Equal(["target", "truePeak", "lra"], Keys("aud.normalize"));
         Assert.Equal(["start", "end", "autoSilence", "silenceDb", "minSilence"], Keys("aud.trim"));
-        Assert.Equal(["channels"], Keys("aud.channels"));
+        Assert.Equal(["channels", "leftGain", "rightGain"], Keys("aud.channels"));
         Assert.Equal(["layout", "color", "background"], Keys("aud.visualize"));
         Assert.Equal(["ranges", "frequency", "volume"], Keys("aud.bleep"));
         Assert.Equal(["format"], Keys("aud.merge"));

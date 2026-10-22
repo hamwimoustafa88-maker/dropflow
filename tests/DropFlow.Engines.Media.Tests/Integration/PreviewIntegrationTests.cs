@@ -96,7 +96,7 @@ public class PreviewIntegrationTests
         Assert.Single(Directory.GetFiles(dir.Path));   // nothing written beside the input
     }
 
-    [EngineFact(EngineId.Ffmpeg)]
+    [FfmpegFact(FfmpegFeature.Encoder, "libvorbis", "libopus")]
     public async Task A_solo_preview_plays_one_side_and_a_playable_copy_is_made_for_ogg()
     {
         using var dir = new TempDir();
@@ -110,7 +110,7 @@ public class PreviewIntegrationTests
         Assert.True((await MediaPreview.WaveformAsync(TestEngines.Locator, right, 4)).Max() < 0.01);
 
         var ogg = Path.Combine(dir.Path, "a.ogg");
-        await RunFfmpeg("-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-c:a", "libvorbis", ogg);
+        await RunFfmpeg("-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-c:a", FfmpegCapabilities.HasEncoder("libvorbis") ? "libvorbis" : "libopus", ogg);
         var copy = await MediaPreview.PlayableCopyAsync(TestEngines.Locator, ogg, scratch);
         Assert.Equal("aac", (await Probe(copy)).Audio!.CodecName);
     }

@@ -415,6 +415,21 @@ public class FfmpegErrorsTests
     }
 
     [Fact]
+    public void A_missing_subtitles_filter_names_libass_instead_of_the_raw_ffmpeg_line()
+    {
+        var message = FfmpegErrors.Summarize("[AVFilterGraph @ 0x1] No such filter: 'subtitles'\nError initializing filters!\nError opening output files: Filter not found");
+        Assert.Equal("This FFmpeg build has no 'subtitles' filter (it was built without libass), so subtitles cannot be burned into the picture. Use an FFmpeg build that includes libass.", message);
+    }
+
+    [Fact]
+    public void Any_other_missing_filter_is_named_too()
+    {
+        var message = FfmpegErrors.Summarize("[AVFilterGraph @ 0x1] No such filter: 'loudnorm'\nError opening filters!");
+        Assert.Contains("no 'loudnorm' filter", message);
+        Assert.DoesNotContain("could not build the filter", message);
+    }
+
+    [Fact]
     public void The_cause_printed_before_ffmpegs_generic_complaint_wins()
     {
         // Real shape of a rejected filter setting: the reason comes first, the generic "Invalid argument" last.

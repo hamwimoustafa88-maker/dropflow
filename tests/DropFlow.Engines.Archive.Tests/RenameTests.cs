@@ -754,13 +754,18 @@ public class RenameConverterTests
     public async Task Cancellation_removes_the_partial_copy_folder()
     {
         using var temp = new TempDir();
-        var big = temp.Combine("big.bin");
-        using (var fs = File.Create(big)) fs.SetLength(200L * 1024 * 1024);
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        // Deterministic on any machine speed: cancel from inside, as soon as the first copy is finished, so the
+        // converter has certainly written a partial result folder before it sees the cancelled token.
+        var a = temp.WriteText("a.txt", "A");
+        var b = temp.WriteText("b.txt", "B");
+        using var cts = new CancellationTokenSource();
+        var recorder = new Recorder { OnReport = _ => cts.Cancel() };
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Kit.Run(Converter, Kit.Job("gen.rename", [big], new() { ["pattern"] = "x{ext}" }), cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Kit.Run(Converter, Kit.Job("gen.rename", [a, b], new() { ["pattern"] = "x{ext}" }), cts.Token, recorder));
 
-        Assert.Equal(["big.bin"], Directory.GetFileSystemEntries(temp.Path).Select(Path.GetFileName));
+        Assert.NotEmpty(recorder.Items); // the first file really was copied before the cancellation
+        Assert.Equal(["a.txt", "b.txt"], Directory.GetFileSystemEntries(temp.Path).Select(Path.GetFileName).Order());
     }
 
     [Fact]

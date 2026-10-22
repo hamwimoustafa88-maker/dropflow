@@ -501,7 +501,9 @@ public class HotkeyParserTests
 
 public class SingleInstanceTests
 {
-    private static string UniqueName() => "DropFlowTest." + Guid.NewGuid().ToString("N");
+    // Short on purpose: on macOS/Linux the pipe is a Unix domain socket at $TMPDIR/CoreFxPipe_<name>.pipe, and the path limit is
+    // 104 characters on macOS where $TMPDIR alone is about 49 (the product's own name, DropFlow.Instance.v1, stays well inside it).
+    private static string UniqueName() => "dft" + Guid.NewGuid().ToString("N")[..8];
 
     [Fact]
     public void The_first_acquirer_is_primary_and_the_second_is_not()

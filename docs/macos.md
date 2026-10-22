@@ -29,6 +29,26 @@ must be written again for macOS. Tangerine itself is Mac-only, so a Mac DropFlow
 So: image work is ready today; making the engine locator find Unix executable names and adding macOS PDFium natives would turn most
 red tests green; the archive hang needs a look on a real Mac.
 
+### Platform layer (2026-10-22) — what was fixed, and the Linux result
+Every failure above was addressed; the shared libraries now target Windows x64/ARM64, macOS (arm64/x64) and Linux (x64/arm64):
+
+| Was failing | Fix |
+|---|---|
+| Windows paths in tests | test data goes through `TestPaths.P(...)` (`C:\a` → `/C/a` off Windows); sheet names are cleaned with the Windows rules on every OS so outputs copy across systems |
+| Named pipes (single instance) | the next pipe server is created before the current one is closed: on Unix a .NET named pipe is a Unix socket whose listener closed with the last instance, dropping launches that connected meanwhile |
+| `ffmpeg.exe`, `qpdf.exe`… | `EngineInfo.ExecutableNames` follows the OS; `EngineLocator` also searches `engines/` next to the app, `../Resources/engines` in a `.app`, `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, MacPorts, snaps, LibreOffice's bundle |
+| PDFiumCore = Windows natives only | **PDFtoImage** (approved) draws the pages; its packages carry PDFium for win-x64/x86/arm64, linux-x64/arm64 and osx-x64/arm64. Page count, sizes and permission flags use five direct PDFium calls under one process-wide lock (`NativeLocks.Pdfium`) |
+| (found on Linux) PDFsharp cannot draw text off Windows | `SystemFontResolver` reads installed TrueType fonts (Arial on macOS, DejaVu Sans on Linux; both carry Arabic) |
+| (found on Linux) Magick.NET text needs a font file off Windows | `FontFiles.DefaultSans()` for the annotate tool |
+| (found on Linux) free-memory query was `kernel32` only (Whisper model choice crashed) | `/proc/meminfo` on Linux, `vm_stat` on macOS |
+| Windows OCR, Windows.Data.Pdf | AI multi-targets `net10.0-windows10.0.19041.0;net10.0`; `Platform/Windows` vs `Platform/Unix`. Off Windows: Tesseract (ara+eng) and PDFium; a host may inject Apple Vision through `IWindowsOcr` |
+| WebView2 HTML → PDF | `ChromiumHtmlPdfRenderer` (headless Chrome/Chromium/Edge/Brave, network blocked unless allowed) behind the existing `IHtmlPdfRenderer`, plus the portable `HtmlToPdfConverter`; a WKWebView renderer can be plugged into the same interface. No browser → a clear "install Chrome or Chromium" message |
+| Archive hang | not reproduced on Linux (561 tests in 30-60 s). The only unbounded waits were in the phone-share tests (a raw socket read and a download read after Stop): both are now bounded (30 s / 60 s), and `build-cross.yml` runs every project with `--blame-hang-timeout 10m` and a 75-minute job limit, so a Mac hang now fails with a dump instead of burning six hours. **Root cause on macOS still unverified** |
+
+Linux, measured in `mcr.microsoft.com/dotnet/sdk:10.0` (Ubuntu 24.04, x64) with FFmpeg 6.1.1, qpdf 11.9.0, Tesseract 5.3.4 (+ara): see
+`docs/status.md` for the counts — every project passes; skips are Windows-only APIs, models that were not present and LibreOffice/7-Zip/WinRAR.
+macOS and the ARM64 runners are covered by `.github/workflows/build-cross.yml` (run it from the Actions tab); they were not run from here.
+
 ## What must be rebuilt for macOS
 | Windows piece | macOS replacement | Effort |
 |---|---|---|

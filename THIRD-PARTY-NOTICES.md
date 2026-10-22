@@ -14,7 +14,9 @@ the repository; planned components are in `docs/plan.md` §3. DropFlow itself is
 | Magick.NET-Q8-AnyCPU (+ Magick.NET.Core) | 15.0.0 | Apache-2.0 | Image decode/encode and drawing | Engines.Images, Engines.Pdf, Engines.Archive, AI |
 | PDFsharp | **6.2.4** | MIT | PDF page work, stamping, image embedding. **Do not upgrade:** 6.5.0 and later are AGPL-3.0-only | Engines.Pdf |
 | PdfPig | 0.1.16 | Apache-2.0 | PDF text and geometry extraction | Engines.Pdf (tests too) |
-| PDFiumCore | 4688.0.0 | Apache-2.0 (wraps PDFium, BSD-3/Apache-2.0) | Rendering PDF pages (win-x64/x86 natives only) | Engines.Pdf |
+| PDFtoImage | 5.4.0 | MIT | Rendering PDF pages (replaced PDFiumCore, which had Windows x64/x86 natives only); DropFlow also calls five PDFium C functions directly for page count, sizes and permission flags | Engines.Pdf, AI (`pdf.ocr` page renderer on macOS/Linux) |
+| bblanchon.PDFium.Win32 / .Linux / .macOS (via PDFtoImage) | 152.0.7961 | Apache-2.0 (packaging; PDFium itself BSD-3-Clause/Apache-2.0) | The PDFium native library for win-x64/x86/arm64, linux-x64/arm64 (glibc and musl) and osx-x64/arm64 | Engines.Pdf, AI |
+| SkiaSharp + SkiaSharp.NativeAssets.Win32 / .Linux.NoDependencies / .macOS (via PDFtoImage) | 4.150.1 | MIT (Skia: BSD-3-Clause) | The bitmap PDFtoImage draws into | Engines.Pdf, AI |
 | DocumentFormat.OpenXml | 3.5.1 | MIT | Writing/reading DOCX and PPTX | Engines.Pdf |
 | ClosedXML | 0.104.2 | MIT | XLSX (its SixLabors.Fonts 1.0.0 is Apache-2.0) | Engines.Pdf |
 | Markdig | 1.4.2 | BSD-2-Clause | Markdown to HTML | Engines.Pdf |
@@ -41,6 +43,8 @@ Debian's colord). DropFlow takes it from Magick.NET at run time (`ColorProfiles.
 | qpdf | 12.4.2 - https://github.com/qpdf/qpdf | Apache-2.0 | Protect, unlock, repair and compress PDFs |
 | Tesseract OCR | 5.4.0 (UB Mannheim Windows build) - https://github.com/UB-Mannheim/tesseract | Apache-2.0 (its bundled libraries: see `engines\Tesseract\doc`) | OCR fallback and searchable PDFs |
 | Tesseract language data `eng`, `ara`, `osd` (tessdata_fast) | https://github.com/tesseract-ocr/tessdata_fast | Apache-2.0 | English and Arabic text recognition |
+| **Windows on ARM64 installer only:** FFmpeg + ffprobe (BtbN FFmpeg-Builds, `n9.0.2-31-gc89d6ee1ca` winarm64 GPL build) | https://github.com/BtbN/FFmpeg-Builds (dated autobuild 2026-10-21; BtbN prunes old autobuilds, so the pin in `tools/fetch-engines.ps1` must be refreshed when it disappears) | **GPL-3.0** | Same use and the same separate-program terms as the x64 FFmpeg (LICENSE + SOURCE-OFFER.txt next to it) |
+| **Windows on ARM64 installer only:** qpdf `msvc-arm64` | 12.4.2 - https://github.com/qpdf/qpdf | Apache-2.0 | Same as x64. Tesseract has no Windows ARM64 build: the ARM64 installer leaves it out unless the x64 build is bundled on purpose (it then runs under Windows 11's x64 emulation) |
 
 ## Optional external programs (not shipped; used only if the user installs them)
 
@@ -48,6 +52,8 @@ Debian's colord). DropFlow takes it from Magick.NET at run time (`ColorProfiles.
 |---|---|---|
 | LibreOffice | MPL-2.0 | Legacy binary Office formats and a few exotic document pairs — separate process (headless) |
 | 7-Zip | LGPL-2.1+ (unRAR restriction on the RAR code) | Writing 7z archives — separate process |
+| Google Chrome, Chromium, Microsoft Edge or Brave (macOS/Linux) | Proprietary / BSD-3-Clause (Chromium) | HTML to PDF on macOS and Linux, started headless as a separate process (`--print-to-pdf`, network blocked unless the job allows it). Found if installed, never downloaded |
+| FFmpeg, qpdf, Tesseract from Homebrew or the Linux distribution (macOS/Linux) | as above | Found on PATH, Homebrew (`/opt/homebrew/bin`, `/usr/local/bin`) or `/usr/bin` until the macOS/Linux packages bundle their own |
 
 ## AI models (downloaded only after the user agrees; SHA-256 pinned and verified)
 
@@ -62,7 +68,7 @@ RMBG-1.4 and other non-commercial models are deliberately **not** used; a test e
 
 ## Windows components used through the OS (not redistributed)
 
-Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), the Microsoft Edge WebView2 Evergreen runtime.
+Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), Windows.Media.FaceAnalysis (face detection for automatic redaction, no model download), the Microsoft Edge WebView2 Evergreen runtime. These exist only in the Windows build of the AI engine (`net10.0-windows`); the macOS/Linux build uses Tesseract, PDFium and the UltraFace model instead.
 
 ## Web (`web/`)
 

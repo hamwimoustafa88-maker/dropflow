@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# DropFlow for Linux as .deb and .rpm (nfpm). installer/linux/build-linux.sh sets DROPFLOW_ARCH (amd64|arm64), DROPFLOW_VERSION and
+# DROPFLOW_ROOT (the staged tree). nfpm turns amd64/arm64 into x86_64/aarch64 for rpm. The packages use the distribution's FFmpeg;
+# only the AppImage carries its own.
+name: dropflow
+arch: ${DROPFLOW_ARCH}
+platform: linux
+version: ${DROPFLOW_VERSION}
+section: utils
+priority: optional
+# No personal e-mail address in public package metadata: issues go through GitHub.
+maintainer: ScoutHub DropFlow team <https://github.com/hamwimoustafa88-maker/dropflow/issues>
+vendor: ScoutHub
+homepage: https://dropflow.scouthub.dev
+license: GPL-3.0-or-later
+description: |
+  Drag a file, tap a key, drop it on the wheel.
+  DropFlow converts, compresses and edits files right where you drag them: tap Shift, Ctrl or Alt during a drag and a wheel
+  of choices opens under the pointer. Everything happens on this computer; nothing is uploaded. Arabic and English.
+
+contents:
+  - src: ${DROPFLOW_ROOT}/usr/lib/dropflow/
+    dst: /usr/lib/dropflow
+    type: tree
+  - src: /usr/lib/dropflow/dropflow-desktop
+    dst: /usr/bin/dropflow-desktop
+    type: symlink
+  - src: ${DROPFLOW_ROOT}/usr/share/applications/dev.scouthub.dropflow.desktop
+    dst: /usr/share/applications/dev.scouthub.dropflow.desktop
+  - src: ${DROPFLOW_ROOT}/usr/share/icons/hicolor/512x512/apps/dropflow.png
+    dst: /usr/share/icons/hicolor/512x512/apps/dropflow.png
+  - src: ${DROPFLOW_ROOT}/usr/share/icons/hicolor/scalable/apps/dropflow.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/dropflow.svg
+  - src: ${DROPFLOW_ROOT}/usr/share/gnome-shell/extensions/dropflow@scouthub.dev/
+    dst: /usr/share/gnome-shell/extensions/dropflow@scouthub.dev
+    type: tree
+  - src: ${DROPFLOW_ROOT}/usr/share/doc/dropflow/
+    dst: /usr/share/doc/dropflow
+    type: tree
+
+overrides:
+  deb:
+    depends:
+      - ffmpeg
+      - libx11-6
+      - libxfixes3
+      - libxext6
+      - libxi6
+      - libxrandr2
+      - libxcursor1
+      - libice6
+      - libsm6
+      - libfontconfig1
+    recommends:
+      - tesseract-ocr
+      - tesseract-ocr-ara
+      - qpdf
+      - fonts-noto-core
+      - gnome-shell-extension-appindicator
+    suggests:
+      - libreoffice
+  rpm:
+    depends:
+      - /usr/bin/ffmpeg
+      - libX11
+      - libXfixes
+      - libXext
+      - libXi
+      - libXrandr
+      - libXcursor
+      - libICE
+      - libSM
+      - fontconfig
+    recommends:
+      - tesseract
+      - tesseract-langpack-ara
+      - qpdf
+    suggests:
+      - libreoffice

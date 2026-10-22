@@ -41,3 +41,6 @@ tests/samples/large/
 # Installer build output (installer/build.ps1)
 /publish/
 /Releases/
+
+# macOS / Linux desktop packages (installer/macos/build-macos.sh, installer/linux/build-linux.sh)
+/build/

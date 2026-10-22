@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=DropFlow
+GenericName=File converter
+GenericName[ar]=محوّل الملفات
+Comment=Drag a file, tap a key, drop it on the wheel. Everything stays on this computer.
+Comment[ar]=اسحب ملفاً، انقر مفتاحاً، وأفلته على العجلة. كل شيء يبقى على هذا الحاسوب.
+Exec=dropflow-desktop %F
+Icon=dropflow
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=convert;compress;pdf;image;video;audio;تحويل;ضغط;
+StartupWMClass=dropflow

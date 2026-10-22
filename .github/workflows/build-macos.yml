@@ -1,0 +1,80 @@
+name: Build macOS app
+
+# Reusable: release.yml (or a manual run) calls it with the version; it uploads the artifact "dropflow-macos" holding
+# DropFlow-mac-arm64.dmg, DropFlow-mac-x64.dmg and SHA256SUMS-macos.txt. Ad-hoc signed, not notarized (owner decision, docs/macos.md).
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version without the leading v (e.g. 0.2.0)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the leading v
+        required: false
+        default: 0.0.0-dev
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  macos:
+    runs-on: macos-latest   # Apple Silicon; the x64 app is cross-published and runs under Rosetta for the smoke check
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test the desktop app's logic
+        run: dotnet test tests/DropFlow.Desktop.Tests -c Release
+
+      - name: Build DropFlow.app and the disk images
+        run: |
+          chmod +x installer/macos/build-macos.sh installer/unix/fetch-ffmpeg.sh
+          installer/macos/build-macos.sh "${{ inputs.version }}" arm64 x64
+
+      - name: Check the bundles
+        run: |
+          for arch in arm64 x64; do
+            app=build/macos/$arch/DropFlow.app
+            /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$app/Contents/Info.plist"
+            file "$app/Contents/MacOS/dropflow-desktop"
+            "$app/Contents/Resources/engines/ffmpeg" -hide_banner -version | head -1 || true
+            spctl --assess --type execute -vv "$app" || echo "Gatekeeper rejects it, as expected for an app that is not notarized"
+          done
+
+      - name: Look at the windows (snapshots, best effort)
+        continue-on-error: true
+        run: |
+          mkdir -p build/macos/snapshots
+          for lang in en ar; do
+            # macOS has no GNU timeout: perl's alarm stops a hung run after two minutes
+            perl -e 'alarm shift; exec @ARGV' 120 build/macos/arm64/DropFlow.app/Contents/MacOS/dropflow-desktop --snapshot build/macos/snapshots --lang $lang || true
+          done
+          ls -la build/macos/snapshots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dropflow-macos
+          path: |
+            build/macos/packages/DropFlow-mac-arm64.dmg
+            build/macos/packages/DropFlow-mac-x64.dmg
+            build/macos/packages/SHA256SUMS-macos.txt
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dropflow-macos-snapshots
+          path: build/macos/snapshots
+          if-no-files-found: ignore

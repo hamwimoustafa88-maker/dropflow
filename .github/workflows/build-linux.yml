@@ -1,0 +1,89 @@
+name: Build Linux app
+
+# Reusable: release.yml (or a manual run) calls it with the version; it uploads the artifact "dropflow-linux" holding
+# DropFlow-linux-amd64.deb, DropFlow-linux-arm64.deb, DropFlow-linux-x86_64.rpm, DropFlow-linux-aarch64.rpm,
+# DropFlow-linux-x86_64.AppImage, DropFlow-linux-aarch64.AppImage and SHA256SUMS-linux.txt. Both architectures are built on one x64
+# runner (cross-published .NET, nfpm and squashfs are architecture-neutral); the tests and the window snapshots run on x64.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version without the leading v (e.g. 0.2.0)
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the leading v
+        required: false
+        default: 0.0.0-dev
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build tools and a virtual screen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools unzip xvfb fonts-noto-core rpm
+
+      - name: Test the desktop app's logic
+        run: dotnet test tests/DropFlow.Desktop.Tests -c Release
+
+      - name: Build .deb, .rpm and AppImage (x64 and ARM64)
+        run: |
+          chmod +x installer/linux/build-linux.sh installer/unix/fetch-ffmpeg.sh installer/linux/AppRun
+          installer/linux/build-linux.sh "${{ inputs.version }}" linux-x64 linux-arm64
+
+      - name: Check the packages
+        run: |
+          cd build/linux/packages
+          dpkg-deb -I DropFlow-linux-amd64.deb
+          rpm -qip DropFlow-linux-x86_64.rpm
+          rpm -qpR DropFlow-linux-x86_64.rpm
+          file DropFlow-linux-*.AppImage
+
+      - name: Look at the windows under Xvfb (snapshots)
+        continue-on-error: true
+        run: |
+          mkdir -p build/linux/snapshots /tmp/xdg && chmod 700 /tmp/xdg
+          for lang in en ar; do
+            XDG_RUNTIME_DIR=/tmp/xdg XDG_SESSION_TYPE=x11 timeout 120 xvfb-run -a -s "-screen 0 1600x1000x24" \
+              build/linux/root-linux-x64/usr/lib/dropflow/dropflow-desktop --snapshot build/linux/snapshots --lang $lang || true
+          done
+          ls -la build/linux/snapshots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dropflow-linux
+          path: |
+            build/linux/packages/DropFlow-linux-amd64.deb
+            build/linux/packages/DropFlow-linux-arm64.deb
+            build/linux/packages/DropFlow-linux-x86_64.rpm
+            build/linux/packages/DropFlow-linux-aarch64.rpm
+            build/linux/packages/DropFlow-linux-x86_64.AppImage
+            build/linux/packages/DropFlow-linux-aarch64.AppImage
+            build/linux/packages/SHA256SUMS-linux.txt
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dropflow-linux-snapshots
+          path: build/linux/snapshots
+          if-no-files-found: ignore

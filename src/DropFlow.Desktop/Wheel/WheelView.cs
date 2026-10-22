@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 using DropFlow.Desktop.Views;
 using DropFlow.Overlay;
 
@@ -202,10 +203,11 @@ public sealed class WheelView : Control
 
         var brush = selected ? p.TextOnAccent : item.Role == WheelItemRole.Add ? p.Highlight : p.Text;
         var chord = 2 * ((Inner + Outer) / 2) * Math.Sin(Math.Min(Math.PI / 2, Math.PI / Items.Count)) - 14;
-        var maxWidth = Math.Max(48, chord);
+        var maxWidth = Math.Max(54, chord);
         var label = item.Label + (item.NeedsOptions ? " …" : "");
         if (item.State == WheelItemState.NeedsEngine) label = "⭳ " + label;
-        var size = 14.0;
+        // A crowded wheel (the Tools wheel of a picture has 15+ items) uses a smaller face and two lines.
+        var size = Items.Count > 10 ? 12.5 : 14.0;
         if (item.Role == WheelItemRole.Add && !Fits(label, size, maxWidth))
         {
             var space = label.IndexOf(' ');
@@ -214,9 +216,10 @@ public sealed class WheelView : Control
             if (label == "+") size = 26;
         }
 
-        var text = Text(label, size, brush, maxWidth, LabelMaxHeight);
+        using var layout = new TextLayout(label, _face, size, brush, TextAlignment.Center, TextWrapping.Wrap,
+            TextTrimming.CharacterEllipsis, null, Flow, maxWidth, LabelMaxHeight + 6, double.NaN, 0, 3);
         var (lx, ly) = g.LabelCenter(i);
-        DrawCentered(dc, text, c.X + lx, c.Y + ly, maxWidth);
+        layout.Draw(dc, new Point(c.X + lx - maxWidth / 2, c.Y + ly - layout.Height / 2));
     }
 
     /// <summary>Centred text is laid out inside its MaxTextWidth box, so the box (not the ink) is centred on the point.</summary>

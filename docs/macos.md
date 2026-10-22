@@ -1,5 +1,9 @@
 # DropFlow on macOS — feasibility (2026-10-21)
 
+> **Update 2026-10-22:** the Mac (and Linux) app now exists as `src/DropFlow.Desktop` (Avalonia). Drag detection does **not** need
+> the Accessibility / Input Monitoring permission after all: it polls `NSEvent` and the drag pasteboard instead of a `CGEventTap`.
+> Architecture, packaging (ad-hoc signed DMG) and what is still unverified: [desktop-mac-linux.md](desktop-mac-linux.md).
+
 Short answer: **possible, and about half of the code already runs on a Mac**; the other half (the parts that touch the operating system)
 must be written again for macOS. Tangerine itself is Mac-only, so a Mac DropFlow competes with it directly.
 

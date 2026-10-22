@@ -231,6 +231,7 @@ internal sealed class AppController : IDesktopPrompts
         var existing = files.Where(f => File.Exists(f) || Directory.Exists(f)).ToList();
         if (existing.Count == 0) return;
         var (x, y) = PointerForClickMode();
+        Log.Info($"click-mode wheel for {existing.Count} item(s) at {x},{y}");
         _presenter.NextInteractive = true;
         _wheelSession.ShowFor(existing, kind, x, y);
     }

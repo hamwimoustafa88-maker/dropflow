@@ -61,19 +61,24 @@ for rid in "${rids[@]}"; do
   mkdir -p "$root/usr/lib/dropflow" "$root/usr/share/applications" "$root/usr/share/icons/hicolor/512x512/apps" \
            "$root/usr/share/icons/hicolor/scalable/apps" "$root/usr/share/gnome-shell/extensions" "$root/usr/share/doc/dropflow"
   cp -R "$publish/." "$root/usr/lib/dropflow/"
-  chmod 0755 "$root/usr/lib/dropflow/dropflow-desktop"
   cp installer/linux/dev.scouthub.dropflow.desktop "$root/usr/share/applications/"
   cp src/DropFlow.Desktop/Assets/dropflow-512.png "$root/usr/share/icons/hicolor/512x512/apps/dropflow.png"
   cp src/DropFlow.Desktop/Assets/dropflow.svg "$root/usr/share/icons/hicolor/scalable/apps/dropflow.svg"
   cp -R linux/gnome-extension/dropflow@scouthub.dev "$root/usr/share/gnome-shell/extensions/"
   cp LICENSE "$root/usr/share/doc/dropflow/copyright"
   cp THIRD-PARTY-NOTICES.md TRADEMARK.md "$root/usr/share/doc/dropflow/"
+  # Normalise modes (a mounted or Windows-checked-out source tree makes every file executable): data 0644, folders 0755, only the app 0755
+  find "$root" -type f -exec chmod 0644 {} +
+  find "$root" -type d -exec chmod 0755 {} +
+  chmod 0755 "$root/usr/lib/dropflow/dropflow-desktop"
 
   echo "::group::deb + rpm $rid"
-  DROPFLOW_ARCH=$deb DROPFLOW_VERSION=$version DROPFLOW_ROOT=$root \
-    "$nfpm" package --config installer/linux/nfpm.yaml --packager deb --target "$packages/DropFlow-linux-$deb.deb"
-  DROPFLOW_ARCH=$deb DROPFLOW_VERSION=$version DROPFLOW_ROOT=$root \
-    "$nfpm" package --config installer/linux/nfpm.yaml --packager rpm --target "$packages/DropFlow-linux-$long.rpm"
+  # nfpm does not expand variables in "contents", so the placeholders are filled in here
+  config=$out/nfpm-$rid.yaml
+  sed -e "s|\${DROPFLOW_ARCH}|$deb|g" -e "s|\${DROPFLOW_VERSION}|$version|g" -e "s|\${DROPFLOW_ROOT}|$root|g" \
+    installer/linux/nfpm.yaml > "$config"
+  "$nfpm" package --config "$config" --packager deb --target "$packages/DropFlow-linux-$deb.deb"
+  "$nfpm" package --config "$config" --packager rpm --target "$packages/DropFlow-linux-$long.rpm"
   echo "::endgroup::"
 
   echo "::group::AppImage $rid"

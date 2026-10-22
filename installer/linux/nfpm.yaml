@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# DropFlow for Linux as .deb and .rpm (nfpm). installer/linux/build-linux.sh sets DROPFLOW_ARCH (amd64|arm64), DROPFLOW_VERSION and
+# DropFlow for Linux as .deb and .rpm (nfpm). installer/linux/build-linux.sh replaces ${DROPFLOW_ARCH} (amd64|arm64), ${DROPFLOW_VERSION} and
 # DROPFLOW_ROOT (the staged tree). nfpm turns amd64/arm64 into x86_64/aarch64 for rpm. The packages use the distribution's FFmpeg;
 # only the AppImage carries its own.
 name: dropflow

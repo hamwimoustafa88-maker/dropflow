@@ -23,6 +23,7 @@ when a program is missing.
 - Engines: FFmpeg (GPL, separate bundled program), Magick.NET, qpdf, PDFiumCore, PDFsharp, PdfPig (PDF/A and HEIC to PDF are in-process; Ghostscript is never used), LibreOffice headless (optional),
   DocumentFormat.OpenXml, ClosedXML, WebView2, SharpCompress/7-Zip
 - Local AI: Whisper.net, Windows.Media.Ocr + Tesseract, ONNX Runtime
+- macOS / Linux desktop: Avalonia 12.1.3 (MIT; Avalonia.Desktop, Avalonia.Themes.Fluent), Objective-C runtime and libX11/XFixes P/Invoke, nfpm + AppImage packaging
 - Web: Next.js + TypeScript + Tailwind + next-intl on Vercel (https://dropflow.scouthub.dev); in-browser pdf-lib, pdf.js, fflate
   (ffmpeg.wasm was removed: GPL)
 - Tests: xUnit with plain `Assert` (desktop — FluentAssertions 8+ is commercially licensed, do not add it), Vitest + Playwright (web) · Installer: Velopack
@@ -43,6 +44,9 @@ when a program is missing.
 | src/DropFlow.App | WPF host (`AppHost`): tray, settings, history, toasts, hooks → wheel → `OperationRunner`, watched folders, global shortcuts, update check; `app.manifest` = per-monitor DPI v2, asInvoker |
 | src/DropFlow.Cli | `dropflow` CLI (assembly name `dropflow`): list / convert / recipe commands over the same Core |
 | src/DropFlow.Spike | Phase 0 throwaway WPF app: log window + transparent drop-target wheel |
+| src/DropFlow.Desktop | macOS + Linux app (Avalonia 12, `dropflow-desktop`): `IDragWatcher` (macOS drag pasteboard, X11 XFixes, GNOME Shell extension socket, none) over a pure `DragDecider`, Avalonia wheel/options/settings/history/shelf/welcome/toast, tray, Unix-socket single instance, `DesktopRunner`. Links `WheelGeometry`/`WheelItem`/`OptionForm`/`Shelf` from Overlay. docs/desktop-mac-linux.md |
+| linux/gnome-extension | DropFlow's GNOME Shell 45–49 extension (`dropflow@scouthub.dev`) that reports wheel keys during Wayland drags |
+| installer/macos · installer/linux · installer/unix | `build-macos.sh` (.app + DMG, ad-hoc signed), `build-linux.sh` (nfpm .deb/.rpm + AppImage), `fetch-ffmpeg.sh` (pinned FFmpeg 9.0.2 for mac/Linux) |
 | installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md) |
 | src/DropFlow.* (planned) | Encoder window, Shell — created as their phases start |
 | tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
@@ -55,6 +59,7 @@ when a program is missing.
 ## Commands
 - Catalog: `node catalog/build.mjs` (run after any edit to catalog/tools.json; must print OK)
 - Desktop: `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.Spike` (single test: `dotnet test --filter "FullyQualifiedName~Name"`)
+- macOS/Linux app: `dotnet test tests/DropFlow.Desktop.Tests` · `dotnet run --project src/DropFlow.Desktop -- --snapshot out --lang ar` (renders the windows to PNG) · packages: `installer/linux/build-linux.sh VERSION`, `installer/macos/build-macos.sh VERSION` (set `AVALONIA_TELEMETRY_OPTOUT=1`)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
 
 ## Architecture rules
@@ -101,6 +106,16 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-22 — macOS + Linux desktop app (owner approved Avalonia): `src/DropFlow.Desktop` (Avalonia 12.1.3, `dropflow-desktop`) on
+  DropFlow.Core + Images/Media/Pdf/Archive; drag watchers without special permissions (macOS drag pasteboard polling via the
+  Objective-C runtime, X11 XFixes + XQueryPointer, own GNOME Shell extension `linux/gnome-extension/dropflow@scouthub.dev` over
+  `$XDG_RUNTIME_DIR/dropflow/drag.sock`, file-manager "Open with DropFlow" entries elsewhere); Unix-socket single instance; wheel,
+  options, settings (ar/en RTL, output folder, start at login), history (undo to the trash), shelf, welcome hint with the Gatekeeper
+  steps. Packaging: `installer/macos/build-macos.sh` (ad-hoc signed .app + DMG, FFmpeg 9.0.2 inside), `installer/linux/build-linux.sh`
+  (nfpm .deb/.rpm, AppImage with FFmpeg), reusable `build-macos.yml` / `build-linux.yml` (release.yml untouched). Avalonia's
+  build-time statistics turned off. 169 new tests (Windows + Linux Docker); Linux packages built, installed and snapshotted in Docker;
+  nothing ran on a Mac and no real drag was tried (docs/status.md). — src/DropFlow.Desktop, tests/DropFlow.Desktop.Tests, linux/,
+  installer/{macos,linux,unix}, .github/workflows/build-{macos,linux}.yml, docs/desktop-mac-linux.md, THIRD-PARTY-NOTICES.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

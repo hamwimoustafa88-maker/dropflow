@@ -138,6 +138,13 @@ After every change to the project (code, docs, decisions, dependencies), before 
   ar/en with in-app switch, adaptive icon from icon.svg, no internet permission. 46 JVM tests pass, debug + signed release build, lint clean;
   NOT run on a device yet (none available). Release key kept outside the repo (%USERPROFILE%\.dropflow). Reusable CI workflow
   build-android.yml (fails instead of publishing unsigned). — android/**, .github/workflows/build-android.yml, docs/android.md, THIRD-PARTY-NOTICES.md
+- 2026-10-22 — Landing downloads for every platform (owner: buttons must download the file, not open GitHub): Windows split button
+  (x64 Setup + list: ARM64, Portable, CLI), macOS / Linux lists, Android direct, Web; one typed table `web/src/lib/downloads.ts` with
+  direct `releases/latest/download/<file>` links and one `*_RELEASED` flag per platform (false = "Soon", no 404; check before deploy);
+  native `<details>` lists (work without JS, Esc/outside click with JS), visitor OS highlighted without layout shift, unsigned-install note.
+  Developers section merged with "Download from GitHub" steps (copy buttons). FAQ Mac answer and JSON-LD operatingSystem follow the flags.
+  READMEs (en/ar) rewritten: download table, architecture mermaid, build/test per platform. Vitest + landing e2e extended.
+  — web/src/lib/downloads.ts, web/src/components/{DownloadButtons,CopyCode,Developers}.tsx, web/messages, web/e2e, README*.md
 - 2026-10-21 — Web app catches up with Windows: in-browser OCR ar+en (Tesseract.js; image -> TXT on the Convert wheel), HEIC/TIFF input,
   GIF/TIFF output, background removal (onnxruntime-web + u2netp, same pinned hash as desktop), edit/add background/redact/collage/icons/QR/
   batch rename, and a "+ Add" slot with per-category pins (localStorage). Engines self-hosted under /vendor (gitignored, fetched at build),

@@ -20,8 +20,6 @@
   },
   "common": {
     "soon": "قريباً",
-    "windows": "ويندوز",
-    "web": "ويب",
     "skip": "تخطَّ إلى المحتوى",
     "language": "اللغة",
     "mainNav": "التنقل الرئيسي",
@@ -38,6 +36,32 @@
     "titleB": "اضغط.",
     "titleC": "أفلت.",
     "subtitle": "حوّل أي ملف. دون إنترنت."
+  },
+  "download": {
+    "label": "تنزيل DropFlow",
+    "platforms": {
+      "windows": "ويندوز",
+      "macos": "ماك",
+      "linux": "لينكس",
+      "android": "أندرويد",
+      "web": "ويب"
+    },
+    "assets": {
+      "installer": "مثبّت",
+      "portable": "نسخة محمولة",
+      "cli": "سطر الأوامر",
+      "appleSilicon": "معالجات Apple",
+      "intel": "Intel",
+      "deb": "Ubuntu / Debian",
+      "rpm": "Fedora / openSUSE",
+      "appImage": "أي توزيعة",
+      "apk": "تطبيق أندرويد"
+    },
+    "more": "تنزيلات {platform} الأخرى",
+    "menu": "تنزيلات {platform}",
+    "yours": "(نظامك)",
+    "soon": "قريباً",
+    "note": "غير موقّع بعد. ماك: زر الفأرة الأيمن ← فتح · ويندوز: مزيد من المعلومات ← تشغيل على أي حال · أندرويد: اسمح بهذا المصدر."
   },
   "demo": {
     "label": "تجربة",
@@ -120,14 +144,36 @@
   },
   "developers": {
     "eyebrow": "مفتوح المصدر · للمبرمجين",
-    "title": "ساهم في مشروع عربي مفتوح المصدر.",
+    "title": "التحميل عبر GitHub.",
     "points": {
       "license": "GPL-3.0 · برنامج حر",
       "stack": "C# · .NET 10 · Next.js · TypeScript",
       "issues": "مهام سهلة لأول مساهمة"
     },
     "repo": "تصفّح على GitHub",
-    "contribute": "ساهم معنا"
+    "contribute": "ساهم معنا",
+    "releases": "الإصدارات",
+    "checksums": "بصمات SHA-256",
+    "steps": {
+      "clone": "انسخ المستودع",
+      "needs": "تحتاج إلى",
+      "run": "ابنِ وشغّل"
+    },
+    "needs": {
+      "dotnet": ".NET 10 SDK",
+      "node": "Node 20+",
+      "android": "JDK 17+ · Android SDK (لأندرويد)"
+    },
+    "targets": {
+      "windows": "تطبيق ويندوز",
+      "desktop": "تطبيق ماك · لينكس",
+      "cli": "سطر الأوامر (CLI)",
+      "web": "تطبيق الويب",
+      "android": "أندرويد",
+      "engines": "المحركات: FFmpeg وqpdf وTesseract"
+    },
+    "copyLabel": "نسخ: {label}",
+    "copied": "تم النسخ"
   },
   "faq": {
     "title": "أسئلة شائعة",
@@ -154,7 +200,7 @@
       },
       {
         "q": "هل توجد نسخة لماك؟",
-        "a": "ليس بعد. وهي ضمن الخطة."
+        "a": "نعم، جديدة: نسخ ماك ولينكس وأندرويد في أزرار التنزيل، واختبارها أقل من نسخة ويندوز."
       }
     ]
   },

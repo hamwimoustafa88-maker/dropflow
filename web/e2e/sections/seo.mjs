@@ -99,8 +99,8 @@ export async function seo({ b, base }) {
       const app = graph.find((n) => n["@type"] === "SoftwareApplication") ?? {};
       const src = graph.find((n) => n["@type"] === "SoftwareSourceCode") ?? {};
       check(
-        `/${loc}: SoftwareApplication (name, Windows 10/11 + Web, UtilitiesApplication, free, GPL, download, ar+en)`,
-        ld[0]?.["@context"] === "https://schema.org" && app.name === "DropFlow" && app.operatingSystem === "Windows 10, Windows 11, Web" && app.applicationCategory === "UtilitiesApplication" &&
+        `/${loc}: SoftwareApplication (name, Windows 10/11 ... Web, UtilitiesApplication, free, GPL, download, ar+en)`,
+        ld[0]?.["@context"] === "https://schema.org" && app.name === "DropFlow" && /^Windows 10, Windows 11(, macOS)?(, Linux)?(, Android)?, Web$/.test(app.operatingSystem ?? "") && app.applicationCategory === "UtilitiesApplication" &&
           Number(app.offers?.price) === 0 && app.license === GPL && /\/releases\/latest$/.test(app.downloadUrl ?? "") && JSON.stringify(app.inLanguage) === '["ar","en"]',
         JSON.stringify(app).slice(0, 200),
       );
@@ -126,7 +126,7 @@ export async function seo({ b, base }) {
       const d = await b.ev(`(() => {
         const s = document.querySelector('#developers');
         const a = (id) => { const e = document.querySelector('[data-testid=' + id + ']'); return e ? { href: e.getAttribute('href'), text: e.textContent.trim(), h: e.getBoundingClientRect().height, rel: e.rel } : null; };
-        return { h2: s?.querySelector('h2')?.textContent ?? '', items: s ? s.querySelectorAll('li').length : 0, repo: a('dev-repo'), contrib: a('dev-contribute'), license: a('footer-license'),
+        return { h2: s?.querySelector('h2')?.textContent ?? '', items: s ? s.querySelectorAll('[data-testid=dev-point]').length : 0, repo: a('dev-repo'), contrib: a('dev-contribute'), license: a('footer-license'),
           nav: !!document.querySelector('header nav a[href="#developers"]') };
       })()`);
       check(`/${loc}: developer section with a heading and 3 points`, d.h2.length > 5 && d.items === 3, `${d.h2} (${d.items})`);

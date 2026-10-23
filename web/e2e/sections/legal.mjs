@@ -41,7 +41,7 @@ export async function legal({ b, base }) {
           check(`/${loc}/privacy: names Vercel, GitHub and Hugging Face as third parties`, /Vercel/.test(page.text) && /GitHub/.test(page.text) && /Hugging Face/.test(page.text));
         } else {
           check(`/${loc}/terms: credits the ScoutHub teams and the lead developer, and the year`, /ScoutHub/.test(page.text) && /Moustafa Al-Hamwi|مصطفى الحموي/.test(page.text) && !/Moustafa Hamwi|مصطفى حموي/.test(page.text) && /2026/.test(page.text));
-          check(`/${loc}/terms: free software under the GPL, no "all rights reserved"`, /GPL-3\.0/.test(page.text) && !/all rights reserved|جميع الحقوق محفوظة|proprietary|برنامج مملوك/i.test(page.text));
+          check(`/${loc}/terms: free software under the GPL, never called proprietary`, /GPL-3\.0/.test(page.text) && !/proprietary|برنامج مملوك/i.test(page.text));
         }
       }
     }

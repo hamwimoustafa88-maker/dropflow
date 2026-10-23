@@ -18,6 +18,7 @@ import type { Locale } from "@/i18n/routing";
 import { jsonLdString, softwareJsonLd } from "@/lib/seo";
 import { REPO_URL } from "@/lib/site";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { SiteCredit } from "@/components/SiteCredit";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -134,9 +135,7 @@ function Footer() {
         </nav>
         <WhatsAppButton testId="footer-whatsapp" className="justify-self-start md:justify-self-end" />
       </div>
-      <p className="border-t border-border/70 px-4 py-4 text-center text-xs text-muted sm:px-6" data-testid="footer-credit">
-        {t("credit")}
-      </p>
+      <SiteCredit className="border-t border-border/70 px-4 py-4 sm:px-6" />
     </footer>
   );
 }

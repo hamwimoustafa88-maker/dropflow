@@ -4,6 +4,7 @@ import { ISSUES_URL, LEGAL_LINKS, WHATSAPP_NUMBER, type LegalLinkKey } from "@/l
 import { GitHubLink, GitHubMark } from "./GitHubLink";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { Logo } from "./Logo";
+import { SiteCredit } from "./SiteCredit";
 import { WhatsAppButton } from "./WhatsAppButton";
 
 // A readable document page (privacy policy, terms of use). All text lives in messages/<locale>.json under the `privacy` /
@@ -241,8 +242,8 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
               <Link href="/" className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">
                 {tl("home")}
               </Link>
-              <span className="text-muted">{tl("rights")}</span>
             </nav>
+            <SiteCredit className="mt-10 border-t border-border pt-6" />
           </article>
         </div>
       </main>

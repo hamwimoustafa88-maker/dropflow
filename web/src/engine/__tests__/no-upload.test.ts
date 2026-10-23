@@ -70,6 +70,7 @@ describe("no code path uploads user data", () => {
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/LICENSE", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/TRADEMARK.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/THIRD-PARTY-NOTICES.md", // a link the visitor may click, never fetched
+      "src/lib/site.ts: https://scouthub.dev/", // the ScoutHub platform link in the credit line, clicked by the visitor, never fetched
       "src/lib/site.ts: https://www.gnu.org/licenses/gpl-3.0.html", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://wa.me/96170863903", // a link the visitor may click (WhatsApp contact), never fetched
       "src/engine/converters/media-engine.ts: http://localhost", // a base for parsing relative URLs, never fetched

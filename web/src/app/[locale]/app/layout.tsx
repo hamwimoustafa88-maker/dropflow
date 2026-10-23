@@ -38,7 +38,7 @@ export default async function AppLayout({ children, params }: Props) {
   setRequestLocale(locale);
   const messages = await getMessages({ locale });
   return (
-    <NextIntlClientProvider locale={locale} messages={{ app: messages.app, common: messages.common }}>
+    <NextIntlClientProvider locale={locale} messages={{ app: messages.app, common: messages.common, credit: messages.credit }}>
       {children}
     </NextIntlClientProvider>
   );

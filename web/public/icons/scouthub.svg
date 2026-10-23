@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="ScoutHub">
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="-50" y1="-50" x2="50" y2="50">
+      <stop offset="0" stop-color="#22D3EE"/><stop offset=".5" stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="#12141C"/><g fill="url(#g)" transform="translate(60 60) scale(.8)">
+    <g id="r"><rect x="-5.5" y="-54" width="11" height="30" rx="1.8"/></g>
+    <use href="#r" transform="rotate(45)"/><use href="#r" transform="rotate(135)"/>
+    <use href="#r" transform="rotate(180)"/><use href="#r" transform="rotate(225)"/>
+    <use href="#r" transform="rotate(270)"/><use href="#r" transform="rotate(315)"/>
+    <polygon points="7,-10 25,0 7,10 11,0"/>
+    <polygon points="28,-5.5 46,-5.5 51,0 46,5.5 28,5.5 32,0"/>
+  </g>
+  <g fill="none" stroke="url(#g)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(60 60) scale(.8)">
+    <polyline points="-16,-8 -8,0 -16,8"/><line x1="-5" y1="10" x2="4" y2="10"/>
+  </g>
+</svg>

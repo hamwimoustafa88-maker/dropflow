@@ -112,6 +112,11 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-10-23 — Footer credit on every page (owner request): one shared `SiteCredit` (landing footer, /app footer, Privacy, Terms) shows
+  "© 2026 DropFlow. All rights reserved." (ar: "جميع الحقوق محفوظة") and "An initiative of the ScoutHub platform" with the ScoutHub logo (local copy of
+  scouthub.dev/assets/img/favicon.svg in `public/icons/scouthub.svg`, link to https://scouthub.dev/). The wording is the owner's; the software stays GPL-3.0-or-later
+  and the e2e rule now only forbids "proprietary" (it used to forbid "all rights reserved" too). `/app` ships the `credit` messages. New `docs/project-summary.md`:
+  ready-to-paste ScoutHub listing text (taglines, about, features, numbers, technologies; ar/en). — web/src/components/SiteCredit.tsx, web/messages/*, web/e2e/sections/{seo,legal}.mjs, docs/project-summary.md
 - 2026-10-23 — English <-> Arabic translation, 100 % local (owner request): `txt.translate` (SRT/VTT, TXT, Markdown, HTML; also on the Document wheel),
   `img.translate` (OCR, then translate; option `overlay` also writes a copy of the picture with the translation drawn over the text) and `pdf.translate`
   (text layer to .txt/.md; scanned PDFs: run OCR first). Engine: Opus-MT (Helsinki-NLP; Apache-2.0 on the model cards, CC-BY-4.0 upstream, attribution in

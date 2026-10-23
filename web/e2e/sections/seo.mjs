@@ -7,7 +7,8 @@ const GPL = "https://www.gnu.org/licenses/gpl-3.0.html";
 const LOCALES = ["ar", "en"];
 const PATHS = ["", "/app", "/privacy", "/terms"];
 const PAGES = PATHS.flatMap((p) => LOCALES.map((l) => `/${l}${p}`));
-const RIGHTS = /all rights reserved|proprietary|جميع الحقوق محفوظة|برنامج مملوك/i;
+// The footer line "© 2026 DropFlow. All rights reserved." is the owner's wording (2026-10-23); the software itself is still GPL, never "proprietary".
+const RIGHTS = /proprietary|برنامج مملوك/i;
 
 // Search engines and the open-source launch (ADR-0013): indexable pages, robots.txt + sitemap.xml with hreflang,
 // canonical/Open Graph/Twitter tags, JSON-LD, GitHub links, GPL wording, semantic basics. Pure reads, same origin only.
@@ -120,7 +121,7 @@ export async function seo({ b, base }) {
     }
   });
 
-  await section("seo: developer section, footer licence link, and no 'all rights reserved' anywhere", async () => {
+  await section("seo: developer section, footer licence link, the shared copyright / ScoutHub credit, and no 'proprietary' wording", async () => {
     for (const [loc, repoText, contribText] of [["en", "View on GitHub", "Contribute"], ["ar", "تصفّح على GitHub", "ساهم معنا"]]) {
       await b.goto(`${base}/${loc}`, 1000);
       const d = await b.ev(`(() => {
@@ -137,10 +138,14 @@ export async function seo({ b, base }) {
           d.signing?.href === `${REPO}/blob/main/docs/code-signing-policy.md` && [d.license, d.issues, d.security, d.signing].every((x) => x.h >= 44 && /noopener/.test(x.rel)), JSON.stringify([d.license, d.issues, d.security, d.signing]));
       check(`/${loc}: header nav links to the developer section`, d.nav);
     }
+    const CREDIT = { ar: ["© 2026 DropFlow. جميع الحقوق محفوظة.", "إحدى مبادرات منصة ScoutHub"], en: ["© 2026 DropFlow. All rights reserved.", "An initiative of the ScoutHub platform"] };
     for (const path of PAGES) {
       await b.goto(`${base}${path}`, path.endsWith("/app") ? 1600 : 900);
+      const c = await b.ev(`(() => { const e = document.querySelector('[data-testid=site-credit]'); const a = e?.querySelector('a'); const i = e?.querySelector('img'); return { n: document.querySelectorAll('[data-testid=site-credit]').length, rights: e?.querySelector('[data-testid=credit-rights]')?.textContent.trim(), init: e?.querySelector('[data-testid=credit-initiative]')?.textContent.trim(), href: a?.getAttribute('href'), rel: a?.rel, target: a?.target, img: i?.getAttribute('src'), loaded: !!i && i.complete && i.naturalWidth > 0 }; })()`);
+      const [rights, init] = CREDIT[path.slice(1, 3)];
+      check(`${path}: footer credit "${rights}" + "${init}" (logo from our own server, link to https://scouthub.dev/ in a new tab)`, c.n === 1 && c.rights === rights && c.init === init && c.href === "https://scouthub.dev/" && c.target === "_blank" && /noopener/.test(c.rel) && c.img === "/icons/scouthub.svg" && c.loaded, JSON.stringify(c));
       const text = await b.ev("document.body.innerText");
-      check(`${path}: no "all rights reserved" / "proprietary" wording`, !RIGHTS.test(text), (text.match(RIGHTS) ?? [""])[0]);
+      check(`${path}: no "proprietary" wording`, !RIGHTS.test(text), (text.match(RIGHTS) ?? [""])[0]);
     }
   });
 

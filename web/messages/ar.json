@@ -215,13 +215,17 @@
     "title": "أفلت. انتهى.",
     "ask": "عندك سؤال؟"
   },
+  "credit": {
+    "rights": "© 2026 DropFlow. جميع الحقوق محفوظة.",
+    "initiative": "إحدى مبادرات منصة <link>ScoutHub</link>",
+    "logoAlt": "ScoutHub"
+  },
   "footer": {
     "legal": "قانوني",
     "privacy": "الخصوصية",
     "terms": "الشروط",
     "opensource": "مفتوح المصدر · GPL-3.0",
-    "tagline": "حوّل أي ملف. دون إنترنت.",
-    "credit": "من تطوير فرق ScoutHub"
+    "tagline": "حوّل أي ملف. دون إنترنت."
   },
   "app": {
     "meta": {
@@ -640,7 +644,6 @@
     "date": "21 أكتوبر 2026",
     "contactTitle": "التواصل",
     "contactText": "للأعطال والثغرات الأمنية: صفحة البلاغات (Issues) على GitHub، ومن فضلك لا تنشر ملفات خاصة هناك. ولأي أمر آخر: واتساب.",
-    "rights": "© 2026 ScoutHub والمساهمون · GPL-3.0 أو أحدث",
     "links": {
       "gpl": "نص رخصة GNU GPL v3 (gnu.org)",
       "license": "ملف LICENSE في المستودع",

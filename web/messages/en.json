@@ -215,13 +215,17 @@
     "title": "Drop it. Done.",
     "ask": "Questions?"
   },
+  "credit": {
+    "rights": "© 2026 DropFlow. All rights reserved.",
+    "initiative": "An initiative of the <link>ScoutHub</link> platform",
+    "logoAlt": "ScoutHub"
+  },
   "footer": {
     "legal": "Legal",
     "privacy": "Privacy",
     "terms": "Terms",
     "opensource": "Open source · GPL-3.0",
-    "tagline": "Convert any file. Offline.",
-    "credit": "Developed by the ScoutHub teams"
+    "tagline": "Convert any file. Offline."
   },
   "app": {
     "meta": {
@@ -640,7 +644,6 @@
     "date": "21 October 2026",
     "contactTitle": "Contact",
     "contactText": "Bugs and security reports: the GitHub issues page (please do not post private files there). Anything else: WhatsApp.",
-    "rights": "© 2026 ScoutHub and contributors · GPL-3.0-or-later",
     "links": {
       "gpl": "GNU GPL v3 (gnu.org)",
       "license": "LICENSE file",

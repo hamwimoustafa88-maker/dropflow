@@ -37,6 +37,7 @@ import { DropOverlay } from "./DropOverlay";
 import { OptionsPanel } from "./OptionsPanel";
 import { Wheel, type WheelItem } from "./Wheel";
 import { WindowsHintTile } from "./WindowsHint";
+import { SiteCredit } from "../SiteCredit";
 import { canShareFiles, copyBlobText, downloadAll, shareFiles } from "./browser-actions";
 import { captureDrop, dedupeFiles, dragHasFiles, dragHasLink } from "./dropped-files";
 import { LinkError, extractUrl, fetchLink, parseHttpUrl } from "@/engine/lib/fetch-link";
@@ -862,6 +863,7 @@ export function AppShell() {
             </label>
           </div>
         </div>
+        <SiteCredit className="border-t border-border/70 px-4 py-3 sm:px-6" />
       </footer>
 
       <input ref={inputRef} type="file" multiple hidden onChange={pickFiles} data-testid="file-input" aria-label={t("drop.choose")} />

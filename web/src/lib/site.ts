@@ -16,6 +16,8 @@ export const NOTICES_URL = "https://github.com/hamwimoustafa88-maker/dropflow/bl
 export const ISSUES_URL = "https://github.com/hamwimoustafa88-maker/dropflow/issues";
 export const SECURITY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md";
 export const SIGNING_POLICY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md";
+/** ScoutHub, the platform DropFlow is an initiative of (credit line of every page). */
+export const SCOUTHUB_URL = "https://scouthub.dev/";
 export const GPL_URL = "https://www.gnu.org/licenses/gpl-3.0.html";
 /** Contact for anything that is not a bug or a security report (shown on the legal pages and in the footer). */
 export const WHATSAPP_URL = "https://wa.me/96170863903";

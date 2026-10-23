@@ -501,7 +501,7 @@ export function AppShell() {
           </a>
           <div className="flex items-center gap-2">
             {!pwa.online ? (
-              <span data-testid="offline-badge" className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-(--warn)">
+              <span data-testid="offline-badge" className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-warn">
                 {t("offline.badge")}
               </span>
             ) : null}
@@ -630,7 +630,7 @@ export function AppShell() {
               ))}
             </ul>
             <p className="flex items-center gap-2 text-sm font-medium text-muted">
-              <svg viewBox="0 0 24 24" className="size-4 text-(--ok)" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="size-4 text-ok" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="4" y="11" width="16" height="10" rx="2" />
                 <path d="M8 11V7a4 4 0 0 1 8 0v4" />
               </svg>
@@ -669,7 +669,7 @@ export function AppShell() {
             </section>
 
             {bigFiles.length > 0 ? (
-              <p role="status" data-testid="big-warning" className="flex flex-wrap items-center gap-x-2 rounded-2xl bg-surface-2 px-4 py-2.5 text-sm font-semibold text-(--warn)">
+              <p role="status" data-testid="big-warning" className="flex flex-wrap items-center gap-x-2 rounded-2xl bg-surface-2 px-4 py-2.5 text-sm font-semibold text-warn">
                 <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M12 3 2 21h20L12 3Z" />
                   <path d="M12 10v5M12 18.5v.01" />
@@ -825,7 +825,7 @@ export function AppShell() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-sm text-muted sm:px-6">
           <p className="flex items-center gap-2 font-medium">
-            <svg viewBox="0 0 24 24" className="size-4 text-(--ok)" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="size-4 text-ok" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="4" y="11" width="16" height="10" rx="2" />
               <path d="M8 11V7a4 4 0 0 1 8 0v4" />
             </svg>

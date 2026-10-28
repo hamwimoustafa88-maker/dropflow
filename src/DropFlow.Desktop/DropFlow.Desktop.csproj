@@ -39,9 +39,9 @@
 
   <ItemGroup>
     <!-- Owner-approved (MIT). Avalonia.Desktop brings the macOS (Avalonia.Native) and Linux (X11, FreeDesktop/DBus tray) backends. -->
-    <PackageReference Include="Avalonia" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
   </ItemGroup>
 
   <ItemGroup>

@@ -27,7 +27,7 @@
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="ReverseMarkdown" Version="6.2.1" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { operatingSystems } from "./downloads";
-import { GPL_URL, RELEASES_URL, REPO_URL, SITE_URL } from "./site";
+import { GPL_URL, RELEASES_URL, REPO_URL, SCOUTHUB_URL, SITE_URL } from "./site";
 
 // Search metadata shared by every page: canonical + hreflang (ar, en, x-default -> Arabic), Open Graph and Twitter card.
 // Next merges metadata shallowly, so each page passes its own title/description and gets the whole set back.
@@ -56,16 +56,20 @@ export const siteMetadata: Metadata = {
 /** schema.org description of the product and its source code (rendered as JSON-LD on the landing page). */
 export function softwareJsonLd(locale: string, description: string, faq: { q: string; a: string }[] = []) {
   const app = `${SITE_URL}/#software`;
-  // Made by the ScoutHub teams; the lead developer is named as a member, not as the author.
-  const author = {
-    "@type": "Organization",
-    "@id": `${SITE_URL}/#scouthub`,
-    name: "ScoutHub",
-    member: { "@type": "Person", name: "Moustafa Al-Hamwi", jobTitle: "Lead developer", address: { "@type": "PostalAddress", addressCountry: "LB" } },
-  };
+  const scouthub = { "@id": `${SITE_URL}/#scouthub` };
   return {
     "@context": "https://schema.org",
     "@graph": [
+      // Who runs the site: the ScoutHub platform (its own node, so search engines and AI assistants find the organisation, its
+      // address and its logo). Made by the ScoutHub teams; the lead developer is named as a member, not as the author.
+      {
+        "@type": "Organization",
+        ...scouthub,
+        name: "ScoutHub",
+        url: SCOUTHUB_URL,
+        logo: { "@type": "ImageObject", url: `${SITE_URL}/icons/scouthub.svg` },
+        member: { "@type": "Person", name: "Moustafa Al-Hamwi", jobTitle: "Lead developer", address: { "@type": "PostalAddress", addressCountry: "LB" } },
+      },
       {
         "@type": "SoftwareApplication",
         "@id": app,
@@ -80,8 +84,8 @@ export function softwareJsonLd(locale: string, description: string, faq: { q: st
         downloadUrl: RELEASES_URL,
         inLanguage: ["ar", "en"],
         image: `${SITE_URL}/${locale}/opengraph-image`,
-        author,
-        publisher: { "@id": `${SITE_URL}/#scouthub` },
+        author: scouthub,
+        publisher: scouthub,
       },
       {
         "@type": "SoftwareSourceCode",
@@ -91,7 +95,7 @@ export function softwareJsonLd(locale: string, description: string, faq: { q: st
         programmingLanguage: ["C#", "TypeScript"],
         license: GPL_URL,
         targetProduct: { "@id": app },
-        author: { "@id": `${SITE_URL}/#scouthub` },
+        author: scouthub,
       },
       ...(faq.length
         ? [

@@ -1,0 +1,25 @@
+# DropFlow
+
+> DropFlow is a free, open-source (GPL-3.0-or-later) file converter that works 100% on the user's own device: drag a file,
+> tap a key, and a radial wheel offers conversions, PDF tools, media tools and local AI (speech to text, OCR, background
+> removal, English <-> Arabic translation). Nothing is uploaded. Desktop apps for Windows, macOS and Linux, an Android app,
+> and a web app that runs in the browser. Arabic-first, also in English. An initiative of the ScoutHub platform.
+
+## Pages
+
+- [DropFlow (Arabic)](https://dropflow.scouthub.dev/ar): the home page in Arabic: downloads, features, supported formats, FAQ
+- [DropFlow (English)](https://dropflow.scouthub.dev/en): the same home page in English
+- [Web app](https://dropflow.scouthub.dev/en/app): convert PDF, images, text and media in the browser; files never leave the device
+- [Privacy policy](https://dropflow.scouthub.dev/en/privacy): no uploads, no accounts, no cookies, no tracking
+- [Terms of use](https://dropflow.scouthub.dev/en/terms): GPL-3.0-or-later, no warranty
+
+## Downloads and source
+
+- [Latest release](https://github.com/hamwimoustafa88-maker/dropflow/releases/latest): Windows (x64, ARM64), macOS, Linux, Android
+- [Source code](https://github.com/hamwimoustafa88-maker/dropflow): C# / .NET desktop app, Next.js web app, Kotlin Android app
+- [Security policy](https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md): how to report a vulnerability
+
+## Contact
+
+- [WhatsApp](https://wa.me/96170863903): questions and suggestions for the team
+- [Issues](https://github.com/hamwimoustafa88-maker/dropflow/issues): bug reports and feature requests

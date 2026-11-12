@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { prerenderedHtml } from "./prerendered-html.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(root, process.env.NEXT_DIST_DIR ?? ".next");
@@ -22,18 +23,18 @@ const toUrl = (base, file) => "/" + relative(base, file).split(sep).map(encodeUR
 const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 16);
 
 // 1. The app shell: the two prerendered /app pages ...
-// The hash only versions the service worker. Where the prerendered HTML is not on disk (a hosting build can lay the output
-// out differently), fall back to the build id with a warning instead of failing the whole deploy.
+// The hash only versions the service worker. The HTML is found in both build layouts (scripts/prerendered-html.mjs); should
+// it still be missing, fall back to the build id with a warning instead of failing the whole deploy.
 const buildIdFile = join(dist, "BUILD_ID");
 const buildId = existsSync(buildIdFile) ? readFileSync(buildIdFile, "utf8").trim() : "no-build-id";
 if (!existsSync(dist)) throw new Error(`build-sw: ${dist} is missing - run \`next build\` first`);
 const pages = [];
 for (const l of locales) {
-  const html = join(dist, "server", "app", l, "app.html");
-  if (existsSync(html)) {
+  const html = prerenderedHtml(dist, `/${l}/app`);
+  if (html) {
     pages.push({ url: `/${l}/app`, hash: sha(readFileSync(html)) });
   } else {
-    console.warn(`build-sw: ${html} not found; versioning /${l}/app by the build id instead`);
+    console.warn(`build-sw: no prerendered HTML for /${l}/app under ${dist}; versioning /${l}/app by the build id instead`);
     pages.push({ url: `/${l}/app`, hash: sha(`${buildId}:${l}`) });
   }
 }

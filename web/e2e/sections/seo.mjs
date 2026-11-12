@@ -75,7 +75,7 @@ export async function seo({ b, base }) {
         m.ogTitle && m.ogDesc && m.ogUrl && new URL(m.ogUrl).pathname === path && m.ogLocale === (loc === "ar" ? "ar_AR" : "en_US") && m.ogSite === "DropFlow" && m.ogImage && m.twCard === "summary_large_image" && m.twImage,
         JSON.stringify({ og: m.ogUrl, loc: m.ogLocale, img: m.ogImage, tw: m.twCard }),
       );
-      check(`${path}: has a title and a description`, m.title.length > 5 && (m.desc ?? "").length > 40, `${m.title} | ${(m.desc ?? "").length}`);
+      check(`${path}: has a title and a 50-160 character description (not cut off in search results)`, m.title.length > 5 && [...(m.desc ?? "")].length >= 50 && [...(m.desc ?? "")].length <= 160, `${m.title} | ${[...(m.desc ?? "")].length}`);
       check(`${path}: exactly one h1`, m.h1 === 1, String(m.h1));
       check(`${path}: lang=${loc} dir=${loc === "ar" ? "rtl" : "ltr"}`, m.lang === loc && m.dir === (loc === "ar" ? "rtl" : "ltr"), `${m.lang}/${m.dir}`);
       check(`${path}: every <img> has alt, no vague link text`, m.imgNoAlt === 0 && m.vague === 0, `${m.imgNoAlt} / ${m.vague}`);
@@ -112,7 +112,12 @@ export async function seo({ b, base }) {
         shown.length === 6 && (faq.mainEntity ?? []).length === 6 && faq.mainEntity.every((q, i) => q["@type"] === "Question" && q.name === shown[i] && q.acceptedAnswer?.text?.length > 5),
         JSON.stringify(shown),
       );
-      check(`/${loc}: JSON-LD author/publisher is the ScoutHub organisation`, app.author?.["@type"] === "Organization" && app.author?.name === "ScoutHub" && !/Moustafa Hamwi/.test(JSON.stringify(ld)), JSON.stringify(app.author));
+      const org = graph.find((n) => n["@type"] === "Organization") ?? {};
+      check(
+        `/${loc}: JSON-LD has the ScoutHub Organization as its own node (name, url, logo) and it is the author/publisher`,
+        org.name === "ScoutHub" && org.url === "https://scouthub.dev/" && (org.logo?.url ?? "").endsWith("/icons/scouthub.svg") && app.author?.["@id"] === org["@id"] && app.publisher?.["@id"] === org["@id"] && !/Moustafa Hamwi/.test(JSON.stringify(ld)),
+        JSON.stringify({ org, author: app.author }).slice(0, 240),
+      );
       check(
         `/${loc}: SoftwareSourceCode (repository, C# + TypeScript, GPL)`,
         src.codeRepository === REPO && JSON.stringify(src.programmingLanguage) === '["C#","TypeScript"]' && src.license === GPL,
@@ -199,9 +204,16 @@ export async function seo({ b, base }) {
         !/https?:\/\//.test(csp) && !/http:/.test(csp) && (path.endsWith("/app") ? /connect-src 'self' blob: data: https:(;|$)/.test(csp) : !/https:/.test(csp));
       check(`${path}: CSP + nosniff, DENY, HSTS preload, Permissions-Policy, COOP/CORP, Referrer-Policy, no CORS *, no X-Powered-By`, ok, JSON.stringify({ csp: csp.slice(0, 60), acao: h["access-control-allow-origin"], ref: h["referrer-policy"], link: h["link"] }));
     }
+    for (const path of PAGES) {
+      const csp = await b.ev(`fetch(${JSON.stringify(path)}).then((r) => r.headers.get('content-security-policy'))`);
+      const scriptSrc = /(?:^|;)\s*script-src([^;]*)/.exec(csp ?? "")?.[1] ?? "";
+      check(`${path}: script-src lists the page's script hashes and no 'unsafe-inline' (scripts/csp-hashes.mjs)`, /'sha256-[A-Za-z0-9+/=]+'/.test(scriptSrc) && !/'unsafe-inline'/.test(scriptSrc), scriptSrc.slice(0, 100));
+    }
     const appCsp = await b.ev(`fetch('/en/app').then((r) => r.headers.get('content-security-policy'))`);
     check("/app keeps its stricter CSP (form-action 'none', connect-src with blob/data only)", /form-action 'none'/.test(appCsp) && /connect-src 'self' blob: data:/.test(appCsp), appCsp);
 
+    const llms = await b.ev(`fetch('/llms.txt').then(async (r) => ({ s: r.status, type: r.headers.get('content-type'), t: await r.text() }))`);
+    check("/llms.txt: plain-text Markdown summary for AI assistants (title, summary, key pages)", llms.s === 200 && /text\/plain/.test(llms.type ?? "") && /^# DropFlow$/m.test(llms.t) && /^> /m.test(llms.t) && llms.t.includes("(https://dropflow.scouthub.dev/ar)"), `${llms.s} ${llms.type}`);
     const sec = await b.ev(`fetch('/.well-known/security.txt').then(async (r) => ({ s: r.status, type: r.headers.get('content-type'), t: await r.text() }))`);
     check(
       "/.well-known/security.txt (RFC 9116): Contact, Expires in the future, Preferred-Languages, Canonical, Policy",
@@ -214,13 +226,15 @@ export async function seo({ b, base }) {
     for (const loc of LOCALES) {
       await b.goto(`${base}/${loc}`, 900);
       const f = await b.ev(`[...document.querySelectorAll('[data-testid=footer-nav] a')].map((a) => [a.getAttribute('data-testid'), a.getAttribute('href'), a.getBoundingClientRect().height])`);
-      const want = { "footer-privacy": `/${loc}/privacy`, "footer-terms": `/${loc}/terms`, "footer-github": REPO };
+      const want = { "footer-about": "#about", "footer-contact": "#contact", "footer-privacy": `/${loc}/privacy`, "footer-terms": `/${loc}/terms`, "footer-github": REPO };
       const got = Object.fromEntries(f.map(([id, href]) => [id, href]));
-      check(`/${loc}: the footer nav is only Privacy, Terms and ONE open-source link to the repository (each >= 44 px tall)`, JSON.stringify(got) === JSON.stringify(want) && f.every(([, , h]) => h >= 44), JSON.stringify(got));
-      const wa = await b.ev(`(() => { const a = document.querySelector('footer [data-testid=footer-whatsapp]'); const r = a.getBoundingClientRect(); return { href: a.getAttribute('href'), target: a.target, rel: a.rel, label: a.getAttribute('aria-label'), text: a.textContent.trim(), glyph: !!a.querySelector('svg[aria-hidden=true] path'), h: r.height, all: document.querySelectorAll('footer a').length }; })()`);
-      check(`/${loc}: the footer has ONE prominent WhatsApp button (glyph, name starts with its visible text, new tab, noopener, >= 44 px) and 4 links in total`, wa.href === "https://wa.me/96170863903" && wa.target === "_blank" && /noopener/.test(wa.rel) && wa.glyph && wa.label.startsWith(wa.text) && wa.h >= 44 && wa.all === 4, JSON.stringify(wa));
+      check(`/${loc}: the footer nav is About, Contact, Privacy, Terms and ONE open-source link to the repository (each >= 44 px tall)`, JSON.stringify(got) === JSON.stringify(want) && f.every(([, , h]) => h >= 44), JSON.stringify(got));
+      const wa = await b.ev(`(() => { const a = document.querySelector('footer [data-testid=footer-whatsapp]'); const r = a.getBoundingClientRect(); return { href: a.getAttribute('href'), target: a.target, rel: a.rel, label: a.getAttribute('aria-label'), text: a.textContent.trim(), glyph: !!a.querySelector('svg[aria-hidden=true] path'), h: r.height, all: document.querySelectorAll('footer a').length - document.querySelectorAll('footer [data-testid=site-credit] a').length }; })()`);
+      check(`/${loc}: the footer has ONE prominent WhatsApp button (glyph, name starts with its visible text, new tab, noopener, >= 44 px) and 6 links besides the credit line`, wa.href === "https://wa.me/96170863903" && wa.target === "_blank" && /noopener/.test(wa.rel) && wa.glyph && wa.label.startsWith(wa.text) && wa.h >= 44 && wa.all === 6, JSON.stringify(wa));
       const spots = await b.ev(`['footer-whatsapp', 'cta-whatsapp', 'about-whatsapp'].map((id) => { const a = document.querySelector('[data-testid=' + id + ']'); return [id, a?.getAttribute('href'), a?.getAttribute('data-variant')]; })`);
       check(`/${loc}: the WhatsApp button is also in About (solid) and the closing call to action (outline)`, JSON.stringify(spots) === JSON.stringify([["footer-whatsapp", "https://wa.me/96170863903", "solid"], ["cta-whatsapp", "https://wa.me/96170863903", "outline"], ["about-whatsapp", "https://wa.me/96170863903", "solid"]]), JSON.stringify(spots));
+      const c = await b.ev(`(() => { const r = document.getElementById('contact'); const h = r && document.getElementById(r.getAttribute('aria-labelledby')); return { role: r?.getAttribute('role'), heading: h?.tagName, text: h?.textContent.trim(), wa: !!r?.querySelector('[data-testid=about-whatsapp]'), address: r?.querySelector('address')?.textContent.trim(), inAbout: !!r?.closest('#about') }; })()`);
+      check(`/${loc}: a named "contact" region (h3 heading, WhatsApp button, number in <address>) inside About`, c.role === "region" && c.heading === "H3" && c.text === (loc === "ar" ? "تواصل معنا" : "Contact us") && c.wa && c.address === "+961 70 863 903" && c.inAbout, JSON.stringify(c));
       const names = await b.ev(`[...document.querySelectorAll('header [role=group] button')].map((e) => ({ text: e.textContent.trim(), label: e.getAttribute('aria-label') ?? '' }))`);
       check(`/${loc}: language buttons' accessible names start with their visible text (label in name)`, names.length === 2 && names.every((n) => n.label.startsWith(n.text)), JSON.stringify(names));
     }

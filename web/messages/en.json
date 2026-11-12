@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "DropFlow — free offline file converter, open source",
-    "description": "Convert PDF, images, video and documents on your own device: offline, nothing uploaded. A free, open-source (GPL-3.0) file converter for Windows and the web, in Arabic and English.",
+    "description": "Convert PDF, images, video and documents on your own device, offline: nothing is uploaded. A free, open-source file converter for Windows and the web.",
     "keywords": [
       "file converter",
       "offline file converter",
@@ -221,7 +221,9 @@
     "logoAlt": "ScoutHub"
   },
   "footer": {
-    "legal": "Legal",
+    "nav": "Site links",
+    "about": "About",
+    "contact": "Contact",
     "privacy": "Privacy",
     "terms": "Terms",
     "opensource": "Open source · GPL-3.0",
@@ -883,6 +885,7 @@
     "team": "Developed by the ScoutHub teams · Lead developer: Moustafa Al-Hamwi, Lebanon"
   },
   "contact": {
+    "title": "Contact us",
     "whatsapp": "WhatsApp",
     "aria": "WhatsApp: chat with the team (opens in a new tab)"
   }

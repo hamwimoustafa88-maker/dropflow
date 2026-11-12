@@ -9,7 +9,7 @@ The repository is public and open to contributors; the DropFlow name/logo are re
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
 multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
-are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.2.0 is live (Windows x64 + ARM64, macOS, Linux, Android; unsigned except Android). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); the MCP connector still gets 403 on the owner's scope, so builds/logs can't be read from here. No Vercel CLI login on this machine. .NET 10 SDK 10.0.402 is
+are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.2.0 is live (Windows x64 + ARM64, macOS, Linux, Android; unsigned except Android). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); since 2026-11-11 the Vercel MCP connector reads deployments and build logs (team id `team_OrtB2bAfjUT4usaCRVFnerWJ`). No Vercel CLI login on this machine. External audit: Kashef (https://kashef.scouthub.dev, API key from the owner, never committed; scouthub.dev is verified there, so scans include active checks). .NET 10 SDK 10.0.402 is
 installed (new terminals may need a restart to see it on PATH). The dev machine now has FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and
 four AI models, and the installer ships FFmpeg, qpdf and Tesseract (+ Arabic data) inside (ADR-0012): users never download a program.
 `tools/fetch-engines.ps1` fetches them at build time (never commit binaries); engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`
@@ -112,6 +112,16 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-12 — Kashef scan fixes (owner: "connect to Kashef with this API key, run a full scan, fix everything it reports"): full scan of
+  dropflow.scouthub.dev = security 92 (A-), readiness 95. Root cause of the main finding: the CSP script hashes never reached Vercel, because
+  with a deployment adapter Next 16.4 writes prerendered HTML to `.next/server/route-cache/APP_PAGE/<hash>/$/<route>.html` and
+  `csp-hashes.mjs` / `build-sw.mjs` only looked in `server/app/` (Vercel build log: "verified 0 page policies"). New
+  `scripts/prerendered-html.mjs` finds both layouts; the hashes now REPLACE `'unsafe-inline'` in script-src; the build fails on Vercel
+  (`VERCEL=1`) or in CI if a page is missing. Reproduced and verified locally with a no-op adapter (`NEXT_ADAPTER_PATH`). Also: Contact
+  region (h3, WhatsApp, `<address>`) in the About card + footer About/Contact links, meta descriptions ≤ 160 characters, ScoutHub
+  Organization as its own JSON-LD node, `public/llms.txt`. e2e 538/539 (the one failure, the 18 px "ScoutHub" credit link, predates this).
+  Not fixable here: React/Next framework JS reported as "unused", DNSSEC (Vercel DNS), DMARC p=reject, PGP-signed security.txt.
+  — web/scripts/{prerendered-html,csp-hashes,build-sw}.mjs, web/next.config.ts, web/src/{components/About.tsx,app/[locale]/page.tsx,lib/seo.ts}, web/messages/*, web/public/llms.txt, web/e2e/sections/seo.mjs, docs/status.md
 - 2026-10-23 — Footer credit on every page (owner request): one shared `SiteCredit` (landing footer, /app footer, Privacy, Terms) shows
   "© 2026 DropFlow. All rights reserved." (ar: "جميع الحقوق محفوظة") and "An initiative of the ScoutHub platform" with the ScoutHub logo (local copy of
   scouthub.dev/assets/img/favicon.svg in `public/icons/scouthub.svg`, link to https://scouthub.dev/). The wording is the owner's; the software stays GPL-3.0-or-later
@@ -340,8 +350,5 @@ After every change to the project (code, docs, decisions, dependencies), before 
   created catalog/tools.json (428 conversions, 63 tools, 7 actions) + catalog/build.mjs which enforces Tangerine parity
   (all 40 tools and every format target); enabled superpowers + ui-ux-pro-max; deleted the five cloned repos
   (claude-skills, ponytail, rea, superpowers, ui-ux-pro-max-skill — clean, re-clonable from GitHub).
-- 2026-10-20 — Planning session: re-read the live Tangerine site tab by tab and recorded the parity baseline; adopted
-  GPL-3.0-or-later; added iLovePDF-parity PDF suite (Phase 2), Media Studio with Encoder + Whisper (Phase 3), landing
-  page with Phase 1, in-browser web app (Phase 6); deferred accounts/payments to Phase 9; drag keys Shift/Ctrl/Alt.
 
 

@@ -11,7 +11,8 @@ const isProd = process.env.NODE_ENV === "production";
 // with ONE exception: `https:` in connect-src lets the "drop a link" feature download the file at an address the
 // user gave (src/engine/lib/fetch-link.ts, a GET without credentials or body; the static no-upload test allows no
 // other network call). Forms, beacons over http, WebSockets and image pings stay blocked.
-// 'unsafe-inline' scripts are Next's inline bootstrap; 'wasm-unsafe-eval' lets ffmpeg.wasm / pdf.js compile WebAssembly;
+// 'unsafe-inline' scripts are Next's inline bootstrap, and only a fallback: the production build replaces it with the hashes of
+// exactly those scripts (withHashes below); 'wasm-unsafe-eval' lets ffmpeg.wasm / pdf.js compile WebAssembly;
 // media-src blob: plays the converted audio/video previews.
 const APP_CSP = [
   "default-src 'self'",
@@ -30,7 +31,8 @@ const APP_CSP = [
 ].join("; ");
 
 // Every other page (landing, legal pages) is static HTML that loads only its own scripts, styles, fonts and images.
-// JSON-LD is a data block (type="application/ld+json"), never executed, so it needs nothing here.
+// JSON-LD is a data block (type="application/ld+json"), never executed, so it needs nothing here. As above, 'unsafe-inline' in
+// script-src is replaced by the page's script hashes in the production build.
 const SITE_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -64,7 +66,8 @@ const SECURITY_HEADERS = [
 
 // Static pages whose CSP carries the SHA-256 hashes of their own inline scripts. csp-hashes.json is written by
 // scripts/csp-hashes.mjs after the first build pass and read here by the second (see package.json "build"); without it a page
-// keeps the plain policy. With hashes present, browsers ignore 'unsafe-inline' for scripts.
+// keeps the plain policy. With hashes present they REPLACE 'unsafe-inline' in script-src: only Next's own inline scripts of
+// that exact build may run (styles keep 'unsafe-inline': Next and the components set inline styles).
 const LOCALES = ["ar", "en"];
 const HASHED_PAGES = ["", "/privacy", "/terms"];
 // Looked up next to this file first: a build tool may evaluate the config with another working directory (Vercel did).
@@ -74,9 +77,16 @@ const HASH_FILE = [
   join(process.cwd(), "web", "csp-hashes.json"),
 ].find((f) => f && existsSync(f));
 const CSP_HASHES: Record<string, string[]> = HASH_FILE ? JSON.parse(readFileSync(HASH_FILE, "utf8")) : {};
-const withHashes = (policy: string, route: string) =>
-  CSP_HASHES[route]?.length
-    ? policy.replace("script-src 'self' 'unsafe-inline'", `script-src 'self' 'unsafe-inline' ${CSP_HASHES[route].join(" ")}`)
+const withHashes =(policy: string, hashes: string[] | undefined) =>
+  hashes?.length
+    ? policy
+        .split("; ")
+        .map((d) =>
+          d.startsWith("script-src ")
+            ? [...d.split(" ").filter((s) => s !== "'unsafe-inline'"), ...hashes].join(" ")
+            : d,
+        )
+        .join("; ")
     : policy;
 
 const nextConfig: NextConfig = {
@@ -118,11 +128,11 @@ const nextConfig: NextConfig = {
             ...LOCALES.flatMap((locale) => [
               ...HASHED_PAGES.map((page) => ({
                 source: `/${locale}${page}`,
-                headers: [{ key: "Content-Security-Policy", value: withHashes(SITE_CSP, `/${locale}${page}`) }],
+                headers: [{ key: "Content-Security-Policy", value: withHashes(SITE_CSP, CSP_HASHES[`/${locale}${page}`]) }],
               })),
               {
                 source: `/${locale}/app`,
-                headers: [{ key: "Content-Security-Policy", value: withHashes(APP_CSP, `/${locale}/app`) }],
+                headers: [{ key: "Content-Security-Policy", value: withHashes(APP_CSP, CSP_HASHES[`/${locale}/app`]) }],
               },
             ]),
             { source: "/vendor/:path*", headers: [csp] },

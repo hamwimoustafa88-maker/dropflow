@@ -108,8 +108,9 @@ function Cta() {
   );
 }
 
-// The footer is deliberately small: logo + one line, Privacy, Terms, ONE "Open source" link and ONE contact button (WhatsApp).
-// Issues, contributing, security, code-signing policy and the licence live in the Developers section (#developers).
+// The footer is deliberately small: logo + one line, About and Contact (anchors to the About card), Privacy, Terms, ONE
+// "Open source" link and ONE contact button (WhatsApp). Issues, contributing, security, code-signing policy and the licence
+// live in the Developers section (#developers).
 function Footer() {
   const t = useTranslations("footer");
   const link = "inline-flex min-h-11 items-center rounded-full px-3.5 font-medium transition-colors duration-200 hover:bg-surface-2 hover:text-fg";
@@ -122,7 +123,13 @@ function Footer() {
             {t("tagline")}
           </p>
         </div>
-        <nav aria-label={t("legal")} className="-mx-3.5 flex flex-wrap items-center text-sm text-muted md:mx-0" data-testid="footer-nav">
+        <nav aria-label={t("nav")} className="-mx-3.5 flex flex-wrap items-center text-sm text-muted md:mx-0" data-testid="footer-nav">
+          <a href="#about" className={link} data-testid="footer-about">
+            {t("about")}
+          </a>
+          <a href="#contact" className={link} data-testid="footer-contact">
+            {t("contact")}
+          </a>
           <Link href="/privacy" prefetch={false} className={link} data-testid="footer-privacy">
             {t("privacy")}
           </Link>

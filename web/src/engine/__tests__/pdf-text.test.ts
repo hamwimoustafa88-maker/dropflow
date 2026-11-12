@@ -158,3 +158,39 @@ describe("hasNoText", () => {
     expect(hasNoText([[line("x", 1)]])).toBe(false);
   });
 });
+
+// Found by the conversion matrix: PDFs printed by Chrome/Edge ("Save as PDF", most web invoices) map every shaped Arabic
+// glyph to a PRESENTATION FORM in their ToUnicode table (ﻣ ﺣ ﺑ ﻟ ...), and the initial/medial yeh and heh glyphs that
+// Arial shares with Persian/Urdu letters to ﯾ (U+FBFE) and ھ (U+06BE). The extracted text then looked right but could
+// not be searched or copied as Arabic. These items are exactly what pdf.js returned for such a PDF (one glyph per item,
+// left to right on the page).
+describe("Arabic presentation forms (Chromium PDFs)", () => {
+  /** One pdf.js item per glyph, in VISUAL order (left to right), like pdf.js reports a Chromium/Skia PDF. */
+  function visual(glyphs: string[], y = 700): TextItemLike[] {
+    let x = 100;
+    return glyphs.map((g) => {
+      const it = item(g, x, y, { width: g === " " ? 4 : 6, dir: "rtl" });
+      x += g === " " ? 4 : 6;
+      return it;
+    });
+  }
+  const text = (items: TextItemLike[]) => linesToText([itemsToLines(items)]).trim();
+
+  it("turns presentation forms back into the base letters, in logical order", () => {
+    // "مرحبا بالعالم" as glyphs, left to right on the page
+    expect(text(visual(["م", "ﻟ", "ﺎ", "ﻌ", "ﻟ", "ﺎ", "ﺑ", " ", "ﺎ", "ﺑ", "ﺣ", "ر", "ﻣ"]))).toBe("مرحبا بالعالم");
+    // lam-alef ligature: "الأولى"
+    expect(text(visual(["ﻰ", "ﻟ", "و", "ﻷ", "ا"]))).toBe("الأولى");
+  });
+
+  it("maps the shared Persian/Urdu glyph code points back to Arabic yeh and heh in Arabic text", () => {
+    // "هذا مستند تجريبي" (ھ U+06BE and ﯾ U+FBFE as Chromium writes them)
+    expect(text(visual(["ﻲ", "ﺑ", "ﯾ", "ر", "ﺟ", "ﺗ", " ", "د", "ﻧ", "ﺗ", "ﺳ", "ﻣ", " ", "ذا", "ھ"]))).toBe("هذا مستند تجريبي");
+  });
+
+  it("leaves Persian text alone (ی and ھ are real letters there)", () => {
+    // "پیام" with Persian yeh (ﯿ U+FBFF medial) and peh
+    const t = text(visual(["م", "ﺎ", "ﯿ", "ﭘ"]));
+    expect(t).toBe("پیام");
+  });
+});

@@ -172,6 +172,31 @@ real("audio: every input -> every other target, plus audio tools", () => {
   });
 });
 
+// Found by the conversion matrix: the fixtures above are MONO, but nearly all real audio is stereo, and this core's
+// libopus crashes on stereo ("RuntimeError: memory access out of bounds", shown as "Out of memory") at its default
+// complexity 10; it is fine up to -compression_level 4. Every stereo file -> Opus failed in the browser.
+real("stereo audio (real-world channel layout)", () => {
+  let stereo: Uint8Array;
+  beforeAll(async () => {
+    stereo = await gen(
+      ["-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-f", "lavfi", "-i", "sine=frequency=660:duration=1", "-filter_complex", "[0][1]amerge=inputs=2", "-c:a", "pcm_s16le", "st.wav"],
+      "st.wav",
+    );
+  });
+
+  it.each(["opus", "mp3", "m4a", "ogg", "flac", "wma", "aac", "aiff"])("stereo wav -> %s keeps two channels", async (to) => {
+    const { info } = good(await exec(`convert:${to}`, stereo, "wav"), to);
+    expect(info.hasAudio).toBe(true);
+    expect(info.duration).toBeGreaterThan(0.85);
+  });
+
+  it("stereo opus -> normalize / trim (both re-encode to Opus)", async () => {
+    const opus = good(await exec("convert:opus", stereo, "wav"), "opus").out;
+    good(await exec("aud.normalize", opus, "opus"), "opus");
+    good(await exec("aud.trim", opus, "opus", { start: "0.2", end: "0.6" }), "opus");
+  });
+});
+
 real("video: conversion, tools, failure handling", () => {
   let mp4Av: Uint8Array;
   let mp4Silent: Uint8Array;

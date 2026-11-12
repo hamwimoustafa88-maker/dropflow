@@ -6,6 +6,11 @@ next-intl. Files are processed **entirely in the browser** (Web Workers + WebAss
 - Dev: `npm run dev` · Build: `npm run build` · Lint: `npm run lint` · Unit tests: `npm test` (Vitest)
 - E2E (headless Edge over DevTools): `npm run build && npx next start --port 3200`, then `node e2e/run.mjs http://localhost:3200`
   (`--only=images,pdf,text,wheel,media,link,extras,offline,quality,privacy,landing,legal,seo`, `--out=<dir>` for screenshots/downloads).
+- Conversion matrix (slow, ~35 min, opt-in): `node e2e/run.mjs http://localhost:3200 --only=matrix --out=<dir>` runs EVERY operation the wheel
+  offers on ~60 generated samples (Arabic/English/scanned/multi-page PDFs, EXIF-rotated/transparent/HEIC/SVG/QR pictures, stereo audio in 9
+  formats, 10 videos, UTF-8/UTF-16/windows-1256 subtitles, ZIP/TAR/GZ) and re-checks every output with FFmpeg/ffprobe, pdf-lib, pdf.js and
+  fflate; it writes `<dir>/matrix.md`. Needs FFmpeg on PATH (LibreOffice and qpdf add two PDF samples; missing programs are listed, not
+  hidden). Filters: `DROPFLOW_MATRIX_SAMPLES=<regex>`, `DROPFLOW_MATRIX_OPS=<regex>`, `DROPFLOW_MATRIX_LOCALE=ar`.
 - Content: `messages/ar.json` and `messages/en.json` (all UI text; the web app lives under the `app` namespace and ships only
   with `/app`). Tool/format data comes from `src/data/catalog.json`, **generated** by `node ../catalog/build.mjs`: never edit by hand.
 - Design tokens live in `src/app/globals.css` (`:root` + dark mode); the app adds only its status colours in `src/app/[locale]/app/app.css`.

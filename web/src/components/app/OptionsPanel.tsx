@@ -164,7 +164,7 @@ export function OptionsPanel({ operation, title, options, warning, onRun, onCanc
         })}
       </div>
       {warning && t.has(`warn.${warning}`) ? (
-        <p role="note" className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-sm font-semibold text-(--warn)">
+        <p role="note" className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-sm font-semibold text-warn">
           {t(`warn.${warning}`)}
         </p>
       ) : null}

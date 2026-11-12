@@ -1,5 +1,6 @@
 // DropFlow Web end-to-end test in headless Edge over the DevTools protocol.
 //   node e2e/run.mjs [baseUrl=http://localhost:3200] [--only=images,pdf,...] [--out=<dir for screenshots/downloads>]
+// The slow conversion matrix (sections/matrix.mjs) runs only when asked: --only=matrix, or DROPFLOW_MATRIX=1 with the rest.
 // Needs a production server (`npm run build && npx next start --port 3200`). Uses real files written by the test,
 // real file inputs / drag events (DOM.setFileInputFiles, Input.dispatchDragEvent) and real downloads; asserts the bytes.
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -21,6 +22,7 @@ import { quality } from "./sections/quality.mjs";
 import { seo } from "./sections/seo.mjs";
 import { link } from "./sections/link.mjs";
 import { extras } from "./sections/extras.mjs";
+import { matrix } from "./sections/matrix.mjs";
 
 const args = process.argv.slice(2);
 const base = (args.find((a) => !a.startsWith("--")) ?? "http://localhost:3200").replace(/\/$/, "");
@@ -48,6 +50,7 @@ try {
   if (wants("seo")) await seo(ctx);
   if (wants("quality")) await quality(ctx);
   if (wants("privacy")) await privacy(ctx);
+  if (only.includes("matrix") || process.env.DROPFLOW_MATRIX === "1") await matrix(ctx);
   check("no console errors / exceptions in the whole run", b.errors.length === 0, b.errors.slice(0, 4).join(" | "));
 } finally {
   writeFileSync(join(out, "results.json"), JSON.stringify({ base, seconds: Math.round((Date.now() - t0) / 1000), results, errors: b.errors, requests: b.requests.length }, null, 2));

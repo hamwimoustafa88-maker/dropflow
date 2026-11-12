@@ -1,6 +1,7 @@
 // Turns pdf.js text items into lines, plain text and Markdown. Pure and Node-compatible.
 // pdf.js already returns each run in LOGICAL order (it applies bidi per run), so Arabic text is never reversed here;
 // we only decide which run comes first on a line (right-to-left lines read from the right edge).
+// Arabic presentation forms (what Chrome/Edge-printed PDFs put in their ToUnicode maps) are turned back into base letters.
 
 export interface TextItemLike {
   str: string;
@@ -27,6 +28,31 @@ export interface TextLine {
 
 const RTL_CHAR = /[֐-ࣿיִ-﷿ﹰ-﻿]/g;
 const LTR_CHAR = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]/g;
+
+const PRESENTATION = /[ﭐ-﷿ﹰ-﻿]/g;
+/** Persian/Urdu-only letters (پ چ ژ گ ٹ ڈ ڑ ں ے ۓ): a document with any of them keeps ی ک ھ ہ as they are. */
+const PERSIAN_URDU = /[پچژگٹڈڑںےۓ]/;
+/** Letters Arabic uses and Persian/Urdu text (almost) never does (ة ى ي ك). */
+const ARABIC_ONLY = /[ةىيك]/;
+/** Code points Chromium/Skia give to Arial glyphs that Arabic shares with Persian/Urdu letters: ی ک ھ ہ -> ي ك ه ه. */
+const SHARED = /[یکھہ]/g;
+const SHARED_TO_ARABIC: Record<string, string> = { "ی": "ي", "ک": "ك", "ھ": "ه", "ہ": "ه" };
+
+/** Presentation forms (ﻣ ﺑ ﻷ ...) -> base letters (compatibility decomposition of those characters only). */
+export function basePresentationForms(text: string): string {
+  return text.replace(PRESENTATION, (c) => c.normalize("NFKC"));
+}
+
+/**
+ * Document-level fix for PDFs whose ToUnicode maps shaped Arabic glyphs to the Persian/Urdu code points that share the
+ * glyph (initial yeh -> ی U+06CC, heh -> ھ U+06BE...). Applied only when the text is clearly Arabic: it uses Arabic-only
+ * letters and no Persian/Urdu-only letter, so Persian and Urdu text are never changed.
+ */
+export function arabicSharedLetters(pages: ReadonlyArray<ReadonlyArray<TextLine>>): TextLine[][] {
+  const all = pages.map((p) => p.map((l) => l.text).join("\n")).join("\n");
+  if (PERSIAN_URDU.test(all) || !ARABIC_ONLY.test(all)) return pages.map((p) => [...p]);
+  return pages.map((p) => p.map((l) => ({ ...l, text: l.text.replace(SHARED, (c) => SHARED_TO_ARABIC[c]) })));
+}
 
 function isWordSpace(s: string): boolean {
   return /^\s+$/.test(s);
@@ -91,7 +117,7 @@ export function itemsToLines(items: ReadonlyArray<Partial<TextItemLike> & { tran
   const lines: TextLine[] = [];
   for (const g of groups) {
     const rtl = lineIsRtl(g);
-    const text = joinRun(g, rtl);
+    const text = basePresentationForms(joinRun(g, rtl));
     if (text.length === 0) continue;
     const meaningful = g.filter((i) => !isWordSpace(i.str));
     const size = Math.max(...(meaningful.length ? meaningful : g).map(itemSize));
@@ -131,7 +157,7 @@ function paragraphs(lines: TextLine[]): TextLine[][] {
 /** Plain text: line breaks kept, a blank line between paragraphs and between pages. */
 export function linesToText(pages: ReadonlyArray<ReadonlyArray<TextLine>>): string {
   const blocks: string[] = [];
-  for (const lines of pages) {
+  for (const lines of arabicSharedLetters(pages)) {
     for (const p of paragraphs([...lines])) blocks.push(p.map((l) => l.text).join("\n"));
   }
   return blocks.join("\n\n") + (blocks.length ? "\n" : "");
@@ -167,7 +193,7 @@ function joinWrapped(a: string, b: string): string {
  */
 export function linesToMarkdown(pages: ReadonlyArray<ReadonlyArray<TextLine>>): string {
   const blocks: string[] = [];
-  for (const lines of pages) {
+  for (const lines of arabicSharedLetters(pages)) {
     if (lines.length === 0) continue;
     const med = median(lines.map((l) => l.size)) || 10;
     for (const para of paragraphs([...lines])) {

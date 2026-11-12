@@ -111,8 +111,8 @@ export function recognize(
     });
     try {
       const input = image instanceof Uint8Array ? (image as unknown as TesseractNS.ImageLike) : image;
-      const result = await Promise.race([worker.recognize(input), aborted]);
-      return cleanOcrText(result.data.text ?? "");
+      const result = await Promise.race([worker.recognize(input, {}, { text: true, blocks: true }), aborted]);
+      return cleanOcrText(confidentText(result.data));
     } finally {
       progressSink = null;
       if (onAbort) signal.removeEventListener("abort", onAbort);
@@ -145,6 +145,32 @@ export function cleanOcrText(text: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
   return t.length ? `${t}\n` : "";
+}
+
+/**
+ * Lines Tesseract is sure of. On a picture without text (a photo, a QR code, a gradient) Tesseract still "reads" lines such as
+ * "ل اناس a 0" or "= LJ _J M". Measured with the site's models (eng+ara, LSTM): real printed lines score 90-96, those invented
+ * lines 0-55 (one stray "|" scored 70 but has no letter). A line is kept when it scores at least {@link MIN_LINE_CONFIDENCE} and
+ * holds at least two letters or digits; paragraphs stay separated by an empty line. Without block data (older engines) the plain
+ * text is used as before.
+ */
+export const MIN_LINE_CONFIDENCE = 60;
+
+interface OcrLineLike { text: string; confidence: number }
+interface OcrPageLike { text?: string | null; blocks?: { paragraphs: { lines: OcrLineLike[] }[] }[] | null }
+
+export function confidentText(page: OcrPageLike): string {
+  if (!page.blocks) return page.text ?? "";
+  const paragraphs: string[] = [];
+  for (const block of page.blocks) {
+    for (const paragraph of block.paragraphs) {
+      const lines = paragraph.lines
+        .filter((l) => l.confidence >= MIN_LINE_CONFIDENCE && (l.text.match(/[\p{L}\p{N}]/gu)?.length ?? 0) >= 2)
+        .map((l) => l.text.replace(/\s+$/u, ""));
+      if (lines.length) paragraphs.push(lines.join("\n"));
+    }
+  }
+  return paragraphs.join("\n\n");
 }
 
 /** True when the text holds at least one letter or digit (direction marks and punctuation alone do not count). */

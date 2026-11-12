@@ -145,7 +145,9 @@ async function compressOne(file: File, ext: string, job: Job, signal: AbortSigna
     } else {
       blob = await canvasToBlob(canvas, mime, quality / 100);
     }
-    if (normalizeExt(ext) === fmt && blob.size >= file.size) throw new ConvertError("notSmaller");
+    // "Compress" never hands back a bigger file, also when the format changes (AVIF/GIF/BMP "same" -> JPEG, or an
+    // explicit JPEG/WebP choice): the conversion matrix found a 636 B AVIF "compressed" into a 1.7 KB JPEG.
+    if (blob.size >= file.size) throw new ConvertError("notSmaller");
     return [asFile(blob, `${stemOf(file.name)}.${fmt}`, mime)];
   } finally {
     dec.close();

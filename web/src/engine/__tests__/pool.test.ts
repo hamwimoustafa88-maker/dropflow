@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { WorkerPool, type WorkerCommand, type WorkerLike, type WorkerReply } from "../pool";
 import { ConvertError, isAbort } from "../types";
+import { DEFAULT_IMAGE_CAPS, getImageCaps, setImageCaps } from "../caps";
+import { applyRunCommand } from "../worker-context";
 
 class FakeWorker implements WorkerLike {
   onmessage: ((event: { data: unknown }) => void) | null = null;
@@ -172,5 +174,32 @@ describe("WorkerPool", () => {
     expect(err).toBeInstanceOf(ConvertError);
     expect((err as ConvertError).code).toBe("workerFailed");
     expect(w.terminated).toBe(true);
+  });
+
+  // Found by the conversion matrix: the worker kept the DEFAULT capabilities (no WebP encoder), so "Compress" on a WebP
+  // silently produced a bigger, flattened JPEG and resize/crop/edit turned WebP into PNG. The page's detected image
+  // capabilities must travel with every job.
+  it("sends the page's detected image capabilities with every run, and the worker adopts them", async () => {
+    const detected = { encode: { png: true, jpg: true, webp: true, avif: false }, decodeAvif: true };
+    setImageCaps(detected);
+    let sent: WorkerCommand | undefined;
+    const pool = new WorkerPool(
+      () =>
+        new FakeWorker((w, cmd) => {
+          if (cmd.type === "run") {
+            sent = cmd;
+            w.reply({ type: "done", id: cmd.id, outputs: [out] });
+          }
+        }),
+      1,
+    );
+    await pool.run(req("caps"), () => {}, new AbortController().signal);
+    expect(sent && sent.type === "run" ? sent.imageCaps : undefined).toEqual(detected);
+
+    // worker side: a fresh worker starts with the defaults and takes the page's caps from the command
+    setImageCaps(DEFAULT_IMAGE_CAPS);
+    applyRunCommand(sent!);
+    expect(getImageCaps()).toEqual(detected);
+    setImageCaps(DEFAULT_IMAGE_CAPS);
   });
 });

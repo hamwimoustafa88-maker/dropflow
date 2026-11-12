@@ -31,6 +31,7 @@ Encoders:
  A....D comfortnoise         RFC 3389 comfort noise generator
  A....D flac                 FLAC (Free Lossless Audio Codec)
  A....D libmp3lame           libmp3lame MP3 (MPEG audio layer 3) (codec mp3)
+ A..X.. opus                 Opus
  A..... libopus              libopus Opus (codec opus)
  A....D pcm_s16be            PCM signed 16-bit big-endian
  A....D pcm_s16le            PCM signed 16-bit little-endian

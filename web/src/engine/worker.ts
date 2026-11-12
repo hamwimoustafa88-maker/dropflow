@@ -1,10 +1,12 @@
 // DropFlow Web Worker entry. It receives one job at a time from the WorkerPool, looks the converter up BY ID (the
-// worker has its own, default capability state, so it must not re-run `supports`), runs it and posts the outputs
+// worker has its own, default capability state, so it must not re-run `supports`; the page's detected image caps arrive
+// with the job), runs it and posts the outputs
 // back. Nothing here can reach the network: converters never call fetch with data, and the page CSP forbids it.
 
 import { registry } from "./registry";
 import { ConvertError, isAbort, type Job } from "./types";
 import type { WorkerCommand, WorkerReply } from "./pool";
+import { applyRunCommand } from "./worker-context";
 
 const controllers = new Map<string, AbortController>();
 
@@ -20,6 +22,7 @@ self.onmessage = async (event: MessageEvent<WorkerCommand>) => {
   }
   if (msg.type !== "run") return;
 
+  applyRunCommand(msg);
   const controller = new AbortController();
   controllers.set(msg.id, controller);
   try {

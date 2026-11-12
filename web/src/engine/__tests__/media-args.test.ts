@@ -75,12 +75,16 @@ describe("capability gating (a target exists only if its encoder AND muxer exist
     expect(buildArgs("convert:opus", "wav", {}, FULL).args.slice(-3)).toEqual(["-f", "opus", "out.opus"]);
     expect(buildArgs("convert:opus", "wav", {}, without({ muxers: ["opus"] })).args.slice(-3)).toEqual(["-f", "ogg", "out.opus"]);
   });
-  it("webm uses libvorbis, or libopus when vorbis is missing, and is gone without libvpx", () => {
+  it("webm uses libvorbis, or the native Opus encoder when vorbis is missing, and is gone without libvpx", () => {
     expect(buildArgs("convert:webm", "mp4", {}, FULL).args).toContain("libvorbis");
     const noVorbis = without({ encoders: ["libvorbis"] });
-    expect(buildArgs("convert:webm", "mp4", {}, noVorbis).args).toContain("libopus");
+    expect(buildArgs("convert:webm", "mp4", {}, noVorbis).args.join(" ")).toContain("-c:a opus -strict -2");
+    expect(buildArgs("convert:webm", "mp4", {}, noVorbis).args).not.toContain("libopus");
     expect(videoTargetsFor(without({ encoders: ["libvpx"] }))).not.toContain("webm");
-    expect(videoTargetsFor(without({ encoders: ["libvorbis", "libopus"] }))).not.toContain("webm");
+    expect(videoTargetsFor(without({ encoders: ["libvorbis", "opus"] }))).not.toContain("webm");
+  });
+  it("opus is offered only when the native Opus encoder exists (libopus alone is not used)", () => {
+    expect(audioTargetsFor(without({ encoders: ["opus"] }))).not.toContain("opus");
   });
   it("mp4/mkv/mov need libx264 and aac", () => {
     for (const enc of ["libx264", "aac"]) {
@@ -192,7 +196,8 @@ describe("buildArgs: exact commands", () => {
     ["wav", ["-c:a", "pcm_s16le", "-f", "wav"], "audio/wav"],
     ["flac", ["-c:a", "flac", "-f", "flac"], "audio/flac"],
     ["ogg", ["-c:a", "libvorbis", "-q:a", "5", "-f", "ogg"], "audio/ogg"],
-    ["opus", ["-c:a", "libopus", "-b:a", "128k", "-f", "opus"], "audio/ogg;codecs=opus"],
+    // FFmpeg's native Opus encoder: this core's libopus crashes on stereo input (see media-ffmpeg-real "stereo audio")
+    ["opus", ["-c:a", "opus", "-strict", "-2", "-ar", "48000", "-b:a", "128k", "-f", "opus"], "audio/ogg;codecs=opus"],
     ["aiff", ["-c:a", "pcm_s16be", "-f", "aiff"], "audio/aiff"],
     ["wma", ["-c:a", "wmav2", "-b:a", "192k", "-f", "asf"], "audio/x-ms-wma"],
     ["aac", ["-c:a", "aac", "-b:a", "192k", "-f", "adts"], "audio/aac"],

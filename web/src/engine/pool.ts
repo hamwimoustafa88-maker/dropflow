@@ -5,6 +5,7 @@
 //
 // Only the protocol lives here (pure, testable with a fake Worker); the real Worker is created by ./worker-factory.
 
+import { getImageCaps, type ImageCaps } from "./caps";
 import { ConvertError, type OptionValues } from "./types";
 
 export interface WorkerLike {
@@ -29,7 +30,7 @@ export type WorkerReply =
   | { type: "error"; id: string; aborted: boolean; code?: string; params?: Record<string, string | number>; message: string };
 
 /** Messages main -> worker. */
-export type WorkerCommand = ({ type: "run" } & WorkRequest) | { type: "cancel"; id: string };
+export type WorkerCommand = ({ type: "run"; imageCaps?: ImageCaps } & WorkRequest) | { type: "cancel"; id: string };
 
 interface Active {
   id: string;
@@ -113,7 +114,8 @@ export class WorkerPool {
       };
       signal.addEventListener("abort", onAbort, { once: true });
       try {
-        slot.worker.postMessage({ type: "run", ...request } satisfies WorkerCommand);
+        // The page's detected capabilities travel with the job (a worker has its own, default capability state).
+        slot.worker.postMessage({ type: "run", ...request, imageCaps: getImageCaps() } satisfies WorkerCommand);
       } catch (e) {
         this.discard(slot);
         finish(() => reject(e));

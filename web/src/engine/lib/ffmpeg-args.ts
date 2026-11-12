@@ -27,13 +27,21 @@ interface AudioSpec {
   args: readonly string[];
 }
 
+/**
+ * Opus is written with FFmpeg's own encoder, not libopus: in this ffmpeg.wasm core libopus crashes on STEREO input
+ * ("RuntimeError: memory access out of bounds", shown as "Out of memory") - at its default complexity always, and at
+ * complexity 0-4 too once the instance has run a few commands. The native encoder (CELT, flagged experimental, hence
+ * -strict -2; 48 kHz only) never crashed with the real core: stereo, 5.1, noise, after 30 earlier commands.
+ */
+const OPUS_NATIVE = ["-c:a", "opus", "-strict", "-2", "-ar", "48000"] as const;
+
 const AUDIO_SPECS: Record<string, AudioSpec> = {
   mp3: { ext: "mp3", mime: "audio/mpeg", encoder: "libmp3lame", muxers: ["mp3"], args: ["-c:a", "libmp3lame", "-q:a", "2"] },
   m4a: { ext: "m4a", mime: "audio/mp4", encoder: "aac", muxers: ["ipod", "mp4"], args: ["-c:a", "aac", "-b:a", "192k"] },
   wav: { ext: "wav", mime: "audio/wav", encoder: "pcm_s16le", muxers: ["wav"], args: ["-c:a", "pcm_s16le"] },
   flac: { ext: "flac", mime: "audio/flac", encoder: "flac", muxers: ["flac"], args: ["-c:a", "flac"] },
   ogg: { ext: "ogg", mime: "audio/ogg", encoder: "libvorbis", muxers: ["ogg"], args: ["-c:a", "libvorbis", "-q:a", "5"] },
-  opus: { ext: "opus", mime: "audio/ogg;codecs=opus", encoder: "libopus", muxers: ["opus", "ogg"], args: ["-c:a", "libopus", "-b:a", "128k"] },
+  opus: { ext: "opus", mime: "audio/ogg;codecs=opus", encoder: "opus", muxers: ["opus", "ogg"], args: [...OPUS_NATIVE, "-b:a", "128k"] },
   aiff: { ext: "aiff", mime: "audio/aiff", encoder: "pcm_s16be", muxers: ["aiff"], args: ["-c:a", "pcm_s16be"] },
   wma: { ext: "wma", mime: "audio/x-ms-wma", encoder: "wmav2", muxers: ["asf"], args: ["-c:a", "wmav2", "-b:a", "192k"] },
   aac: { ext: "aac", mime: "audio/aac", encoder: "aac", muxers: ["adts"], args: ["-c:a", "aac", "-b:a", "192k"] },
@@ -152,7 +160,7 @@ function familyAvailable(family: Family, caps: MediaCaps): boolean {
     case "x264":
       return has(caps.encoders, "libx264") && has(caps.encoders, "aac");
     case "vp8":
-      return has(caps.encoders, "libvpx") && hasAny(caps.encoders, ["libvorbis", "libopus"]);
+      return has(caps.encoders, "libvpx") && hasAny(caps.encoders, ["libvorbis", "opus"]);
     case "mpeg4":
       return has(caps.encoders, "mpeg4") && has(caps.encoders, "libmp3lame");
     case "wmv2":
@@ -326,7 +334,7 @@ function codecArgs(family: Family, caps: MediaCaps, purpose: Purpose, level: Lev
       const ob = purpose === "compress" ? ["128k", "96k", "64k"][li] : "128k";
       return {
         v: ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-crf", String(crf), "-b:v", bv],
-        a: vorbis ? ["-c:a", "libvorbis", "-q:a", q] : ["-c:a", "libopus", "-b:a", ob],
+        a: vorbis ? ["-c:a", "libvorbis", "-q:a", q] : [...OPUS_NATIVE, "-b:a", ob],
       };
     }
     case "mpeg4": {

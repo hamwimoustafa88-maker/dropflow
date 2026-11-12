@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { LOADED_KEY, aiConverter } from "../converters/ai";
 import { ocrScale } from "../converters/ocr.impl";
-import { cleanOcrText, closeOcr, hasRealText, langsFor, recognize } from "../lib/ocr-engine";
+import { MIN_LINE_CONFIDENCE, cleanOcrText, closeOcr, confidentText, hasRealText, langsFor, recognize } from "../lib/ocr-engine";
 import { closeRembg, predictMask } from "../lib/rembg-engine";
 import { U2NETP, applyAlpha, flattenOnto, toMask, toTensor } from "../lib/segmentation";
 import catalog from "@/data/catalog.json";
@@ -78,6 +78,20 @@ describe("OCR text helpers", () => {
     expect(hasRealText("٣")).toBe(true);
   });
 
+  it("keeps only lines Tesseract is sure of, with two or more letters, paragraphs apart", () => {
+    const page = {
+      text: "ignored",
+      blocks: [{ paragraphs: [
+        { lines: [{ text: "‏مرحبا بالعالم‎\n", confidence: 92 }, { text: "Invoice 4821", confidence: 95 }] },
+        { lines: [{ text: "ل اناس a 0", confidence: 54 }, { text: "|", confidence: 70 }, { text: "x", confidence: 99 }] },
+        { lines: [{ text: "DropFlow", confidence: 90 }] },
+      ] }],
+    };
+    expect(confidentText(page)).toBe("‏مرحبا بالعالم‎\nInvoice 4821\n\nDropFlow");
+    expect(confidentText({ text: "plain", blocks: null })).toBe("plain");
+    expect(MIN_LINE_CONFIDENCE).toBe(60);
+  });
+
   it("scales small pictures up (2x at most) and huge ones down for recognition", () => {
     expect(ocrScale(760, 220)).toBe(2); // never more than 2x
     expect(ocrScale(1000, 300)).toBe(1);
@@ -111,6 +125,16 @@ describe("OCR on a real Arabic + English picture (Tesseract.js, the same models 
     expect(text.indexOf("مرحبا")).toBeLessThan(text.indexOf("بالعالم"));
     expect(text.endsWith("\n")).toBe(true);
     expect(progress.length).toBeGreaterThan(0);
+  }, 120_000);
+
+  it("a picture without text gives no text instead of invented letters (it used to give lines like \"ل اناس a 0\")", async () => {
+    const png = new Uint8Array(readFileSync(here("./fixtures/ocr-no-text-fractal.png")));
+    const text = await recognize(png, "auto", () => {}, new AbortController().signal, {
+      importer: () => import("tesseract.js"),
+      langPath: langDir,
+    });
+    expect(text).toBe("");
+    expect(hasRealText(text)).toBe(false);
   }, 120_000);
 
   it("a cancelled job rejects with AbortError and the next job still works", async () => {

@@ -2,6 +2,12 @@
 
 Entries moved out of the "Project History" list in `CLAUDE.md` (which keeps the newest 30). Newest first.
 
+- 2026-10-21 — Desktop foundation (owner: "continue all sections, don't stop"): DropFlow.Core (embedded catalog, IConverter contract,
+  ToolRegistry, JobQueue with bounded concurrency/cancel/aggregation, WheelBuilder, OutputPathResolver, SettingsStore, HistoryStore),
+  DropFlow.Engines.Common (ProcessRunner with kill-tree timeout/cancel, EngineLocator, winget EngineInstaller — all winget ids
+  verified except Ghostscript, which winget lacks, so Ghostscript is dropped and PDF compression uses qpdf + image recompression),
+  tests/DropFlow.TestSupport (generated PNG/WAV/PDF/SRT, [EngineFact]), skeleton projects for Images/Media/Pdf/Archive/AI, and
+  docs/writing-a-converter.md + docs/status.md. 80 tests passing. Installed nothing else; no engine binaries downloaded.
 - 2026-10-21 — Landing redesign (owner asked for fewer words, modern, simple tech): hero "Drag. Tap. Drop." + simulated wheel,
   moving format marquee, 3 big numbers, 5-tile bento (PDF, video/audio, speech-to-text, 100% local, Arabic/English), format
   explorer (tools capped at 8 + "+N"), closing CTA; removed roadmap/privacy/PDF/media text sections. Pure CSS + Tailwind, no new

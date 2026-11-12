@@ -114,6 +114,11 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-12 — Vercel cost: the locale proxy no longer runs for /ar/* and /en/* (every real page view), only for paths without a
+  language (/app -> /ar/app); `src/lib/proxy-matcher.ts` + test keep the matcher checked; redirects unchanged (checked locally and by
+  e2e 548/548). Measured on the live site: /vendor files already revalidate as 304 with 0 bytes and the service worker serves them
+  cache-first, so versioned immutable /vendor paths were NOT added (no saving worth the path change). The firewall rate limit and spend
+  cap were not applied from here (permission denied for production changes): steps in docs/vercel-costs.md. — web/src/proxy.ts, web/src/lib/proxy-matcher.ts, docs/vercel-costs.md
 - 2026-11-12 — Full conversion matrix on Windows, web and Android (owner: "some conversions have problems; test every scenario for
   every extension, e.g. Arabic, scanned and several PDFs, and fix what breaks"): opt-in matrix in `tests/DropFlow.App.Tests/Matrix`
   (67 real files from Edge, LibreOffice, FFmpeg, 7-Zip, WinRAR, Windows TTS; 1290 cells; outputs re-opened by other readers; Arabic
@@ -360,9 +365,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   shortcuts (validator rejects duplicates) and watched folders. Core tests: 200 passing. Verified by launching the real app
   and driving it; Windows 11, multi-monitor and in-other-apps hook behaviour are still unverified (docs/status.md).
   — src/DropFlow.App/**, Overlay/**, Cli/**, Core/Automation/**, Core/Settings/**, installer/**, .github/**
-- 2026-10-21 — Desktop foundation (owner: "continue all sections, don't stop"): DropFlow.Core (embedded catalog, IConverter contract,
-  ToolRegistry, JobQueue with bounded concurrency/cancel/aggregation, WheelBuilder, OutputPathResolver, SettingsStore, HistoryStore),
-  DropFlow.Engines.Common (ProcessRunner with kill-tree timeout/cancel, EngineLocator, winget EngineInstaller — all winget ids
-  verified except Ghostscript, which winget lacks, so Ghostscript is dropped and PDF compression uses qpdf + image recompression),
-  tests/DropFlow.TestSupport (generated PNG/WAV/PDF/SRT, [EngineFact]), skeleton projects for Images/Media/Pdf/Archive/AI, and
-  docs/writing-a-converter.md + docs/status.md. 80 tests passing. Installed nothing else; no engine binaries downloaded.

@@ -5,8 +5,22 @@ Updated by hand whenever a milestone lands. **Verified** means an automated test
 
 Last updated: 2026-10-23 (English/Arabic translation: text, Markdown, HTML, subtitles, PDF text and pictures; earlier on 2026-10-22: lossless rotation, trim silence, multi-box redaction, strict target size, drag robustness, `dropflow doctor`; bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
 
+**Conversion matrix (2026-11-12, [conversion-matrix.md](conversion-matrix.md)):** every wheel item on 67 real, independently produced
+files on Windows (1290 cells, outputs re-opened by other readers, Arabic words checked in logical order) and on 62 files in the
+browser (938 cells). Found and fixed on Windows: HEIC could not be written at all (new FFmpeg/libx265 encoder + own HEIF writer),
+"auto" OCR read Arabic pictures as English (now Tesseract ara+eng, Windows OCR as fallback), Arabic PDFs from Edge/Chrome gave
+Persian ھ/ی for shared glyphs, a misplaced full stop, "$" for a tanween and a lost table header row, and video blur failed for every
+box under about 84 px. On the web: compress handing back bigger/flattened WebP, AVIF and SVG files, Arabic text from Chromium PDFs,
+stereo audio to Opus crashing ffmpeg.wasm. After the fixes: Windows 1168 PASS + 0 defects (the rest are honest refusals, notes,
+input requests and windows), web 863 PASS + 75 refusals + 0 failures. Whole .NET suite: 3,830 passed, 3 skipped, 0 failed (after the follow-up). Follow-up: scanned PDFs are read with OCR by the text/export/translate tools (28 PASS on the scan sample, was 9 refusals),
+TIFF takes Artist/Copyright/Description and the other text tags as IFD0 tags, web OCR drops lines under confidence 60.
+Android ran for the first time, on an Android 15 emulator (AVD `dropflow_api35`, WHPX): 258 of 258 instrumented matrix rows pass after
+13 fixes, the worst being that **every job crashed the app on Android 15+** (foreground-service type dropped by androidx.core);
+others: Arabic PDF text with words reversed, rotate doing nothing on JPEGs without an orientation tag, CP437 zip names, compress and
+target size saving bigger files, HEVC output silently shrinking video, GPS left in XMP. Still no real phone (details: android.md).
+
 **Android app (`android/`, added 2026-10-22):** builds (debug + signed release), 46 JVM unit tests pass, lint 0 errors;
-it has **not run on any device or emulator yet** (none available). Details and the full unverified list: [android.md](android.md).
+since 2026-11-12 it has run on an Android 15 emulator (see above), never on a real phone. Details and the full unverified list: [android.md](android.md).
 
 ## Test totals (`dotnet test DropFlow.sln`, dev PC with FFmpeg, qpdf, LibreOffice, Tesseract and four AI models present)
 

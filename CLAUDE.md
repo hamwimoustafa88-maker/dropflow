@@ -38,7 +38,7 @@ when a program is missing.
 | DropFlow.sln | Desktop solution |
 | src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder`, `OutputPathResolver`, settings, history (no UI, no engines) |
 | src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator` (Windows/macOS/Linux names and folders, `engines/` and a `.app`'s `Resources/engines`), winget-based `EngineInstaller` (Windows), `NativeLocks.Pdfium`, `FontFiles` |
-| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL), has `SystemFontResolver` (PDFsharp fonts off Windows), `ChromiumHtmlPdfRenderer` (headless Chrome/Edge HTML→PDF off Windows) and the portable `HtmlToPdfConverter` |
+| src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Images writes HEIC itself (`Heic/HeicEncoder` = FFmpeg libx265 + own `HeifContainer`; Magick.NET only reads HEIC). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL), has `SystemFontResolver` (PDFsharp fonts off Windows), `ChromiumHtmlPdfRenderer` (headless Chrome/Edge HTML→PDF off Windows) and the portable `HtmlToPdfConverter` |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
 | src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, English/Arabic translation (`Translation/`: `MarianModel` beam search, `MarianTokenizer`, `TextSegmenter`, format parsers for SRT/VTT/Markdown/HTML/text, `TextOverlayRenderer`; converters `txt.translate`, `img.translate`, `pdf.translate`), `ModelManager` (resumable, SHA-256 verified, single files or multi-file packs; downloads only after the app asks the user). Multi-targets `net10.0-windows10.0.19041.0` (`Platform/Windows`: Windows OCR, Windows.Data.Pdf, Windows face detection) and `net10.0` (`Platform/Unix`: Tesseract, PDFium pages, UltraFace) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
@@ -52,7 +52,7 @@ when a program is missing.
 | installer/ · .github/workflows/ | Velopack packaging (`installer/build.ps1`), winget manifest templates, CI + release workflows (docs/release.md); `build-cross.yml` (tests on Linux x64/arm64, macOS arm64, Windows 11 ARM64) and `build-win-arm64.yml` (reusable: win-arm64 installer on the `win-arm64` channel) |
 | src/DropFlow.* (planned) | Encoder window, Shell — created as their phases start |
 | tests/DropFlow.TestSupport | Sample-file generators (`Samples`), `TempDir`, `[EngineFact]` (skips when an engine is missing) |
-| tests/*.Tests | xUnit tests, one project per src project. `DropFlow.App.Tests` is cross-module: catalog conformance of every converter, no overlapping converters, option-label coverage in ar/en, the known-gaps ratchet, Encoder and phone-share windows |
+| tests/*.Tests | xUnit tests, one project per src project. `DropFlow.App.Tests` is cross-module: catalog conformance of every converter, no overlapping converters, option-label coverage in ar/en, the known-gaps ratchet, Encoder and phone-share windows, and the opt-in conversion matrix (`Matrix/`: every wheel item on 67 real files, docs/conversion-matrix.md) |
 | web/ | Next.js 16: landing (`/ar`, `/en`), web app (`/app`, Phase 6), PWA. Copy in `web/messages/`, tokens in `src/app/globals.css`, data in generated `src/data/catalog.json` |
 | android/ | Android app: share target `WheelActivity` → wheel (`ui/WheelView`, pure `wheel/WheelGeometry`) → `work/WorkService` (foreground) → `ops/*` → MediaStore (`work/Publisher`). Tool table `catalog/AndroidTools.kt`; labels generated from catalog/tools.json at build time (`generateCatalog`). See docs/android.md |
 | tests/ | Desktop tests; tests/samples holds one sample per format |
@@ -62,6 +62,7 @@ when a program is missing.
 ## Commands
 - Catalog: `node catalog/build.mjs` (run after any edit to catalog/tools.json; must print OK)
 - Desktop: `dotnet build DropFlow.sln` · `dotnet test` · `dotnet run --project src/DropFlow.Spike` (single test: `dotnet test --filter "FullyQualifiedName~Name"`)
+- Conversion matrix (20-60 min, real engines): `DROPFLOW_MATRIX=1 dotnet test tests/DropFlow.App.Tests --filter "FullyQualifiedName~ConversionMatrix"` (report in `%TEMP%\dropflow-matrix`); web: `node e2e/run.mjs <url> --only=matrix --out=<dir>` (see docs/conversion-matrix.md)
 - Look at a window without clicking: `DropFlow.exe --snapshot-window <edit|annotate|crop|redact|background|qr|metadata|welcome|settings|encoder|history> out.png [--lang ar|en] [--dark] [--page N] [files…]` or `--snapshot-wheel <convert|tools|actions> out.png <files…>` (2x PNG, exits)
 - macOS/Linux app: `dotnet test tests/DropFlow.Desktop.Tests` · `dotnet run --project src/DropFlow.Desktop -- --snapshot out --lang ar` (renders the windows to PNG) · packages: `installer/linux/build-linux.sh VERSION`, `installer/macos/build-macos.sh VERSION` (set `AVALONIA_TELEMETRY_OPTOUT=1`)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
@@ -113,6 +114,22 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-12 — Full conversion matrix on Windows, web and Android (owner: "some conversions have problems; test every scenario for
+  every extension, e.g. Arabic, scanned and several PDFs, and fix what breaks"): opt-in matrix in `tests/DropFlow.App.Tests/Matrix`
+  (67 real files from Edge, LibreOffice, FFmpeg, 7-Zip, WinRAR, Windows TTS; 1290 cells; outputs re-opened by other readers; Arabic
+  words checked in logical order). Windows fixes: HEIC output (Magick.NET cannot encode it: `Heic/HeicEncoder` = bundled FFmpeg
+  libx265 + own `HeifContainer`; also every tool on a HEIC photo), OCR "auto" = Tesseract ara+eng with Windows OCR fallback (Arabic
+  pictures came out as "pJl.9Jl.J"), Arabic PDF text (`ArabicGlyphSharing` for Chromium's shared heh/yeh glyphs, full stop of an
+  English line on an RTL page, zero-width "$" tanween, tight table header row), video blur for boxes under ~84 px
+  (`ToolFilters.BlurRadii`). Result 1168 PASS, 0 defects; .NET 3,830 passed. Web (`web/e2e/sections/matrix.mjs`, 938 cells, 0
+  failures): compress returning bigger/flattened WebP/AVIF/SVG, Arabic text of Chromium PDFs, stereo to Opus crashing ffmpeg.wasm.
+  Android ran for the first time (Android 15 emulator, AVD `dropflow_api35`; test-only androidx.test deps): 258/258 rows after 13
+  fixes, incl. every job crashing on Android 15+ (foreground-service type), reversed Arabic PDF words, rotate without an EXIF tag.
+  Follow-up: scanned PDFs are read through OCR by the text/export/translate tools (`ScannedPdf` + AI `ScannedPdfReader`), TIFF
+  Artist/Copyright/... written as IFD0 tags (`TiffTags`), web OCR keeps only lines with confidence >= 60 (`confidentText`).
+  Models u2netp + ultraface downloaded on the dev PC for the AI cells. — tests/DropFlow.App.Tests/Matrix, src/DropFlow.Engines.Images/Heic,
+  src/DropFlow.AI/Ocr/OcrService.cs, src/DropFlow.Engines.Pdf/Extraction, src/DropFlow.Engines.Media/Ffmpeg/ToolFilters.cs, web/src/engine/**,
+  web/e2e/**, android/**, docs/{conversion-matrix,status,android}.md
 - 2026-11-12 — security.txt is PGP-signed (owner: "do it, you have full permissions"; Kashef `security-txt.not-signed`): new dedicated
   Ed25519 key `3AF6 2355 A1B5 E75A 5BBA 7E8A 644C 3E90 6373 8274` (+ cv25519 encryption subkey, both expire 2028-11-11), user ID
   without an e-mail address; private key, passphrase, armored backup and revocation certificate only in `%USERPROFILE%\.dropflow`
@@ -349,9 +366,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   verified except Ghostscript, which winget lacks, so Ghostscript is dropped and PDF compression uses qpdf + image recompression),
   tests/DropFlow.TestSupport (generated PNG/WAV/PDF/SRT, [EngineFact]), skeleton projects for Images/Media/Pdf/Archive/AI, and
   docs/writing-a-converter.md + docs/status.md. 80 tests passing. Installed nothing else; no engine binaries downloaded.
-- 2026-10-21 — Landing redesign (owner asked for fewer words, modern, simple tech): hero "Drag. Tap. Drop." + simulated wheel,
-  moving format marquee, 3 big numbers, 5-tile bento (PDF, video/audio, speech-to-text, 100% local, Arabic/English), format
-  explorer (tools capped at 8 + "+N"), closing CTA; removed roadmap/privacy/PDF/media text sections. Pure CSS + Tailwind, no new
-  libraries; scroll reveal via CSS `animation-timeline`; favicon (`icon.svg`) + static OG image; `robots: noindex` until launch
-  (Phase 8). Verified with headless Edge over DevTools (dark/light, ar/en, true 390px mobile: 0 horizontal overflow). Created
-  private GitHub repo hamwimoustafa88-maker/dropflow and pushed `main`.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { operatingSystems } from "./downloads";
-import { GPL_URL, RELEASES_URL, REPO_URL, SCOUTHUB_URL, SITE_URL } from "./site";
+import { GPL_URL, RELEASES_URL, REPO_URL, SCOUTHUB_SOCIAL, SCOUTHUB_URL, SITE_URL } from "./site";
 
 // Search metadata shared by every page: canonical + hreflang (ar, en, x-default -> Arabic), Open Graph and Twitter card.
 // Next merges metadata shallowly, so each page passes its own title/description and gets the whole set back.
@@ -68,6 +68,7 @@ export function softwareJsonLd(locale: string, description: string, faq: { q: st
         name: "ScoutHub",
         url: SCOUTHUB_URL,
         logo: { "@type": "ImageObject", url: `${SITE_URL}/icons/scouthub.svg` },
+        sameAs: SCOUTHUB_SOCIAL.map((s) => s.url),
         member: { "@type": "Person", name: "Moustafa Al-Hamwi", jobTitle: "Lead developer", address: { "@type": "PostalAddress", addressCountry: "LB" } },
       },
       {

@@ -24,7 +24,7 @@ export function SiteCredit({ className = "" }: { className?: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="credit-scouthub"
-                className="font-semibold text-fg underline-offset-4 hover:underline"
+                className="inline-flex min-h-6 items-center font-semibold text-fg underline-offset-4 hover:underline"
               >
                 {chunks}
               </a>

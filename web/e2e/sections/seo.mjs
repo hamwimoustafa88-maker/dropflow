@@ -123,8 +123,8 @@ export async function seo({ b, base }) {
       );
       const org = graph.find((n) => n["@type"] === "Organization") ?? {};
       check(
-        `/${loc}: JSON-LD has the ScoutHub Organization as its own node (name, url, logo) and it is the author/publisher`,
-        org.name === "ScoutHub" && org.url === "https://scouthub.dev/" && (org.logo?.url ?? "").endsWith("/icons/scouthub.svg") && app.author?.["@id"] === org["@id"] && app.publisher?.["@id"] === org["@id"] && !/Moustafa Hamwi/.test(JSON.stringify(ld)),
+        `/${loc}: JSON-LD has the ScoutHub Organization as its own node (name, url, logo, sameAs = its 6 accounts) and it is the author/publisher`,
+        org.name === "ScoutHub" && org.url === "https://scouthub.dev/" && JSON.stringify(org.sameAs) === JSON.stringify(SCOUTHUB_SOCIAL) && (org.logo?.url ?? "").endsWith("/icons/scouthub.svg") && app.author?.["@id"] === org["@id"] && app.publisher?.["@id"] === org["@id"] && !/Moustafa Hamwi/.test(JSON.stringify(ld)),
         JSON.stringify({ org, author: app.author }).slice(0, 240),
       );
       check(

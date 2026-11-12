@@ -47,6 +47,8 @@ android {
         targetSdk = 36
         versionCode = versionCodeOf(dropflowVersion)
         versionName = dropflowVersion
+        // Instrumented tool-matrix tests (app/src/androidTest): gradlew connectedDebugAndroidTest
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -192,4 +194,11 @@ dependencies {
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
+
+    // Test-only, never packaged in the app (THIRD-PARTY-NOTICES.md, test-only note).
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.uiautomator)
 }

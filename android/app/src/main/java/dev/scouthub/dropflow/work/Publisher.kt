@@ -4,7 +4,6 @@ package dev.scouthub.dropflow.work
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import android.provider.MediaStore
 import dev.scouthub.dropflow.core.OutputNaming
 import dev.scouthub.dropflow.ops.Produced
@@ -19,20 +18,37 @@ data class OutputItem(val uri: Uri, val name: String, val mime: String, val size
 object Publisher {
     private data class Target(val collection: Uri, val directory: String)
 
-    private val downloads: Target
-        get() = Target(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), Environment.DIRECTORY_DOWNLOADS)
+    // The values of Environment.DIRECTORY_* (those fields are not compile-time constants, so they are null in JVM tests).
+    const val PICTURES = "Pictures"
+    const val MOVIES = "Movies"
+    const val MUSIC = "Music"
+    const val DOWNLOADS = "Download"
 
-    private fun targetFor(mime: String, inDownloads: Boolean = false): Target = if (inDownloads) downloads else when {
-        mime.startsWith("image/") -> Target(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), Environment.DIRECTORY_PICTURES)
-        mime.startsWith("video/") -> Target(MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), Environment.DIRECTORY_MOVIES)
-        mime.startsWith("audio/") -> Target(MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), Environment.DIRECTORY_MUSIC)
-        else -> downloads
+    private val downloads: Target
+        get() = Target(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), DOWNLOADS)
+
+    private fun targetFor(mime: String, inDownloads: Boolean = false): Target {
+        val dir = directoryFor(mime, inDownloads)
+        return when (dir) {
+            PICTURES -> Target(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), dir)
+            MOVIES -> Target(MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), dir)
+            MUSIC -> Target(MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), dir)
+            else -> downloads
+        }
+    }
+
+    /** Top-level shared folder for a result (pure: unit tested). */
+    fun directoryFor(mime: String, inDownloads: Boolean = false): String = if (inDownloads) DOWNLOADS else when {
+        mime.startsWith("image/") -> PICTURES
+        mime.startsWith("video/") -> MOVIES
+        mime.startsWith("audio/") -> MUSIC
+        else -> DOWNLOADS
     }
 
     /** Relative folder a result lands in, e.g. "Pictures/DropFlow/report (pages)". Sub-folders may nest ("a/b"). */
     fun locationFor(mime: String, folder: String?, inDownloads: Boolean = false): String {
         val sub = folder?.split('/')?.map { OutputNaming.sanitize(it) }?.joinToString("/")
-        return targetFor(mime, inDownloads).directory + "/DropFlow" + (sub?.let { "/$it" } ?: "")
+        return directoryFor(mime, inDownloads) + "/DropFlow" + (sub?.let { "/$it" } ?: "")
     }
 
     /**

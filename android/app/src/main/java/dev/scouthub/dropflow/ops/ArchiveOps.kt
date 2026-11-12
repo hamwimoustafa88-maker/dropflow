@@ -44,12 +44,18 @@ object ArchiveOps {
         for (cs in charsets) {
             try {
                 val z = ZipFile(file, cs)
-                z.entries().toList() // names decode now, or fail and try the next charset
+                // Names decode now: a malformed name fails (desktop Java) or comes back with U+FFFD (Android).
+                // Either way, try the next charset.
+                val names = z.entries().toList().map { it.name }
+                if (cs == Charsets.UTF_8 && ZipGuard.needsLegacyNames(names)) {
+                    z.close()
+                    continue
+                }
                 return z
             } catch (e: IllegalArgumentException) {
                 last = e
             } catch (e: ZipException) {
-                throw OpFailure("error_zip_damaged", e.message)
+                throw OpFailure(if (ZipGuard.isPlatformRefusal(e)) "error_zip_unsafe" else "error_zip_damaged", e.message)
             }
         }
         throw OpFailure("error_zip_damaged", last?.message)
@@ -94,7 +100,7 @@ object ArchiveOps {
                     } catch (e: ZipGuard.TooLarge) {
                         throw OpFailure("error_zip_too_large", e.message)
                     } catch (e: ZipException) {
-                        throw OpFailure("error_zip_damaged", e.message)
+                        throw OpFailure(if (ZipGuard.isPlatformRefusal(e)) "error_zip_unsafe" else "error_zip_damaged", e.message)
                     }
                     val relativeParent = target.parentFile!!.relativeTo(dest.canonicalFile).path.replace(File.separatorChar, '/')
                     val folder = if (relativeParent.isEmpty()) folderName else "$folderName/$relativeParent"

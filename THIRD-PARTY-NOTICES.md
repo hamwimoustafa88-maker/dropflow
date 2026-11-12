@@ -175,6 +175,7 @@ Gradle 9.8.2 through the wrapper (Apache-2.0). The app has no internet permissio
 | `tests/samples/heic/RGB_8__128x128.heic` (HEIC fixture from bigcat88/pillow_heif, not shipped) | BSD-3-Clause, see `tests/samples/README.md` |
 | veraPDF (optional PDF/A validator, run only when `DROPFLOW_VERAPDF` is set; never bundled or committed) | GPL-3.0 / MPL-2.0 |
 | JUnit 4.13.2 (+ Hamcrest 1.3), Android JVM unit tests only, not in the APK | EPL-1.0 (Hamcrest BSD-3-Clause) |
+| AndroidX Test: `androidx.test:runner` 1.7.0, `androidx.test:rules` 1.7.0, `androidx.test.ext:junit` 1.3.0, `androidx.test.uiautomator:uiautomator` 2.3.0 (+ their transitive `androidx.test:core`/`monitor`/`services`, `androidx.tracing`) — **test-only**: Android instrumented tests (`android/app/src/androidTest`, the tool matrix), only in the separate test APK, never in the app | Apache-2.0 |
 
 ## Notes
 - Fonts are not code; OFL 1.1 permits redistribution with the software.

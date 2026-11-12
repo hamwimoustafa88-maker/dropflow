@@ -47,6 +47,36 @@ object TargetSize {
         return Result(best.first, best.second, best.third, true, attempts)
     }
 
+    /**
+     * [search], and when even the lowest quality is too big, again on a smaller picture: [encodeAt] gets the step
+     * (0 = full size, each step smaller) and the quality. The result says [Result.fits] = false when the last step
+     * still did not fit; the caller must then refuse rather than save a file above the target.
+     */
+    fun <T> searchShrinking(
+        targetBytes: Long,
+        maxSteps: Int = 8,
+        minQuality: Int = 5,
+        maxQuality: Int = 95,
+        encodeAt: (step: Int, quality: Int) -> T,
+        sizeOf: (T) -> Long,
+        onStep: (step: Int) -> Unit = {},
+    ): Result<T> {
+        require(maxSteps >= 1)
+        var last: Result<T>? = null
+        var attempts = 0
+        for (step in 0 until maxSteps) {
+            onStep(step)
+            val r = search(targetBytes, minQuality, maxQuality, encode = { q -> encodeAt(step, q) }, sizeOf = sizeOf)
+            attempts += r.attempts
+            last = r.copy(attempts = attempts)
+            if (r.fits) return last
+        }
+        return last!!
+    }
+
+    /** A compressed result is kept only when it is smaller than the original (as the Windows app does). */
+    fun isSmaller(outputBytes: Long, inputBytes: Long): Boolean = outputBytes < inputBytes
+
     /** "500 KB" style budgets typed by people (KB = 1024 bytes, like the Windows app); null if not a number. */
     fun parseKilobytes(text: String): Long? {
         val n = PageRanges.normalizeDigits(text).trim().replace(',', '.').toDoubleOrNull() ?: return null

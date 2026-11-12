@@ -45,6 +45,27 @@ object MediaPlans {
 
     private fun even(v: Int): Int = maxOf(2, v - (v and 1))
 
+    /** Lowest video bitrate DropFlow asks an encoder for (below it H.264 falls apart). */
+    const val MIN_VIDEO_BITRATE = 250_000
+
+    /**
+     * Video bitrate for "Compress videos": the preset's rate, but never more than about 80 % of what the source spends
+     * on the same number of pixels. Without this, a 1 Mbit/s phone clip was re-encoded at 4 Mbit/s and came out bigger.
+     * [sourceBitrate] is the whole file's rate (bits/s); null or unknown pixel counts fall back to the preset.
+     */
+    fun videoBitrateFor(preset: VideoPreset, sourceBitrate: Long?, sourcePixels: Long?, outputPixels: Long?): Int {
+        val requested = preset.videoBitrate
+        if (sourceBitrate == null || sourceBitrate <= 0) return requested
+        val sourceVideo = maxOf(sourceBitrate - preset.audioBitrate, sourceBitrate / 2)
+        val pixelRatio = if (sourcePixels != null && outputPixels != null && sourcePixels > 0 && outputPixels in 1..sourcePixels) {
+            outputPixels.toDouble() / sourcePixels
+        } else {
+            1.0
+        }
+        val cap = (sourceVideo * pixelRatio * 0.8).toLong()
+        return minOf(requested.toLong(), cap).coerceAtLeast(MIN_VIDEO_BITRATE.toLong()).toInt()
+    }
+
     /** Estimated output size in bytes for a duration at the preset bitrates (used to warn about tiny gains). */
     fun estimateBytes(durationMs: Long, preset: VideoPreset): Long =
         (durationMs / 1000.0 * (preset.videoBitrate + preset.audioBitrate) / 8).toLong()

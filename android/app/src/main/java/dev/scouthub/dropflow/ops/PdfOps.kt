@@ -18,10 +18,11 @@ import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import com.tom_roush.pdfbox.text.PDFTextStripper
 import dev.scouthub.dropflow.core.FileKind
 import dev.scouthub.dropflow.core.OutputNaming
 import dev.scouthub.dropflow.core.PageRanges
+import dev.scouthub.dropflow.core.TargetSize
+import dev.scouthub.dropflow.core.TextLayer
 import dev.scouthub.dropflow.work.InputFile
 import java.io.File
 import java.io.IOException
@@ -204,7 +205,9 @@ object PdfOps {
         val files = ctx.eachInput(inputs) { input, progress ->
             open(ctx, input.file).use { doc ->
                 progress(null)
-                val text = PDFTextStripper().apply { sortByPosition = true }.getText(doc)
+                val text = LogicalTextStripper().apply { sortByPosition = true }.getText(doc)
+                // A scanned PDF has pictures of pages and no text layer: say so instead of saving an empty file.
+                if (!TextLayer.hasText(text)) throw OpFailure("error_pdf_no_text")
                 val out = ctx.newFile(OutputNaming.forFile(input.name, "txt"))
                 out.writeText(text, Charsets.UTF_8)
                 progress(1f)
@@ -232,9 +235,15 @@ object PdfOps {
                 }
                 val out = ctx.newFile(OutputNaming.forFile(input.name, "pdf", "compressed"))
                 doc.save(out)
+                // Nothing to shrink (no large images): a rewritten PDF can come out bigger. Keep only real gains.
+                if (!TargetSize.isSmaller(out.length(), input.file.length())) {
+                    out.delete()
+                    return@eachInput null
+                }
                 pdf(out)
             }
-        }
+        }.filterNotNull()
+        if (files.isEmpty()) throw OpFailure("error_already_small")
         return OpResult(files)
     }
 

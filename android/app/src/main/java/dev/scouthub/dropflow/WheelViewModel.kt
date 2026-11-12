@@ -14,6 +14,7 @@ import dev.scouthub.dropflow.catalog.AndroidTools
 import dev.scouthub.dropflow.catalog.Ring
 import dev.scouthub.dropflow.catalog.ToolDef
 import dev.scouthub.dropflow.ops.ImageOps
+import dev.scouthub.dropflow.ops.MediaOps
 import dev.scouthub.dropflow.work.InputFile
 import dev.scouthub.dropflow.work.Inputs
 import dev.scouthub.dropflow.work.JobCenter
@@ -59,7 +60,7 @@ class WheelViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 inputs = Inputs.copy(app, uris, sharedText)
-                rings = AndroidTools.wheelFor(inputs.map { it.kind }, AndroidTools.Capabilities(heicEncoder = ImageOps.heicEncoderAvailable))
+                rings = AndroidTools.wheelFor(inputs.map { it.kind }, AndroidTools.Capabilities(heicEncoder = ImageOps.heicEncoderAvailable, hevcEncoder = MediaOps.hevcEncoderAvailable))
                 screen = if (inputs.isEmpty() || rings.values.all { it.isEmpty() }) Screen.Empty else Screen.Wheel
             } catch (e: Exception) {
                 Log.w("DropFlow", "Could not copy the shared files", e)

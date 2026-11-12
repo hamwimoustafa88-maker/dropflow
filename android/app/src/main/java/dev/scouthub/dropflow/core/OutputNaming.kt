@@ -23,6 +23,19 @@ object OutputNaming {
         return if (ext.isEmpty()) "$stem ($suffix)" else "$stem ($suffix).$ext"
     }
 
+    /**
+     * Adds the extension of [mime] when [name] has no real extension. Some apps share `content://` URIs whose only
+     * name is a MediaStore id ("1000000034") or a document id ("image:34"); without an extension the lossless JPEG
+     * paths, zip entry names and the apps DropFlow shares to would all see an unnamed blob. A "real" extension has a
+     * letter and no space, so "Screenshot_2024.10.12" gets one but "data.csv" or "photo.png" stay as they are.
+     */
+    fun withTypeExtension(name: String, mime: String?): String {
+        val ext = FileKind.extensionForMime(mime) ?: return name
+        val current = FileKind.extensionOf(name)
+        val real = current.isNotEmpty() && current.length <= 10 && current.any { it.isLetter() } && current.all { it.isLetterOrDigit() }
+        return if (real) name else "$name.$ext"
+    }
+
     /** Folder for results made of many files: "report (pages)". */
     fun forFolder(sourceName: String, suffix: String): String = "${stem(sanitize(sourceName))} ($suffix)"
 

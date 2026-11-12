@@ -28,6 +28,7 @@ import androidx.media3.transformer.VideoEncoderSettings
 import dev.scouthub.dropflow.core.MediaPlans
 import dev.scouthub.dropflow.core.MediaPlans.VideoCodec
 import dev.scouthub.dropflow.core.OutputNaming
+import dev.scouthub.dropflow.core.TargetSize
 import dev.scouthub.dropflow.core.WavHeader
 import dev.scouthub.dropflow.work.InputFile
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,21 @@ import kotlin.coroutines.resumeWithException
 @OptIn(UnstableApi::class)
 object MediaOps {
     data class Tracks(val video: List<String>, val audio: List<String>, val durationUs: Long)
+
+    val hevcEncoderAvailable: Boolean by lazy { encoders(MimeTypes.VIDEO_H265).isNotEmpty() }
+
+    private fun encoders(mime: String): List<android.media.MediaCodecInfo> = runCatching {
+        android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
+            .filter { it.isEncoder && it.supportedTypes.any { t -> t.equals(mime, true) } }
+    }.getOrDefault(emptyList())
+
+    /** Whether some encoder for [mime] takes [w] x [h] (either way round: portrait videos are encoded upright). */
+    private fun encoderFits(mime: String, w: Int, h: Int): Boolean = encoders(mime).any { info ->
+        runCatching {
+            val caps = info.getCapabilitiesForType(mime).videoCapabilities ?: return@runCatching false
+            caps.isSizeSupported(w, h) || caps.isSizeSupported(h, w)
+        }.getOrDefault(false)
+    }
 
     fun probe(file: File): Tracks {
         val ex = MediaExtractor()
@@ -229,6 +245,20 @@ object MediaOps {
         }
     }.getOrDefault(0)
 
+    /** The whole file's bitrate in bits/s: the container's value, else size / duration; null when unknown. */
+    private fun sourceBitrate(file: File): Long? = runCatching {
+        MediaMetadataRetriever().run {
+            try {
+                setDataSource(file.absolutePath)
+                extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLongOrNull()?.takeIf { it > 0 }
+                    ?: extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.takeIf { it > 0 }
+                        ?.let { ms -> file.length() * 8 * 1000 / ms }
+            } finally {
+                release()
+            }
+        }
+    }.getOrNull()
+
     private fun videoSize(file: File): Pair<Int, Int>? = runCatching {
         MediaMetadataRetriever().run {
             try {
@@ -253,6 +283,12 @@ object MediaOps {
             val done = MediaPlans.canRemuxToMp4(codec, tracks.video, tracks.audio) &&
                 tryRemux(ctx, input.file, out, keepVideo = true, keepAudio = true, progress)
             if (!done) {
+                // Media3 falls back to a smaller picture when the encoder cannot take the size (the emulator's software
+                // HEVC encoder stops at 512 px). Converting to HEVC must not quietly shrink the video: say so instead.
+                val size = videoSize(input.file)
+                if (codec == VideoCodec.HEVC && size != null && !encoderFits(codec.mime, size.first, size.second)) {
+                    throw OpFailure("error_hevc_size", "${size.first}x${size.second}")
+                }
                 export(ctx, EditedMediaItem.Builder(item(input.file)).build(), out, codec.mime, MimeTypes.AUDIO_AAC, progress = progress)
             }
             Produced(out, out.name, "video/mp4")
@@ -284,9 +320,23 @@ object MediaOps {
             if (size != null && max != null && minOf(size.first, size.second) > max) effects += Presentation.createForShortSide(max)
             val edited = EditedMediaItem.Builder(item(input.file)).setEffects(Effects(emptyList(), effects)).build()
             val out = ctx.newFile(OutputNaming.forFile(input.name, "mp4", "compressed"))
-            export(ctx, edited, out, MimeTypes.VIDEO_H264, MimeTypes.AUDIO_AAC, videoBitrate = preset.videoBitrate, progress = progress)
+            val outSize = size?.let { MediaPlans.scaledSize(it.first, it.second, max) }
+            val bitrate = MediaPlans.videoBitrateFor(
+                preset,
+                sourceBitrate = sourceBitrate(input.file),
+                sourcePixels = size?.let { it.first.toLong() * it.second },
+                outputPixels = outSize?.let { it.first.toLong() * it.second },
+            )
+            export(ctx, edited, out, MimeTypes.VIDEO_H264, MimeTypes.AUDIO_AAC, videoBitrate = bitrate, progress = progress)
+            // Encoders may overshoot a low bitrate (seen on the emulator's software H.264 encoder): a "compressed"
+            // video that is not smaller than the original is not kept, as for images.
+            if (!TargetSize.isSmaller(out.length(), input.file.length())) {
+                out.delete()
+                return@eachInput null
+            }
             Produced(out, out.name, "video/mp4")
-        }
+        }.filterNotNull()
+        if (files.isEmpty()) throw OpFailure("error_already_small")
         return OpResult(files)
     }
 

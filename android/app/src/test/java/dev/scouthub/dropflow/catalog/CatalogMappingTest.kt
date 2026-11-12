@@ -21,7 +21,9 @@ class CatalogMappingTest {
             .first { it.exists() }
             .readText()
         for (t in Catalog.tools + Catalog.actions) assertTrue("${t.id} missing from tools.json", json.contains("\"id\": \"${t.id}\""))
-        val idCount = Regex("\"id\":\\s*\"(img|vid|aud|pdf|arc|gen|act)\\.").findAll(json).count()
+        // Tool and action ids are "<prefix>.<name>" (img., pdf., txt., ...); category ids have no dot. Any prefix counts,
+        // so a new tool family (txt.translate was the first) cannot slip past this check.
+        val idCount = Regex("\"id\":\\s*\"[a-z0-9]+\\.").findAll(json).count()
         assertEquals("every catalog tool and action is generated", idCount, Catalog.tools.size + Catalog.actions.size)
         assertTrue(Catalog.categories.isNotEmpty())
     }

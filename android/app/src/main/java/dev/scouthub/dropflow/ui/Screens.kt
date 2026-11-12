@@ -41,6 +41,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -55,11 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -323,36 +326,40 @@ fun MediaEditorScreen(
                     .aspectRatio(16f / 9f)
                     .background(DfColors.Navy, RoundedCornerShape(12.dp)),
             )
-            if (mode == Editor.RANGE) {
-                RangeSlider(
-                    value = range,
-                    onValueChange = { new ->
-                        val seekTo = if (new.start != range.start) new.start else new.endInclusive
-                        range = new
-                        player.pause()
-                        player.seekTo(seekTo.toLong())
-                    },
-                    valueRange = 0f..total,
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.editor_start, MediaOps.formatTime(range.start.toLong())), style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        stringResource(R.string.editor_length, MediaOps.formatTime((range.endInclusive - range.start).toLong())),
-                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+            // Media timelines are not mirrored in right-to-left languages (Material guidance): time runs left to right,
+            // start on the left, as in every player. Labels inside stay Arabic.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                if (mode == Editor.RANGE) {
+                    RangeSlider(
+                        value = range,
+                        onValueChange = { new ->
+                            val seekTo = if (new.start != range.start) new.start else new.endInclusive
+                            range = new
+                            player.pause()
+                            player.seekTo(seekTo.toLong())
+                        },
+                        valueRange = 0f..total,
                     )
-                    Text(stringResource(R.string.editor_end, MediaOps.formatTime(range.endInclusive.toLong())), style = MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.editor_start, MediaOps.formatTime(range.start.toLong())), style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.editor_length, MediaOps.formatTime((range.endInclusive - range.start).toLong())),
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(stringResource(R.string.editor_end, MediaOps.formatTime(range.endInclusive.toLong())), style = MaterialTheme.typography.bodySmall)
+                    }
+                } else {
+                    Slider(
+                        value = position,
+                        onValueChange = {
+                            position = it
+                            player.pause()
+                            player.seekTo(it.toLong())
+                        },
+                        valueRange = 0f..total,
+                    )
+                    Text(stringResource(R.string.editor_at, MediaOps.formatTime(position.toLong())), style = MaterialTheme.typography.bodySmall)
                 }
-            } else {
-                Slider(
-                    value = position,
-                    onValueChange = {
-                        position = it
-                        player.pause()
-                        player.seekTo(it.toLong())
-                    },
-                    valueRange = 0f..total,
-                )
-                Text(stringResource(R.string.editor_at, MediaOps.formatTime(position.toLong())), style = MaterialTheme.typography.bodySmall)
             }
             ButtonsRow {
                 TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }

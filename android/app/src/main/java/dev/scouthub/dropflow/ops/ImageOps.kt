@@ -13,9 +13,11 @@ import android.media.MediaCodecList
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
 import androidx.heifwriter.HeifWriter
+import dev.scouthub.dropflow.core.ExifOrientation
 import dev.scouthub.dropflow.core.FileKind
 import dev.scouthub.dropflow.core.OutputNaming
 import dev.scouthub.dropflow.core.TargetSize
+import dev.scouthub.dropflow.core.Xmp
 import dev.scouthub.dropflow.work.InputFile
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -161,35 +163,48 @@ object ImageOps {
     suspend fun compress(ctx: OpContext, inputs: List<InputFile>): OpResult {
         val bySize = ctx.option("compress_by", "quality") == "size"
         val formatOption = ctx.option("format", "auto")
+        val target = if (bySize) TargetSize.parseKilobytes(ctx.option("target_kb", "500")) ?: throw OpFailure("error_target_size") else 0L
         val files = ctx.eachInput(inputs) { input, progress ->
-            var bitmap = decode(input.file)
+            val full = decode(input.file)
             val format = when (formatOption) {
                 "jpg", "webp" -> formatOption
-                else -> if (bitmap.hasAlpha()) "webp" else "jpg"
+                else -> if (full.hasAlpha()) "webp" else "jpg"
             }
             val bytes = if (bySize) {
-                val target = TargetSize.parseKilobytes(ctx.option("target_kb", "500")) ?: throw OpFailure("error_target_size")
-                var best: TargetSize.Result<ByteArray>? = null
-                for (step in 0 until 8) {
-                    ctx.checkCancelled()
-                    val current = bitmap
-                    val r = TargetSize.search(target, 5, 95, encode = { q -> encodeBytes(current, format, q) }, sizeOf = { it.size.toLong() })
-                    best = r
-                    progress((step + 1) / 8f)
-                    if (r.fits) break
-                    // Even the lowest quality is too big: shrink the picture and try again.
-                    bitmap = Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * 0.75).toInt()), max(1, (bitmap.height * 0.75).toInt()), true)
-                }
-                best!!.value
+                var bitmap = full
+                var bitmapStep = 0
+                val r = TargetSize.searchShrinking(
+                    target,
+                    maxSteps = 8,
+                    encodeAt = { step, q ->
+                        // Even the lowest quality was too big: shrink the picture (0.75x per side per step) and try again.
+                        while (bitmapStep < step) {
+                            bitmap = Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * 0.75).toInt()), max(1, (bitmap.height * 0.75).toInt()), true)
+                            bitmapStep++
+                        }
+                        encodeBytes(bitmap, format, q)
+                    },
+                    sizeOf = { it.size.toLong() },
+                    onStep = { step -> progress(step / 8f) },
+                )
+                ctx.checkCancelled()
+                // Never save a file above the size the person asked for.
+                if (!r.fits) throw OpFailure("error_target_unreachable")
+                r.value
             } else {
-                encodeBytes(bitmap, format, ctx.intOption("quality", 75).coerceIn(5, 100))
+                encodeBytes(full, format, ctx.intOption("quality", 75).coerceIn(5, 100))
             }
+            progress(1f)
+            // A "compressed" copy that is not smaller than the original is useless: keep nothing for this file.
+            if (!TargetSize.isSmaller(bytes.size.toLong(), input.file.length())) return@eachInput null
             val out = ctx.newFile(OutputNaming.forFile(input.name, format, "compressed"))
             out.writeBytes(bytes)
             copyBasicExif(input.file, out, format)
-            progress(1f)
+            // The date/camera tags add a few hundred bytes: drop them again if they push the file over the target.
+            if (bySize && out.length() > target) out.writeBytes(bytes)
             produced(out, format)
-        }
+        }.filterNotNull()
+        if (files.isEmpty()) throw OpFailure("error_already_small")
         return OpResult(files)
     }
 
@@ -221,8 +236,10 @@ object ImageOps {
                 // Lossless: JPEG pixels stay as they are, only the orientation tag turns.
                 val out = ctx.newFile(OutputNaming.forFile(input.name, ext, "rotated"))
                 input.file.copyTo(out)
+                // Not ExifInterface.rotate(): it leaves a file without the tag ("undefined") unchanged.
                 ExifInterface(out).apply {
-                    rotate(degrees)
+                    val current = getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+                    setAttribute(ExifInterface.TAG_ORIENTATION, ExifOrientation.rotated(current, degrees).toString())
                     saveAttributes()
                 }
                 progress(1f)
@@ -253,6 +270,9 @@ object ImageOps {
             .mapNotNull { runCatching { it.get(null) as String }.getOrNull() }
     }
 
+    private fun xmpOf(exif: ExifInterface): String? =
+        runCatching { exif.getAttributeBytes(ExifInterface.TAG_XMP)?.toString(Charsets.UTF_8) }.getOrNull()
+
     suspend fun stripMetadata(ctx: OpContext, inputs: List<InputFile>): OpResult {
         val everything = ctx.option("strip", "location") == "all"
         val files = ctx.eachInput(inputs) { input, progress ->
@@ -264,9 +284,13 @@ object ImageOps {
                 val exif = ExifInterface(out)
                 val tags = if (everything) allExifTags.filter { it != ExifInterface.TAG_ORIENTATION } else gpsTags
                 for (tag in tags) runCatching { exif.setAttribute(tag, null) }
+                // The XMP block can carry the position too (Lightroom, IPTC place names): drop it when it does.
+                if (xmpOf(exif)?.let(Xmp::hasLocation) == true) runCatching { exif.setAttribute(ExifInterface.TAG_XMP, null) }
                 exif.saveAttributes()
                 val check = ExifInterface(out)
-                if (check.latLong != null || check.getAttribute(ExifInterface.TAG_GPS_LATITUDE) != null) {
+                if (check.latLong != null || check.getAttribute(ExifInterface.TAG_GPS_LATITUDE) != null ||
+                    xmpOf(check)?.let(Xmp::hasLocation) == true
+                ) {
                     out.delete()
                     throw OpFailure("error_strip_failed")
                 }

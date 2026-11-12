@@ -22,7 +22,7 @@ enum class FileKind(val catalogCategory: String?) {
             val m = mime?.lowercase()?.substringBefore(';')?.trim().orEmpty()
             when {
                 m == "application/pdf" -> return PDF
-                m == "application/zip" || m == "application/x-zip-compressed" -> return ZIP
+                m == "application/zip" || m == "application/x-zip-compressed" || m == "application/x-zip" -> return ZIP
                 m == "image/gif" -> return IMAGE
                 m.startsWith("image/") && m != "image/svg+xml" -> return IMAGE
                 m.startsWith("video/") -> return VIDEO
@@ -44,6 +44,39 @@ enum class FileKind(val catalogCategory: String?) {
             val name = fileName.substringAfterLast('/').substringAfterLast('\\')
             val dot = name.lastIndexOf('.')
             return if (dot <= 0 || dot == name.length - 1) "" else name.substring(dot + 1).lowercase()
+        }
+
+        /**
+         * The usual extension for a MIME type, or null when DropFlow does not know it. Used to name inputs whose
+         * sharing app gave no file name (a bare MediaStore id such as "1000000034", or "image:34").
+         */
+        fun extensionForMime(mime: String?): String? = when (mime?.lowercase()?.substringBefore(';')?.trim()) {
+            "image/jpeg", "image/jpg", "image/pjpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/heic", "image/heic-sequence" -> "heic"
+            "image/heif", "image/heif-sequence" -> "heif"
+            "image/gif" -> "gif"
+            "image/bmp", "image/x-ms-bmp" -> "bmp"
+            "image/avif" -> "avif"
+            "application/pdf" -> "pdf"
+            "application/zip", "application/x-zip-compressed", "application/x-zip" -> "zip"
+            "text/plain" -> "txt"
+            "video/mp4" -> "mp4"
+            "video/quicktime" -> "mov"
+            "video/x-matroska" -> "mkv"
+            "video/webm" -> "webm"
+            "video/3gpp" -> "3gp"
+            "video/mp2t" -> "ts"
+            "audio/mp4", "audio/m4a", "audio/x-m4a", "audio/mp4a-latm" -> "m4a"
+            "audio/aac", "audio/aacp" -> "aac"
+            "audio/mpeg", "audio/mp3" -> "mp3"
+            "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave" -> "wav"
+            "audio/flac", "audio/x-flac" -> "flac"
+            "audio/ogg", "application/ogg" -> "ogg"
+            "audio/opus" -> "opus"
+            "audio/amr", "audio/3gpp" -> "amr"
+            else -> null
         }
 
         /** MIME type for a file DropFlow writes. */

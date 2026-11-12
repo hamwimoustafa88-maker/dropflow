@@ -51,6 +51,8 @@ data class ToolDef(
     val options: List<OptionSpec> = emptyList(),
     val editor: Editor? = null,
     val needsHeicEncoder: Boolean = false,
+    /** Offered only when the phone has an HEVC video encoder (otherwise Media3 quietly writes H.264 instead). */
+    val needsHevcEncoder: Boolean = false,
 )
 
 object AndroidTools {
@@ -74,7 +76,7 @@ object AndroidTools {
         ToolDef("convert.pdf.jpg", Ring.CONVERT, Op.PDF_TO_IMAGES, labelKey = "fmt_jpg", kinds = pdf, target = "jpg", options = listOf(dpi)),
         ToolDef("convert.pdf.txt", Ring.CONVERT, Op.PDF_TEXT, labelKey = "fmt_txt", kinds = pdf, target = "txt"),
         ToolDef("convert.video.mp4", Ring.CONVERT, Op.VID_CONVERT, labelKey = "fmt_mp4_h264", kinds = video, target = "mp4"),
-        ToolDef("convert.video.mp4-hevc", Ring.CONVERT, Op.VID_CONVERT, labelKey = "fmt_mp4_hevc", kinds = video, target = "mp4"),
+        ToolDef("convert.video.mp4-hevc", Ring.CONVERT, Op.VID_CONVERT, labelKey = "fmt_mp4_hevc", kinds = video, target = "mp4", needsHevcEncoder = true),
         ToolDef("convert.video.m4a", Ring.CONVERT, Op.MEDIA_TO_M4A, labelKey = "fmt_m4a", kinds = video, target = "m4a"),
         ToolDef("convert.video.wav", Ring.CONVERT, Op.MEDIA_TO_WAV, labelKey = "fmt_wav", kinds = video, target = "wav"),
         ToolDef("convert.audio.m4a", Ring.CONVERT, Op.MEDIA_TO_M4A, labelKey = "fmt_m4a", kinds = audio, target = "m4a"),
@@ -155,7 +157,7 @@ object AndroidTools {
     fun byKey(key: String): ToolDef? = all.firstOrNull { it.key == key }
 
     /** Device features that decide whether some entries are shown. */
-    data class Capabilities(val heicEncoder: Boolean)
+    data class Capabilities(val heicEncoder: Boolean, val hevcEncoder: Boolean = heicEncoder)
 
     /**
      * The wheel for a selection: entries per ring, in table order. A tool that is not "combine" runs once per input,
@@ -168,7 +170,7 @@ object AndroidTools {
         val applicable = all.filter { def ->
             val kindOk = def.kinds.isEmpty() || def.kinds.containsAll(distinct)
             val countOk = count >= def.minFiles && (def.maxFiles == null || count <= def.maxFiles)
-            val featureOk = !def.needsHeicEncoder || caps.heicEncoder
+            val featureOk = (!def.needsHeicEncoder || caps.heicEncoder) && (!def.needsHevcEncoder || caps.hevcEncoder)
             val textOnlyAction = FileKind.TEXT in distinct && def.op == Op.OPEN_WITH
             kindOk && countOk && featureOk && !textOnlyAction
         }

@@ -4,7 +4,6 @@ package dev.scouthub.dropflow.work
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
@@ -14,6 +13,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import dev.scouthub.dropflow.Language
 import dev.scouthub.dropflow.R
+import dev.scouthub.dropflow.core.ForegroundPlan
 import dev.scouthub.dropflow.ops.OpFailure
 import dev.scouthub.dropflow.ui.Labels
 import kotlinx.coroutines.CancellationException
@@ -81,8 +81,8 @@ class WorkService : LifecycleService() {
     private fun goForeground(id: Long) {
         if (foreground) return
         val title = JobCenter.request(id)?.title ?: getString(R.string.app_name)
-        val type = if (Build.VERSION.SDK_INT >= 35) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        ServiceCompat.startForeground(this, Notifications.FOREGROUND_ID, Notifications.progress(this, title, null, 0, cancelIntent(id)), type)
+        // Service.startForeground directly (API 29+, minSdk 29): ServiceCompat drops mediaProcessing (see ForegroundPlan).
+        startForeground(Notifications.FOREGROUND_ID, Notifications.progress(this, title, null, 0, cancelIntent(id)), ForegroundPlan.type(Build.VERSION.SDK_INT))
         foreground = true
     }
 

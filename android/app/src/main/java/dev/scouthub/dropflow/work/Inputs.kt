@@ -57,8 +57,10 @@ object Inputs {
             }
             val resolver = context.contentResolver
             uris.forEachIndexed { i, uri ->
-                val display = displayName(context, uri) ?: uri.lastPathSegment ?: "file"
-                val mime = resolver.getType(uri) ?: FileKind.mimeFor(FileKind.extensionOf(display))
+                val raw = displayName(context, uri) ?: uri.lastPathSegment ?: "file"
+                val mime = resolver.getType(uri) ?: FileKind.mimeFor(FileKind.extensionOf(raw))
+                // A bare MediaStore id or "image:34" gets the extension of its type, so every tool sees a normal name.
+                val display = OutputNaming.withTypeExtension(OutputNaming.sanitize(raw), mime)
                 val target = place(display)
                 resolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it, 256 * 1024) } }
                     ?: throw java.io.FileNotFoundException(uri.toString())

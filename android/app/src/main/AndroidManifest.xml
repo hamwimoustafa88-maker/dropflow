@@ -64,6 +64,7 @@
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="application/pdf" />
                 <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
             </intent-filter>
         </activity>
 

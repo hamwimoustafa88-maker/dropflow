@@ -80,6 +80,29 @@ public class OcrServiceTests
     }
 
     [Fact]
+    public async Task Auto_reads_with_tesseract_arabic_and_english_and_falls_back_to_windows_when_it_finds_nothing()
+    {
+        using var dir = new TempDir();
+        var png = Samples.Png(dir.Combine("a.png"));
+        var windows = new FakeWindowsOcr((_, _) => Line("windows", "Dro Flow", 0, 0, 10, 10, 64, 48));
+        var empty = new OcrResult("tesseract", "ara+eng", 64, 48, []);
+        var tess = new FakeTesseractOcr(true, ["eng", "ara"], empty);
+        var svc = new OcrService(new FakeEngines(), new OcrLanguageService(new FakeLanguages("en-US")), windows, tess);
+
+        var result = await svc.RecognizeAsync(png, new OcrRequest(), default);
+
+        Assert.Equal(["ara+eng"], tess.RecognisedWith);
+        Assert.Single(windows.Calls);
+        Assert.Equal("Dro Flow", result.Text);
+
+        // When Tesseract does read something, Windows OCR is not asked at all.
+        var reading = new FakeTesseractOcr(true, ["eng", "ara"], Line("tesseract", "مرحبا", 0, 0, 10, 10, 64, 48));
+        var windows2 = new FakeWindowsOcr((_, _) => throw new InvalidOperationException("must not run"));
+        var svc2 = new OcrService(new FakeEngines(), new OcrLanguageService(new FakeLanguages("en-US")), windows2, reading);
+        Assert.Equal("مرحبا", (await svc2.RecognizeAsync(png, new OcrRequest(), default)).Text);
+    }
+
+    [Fact]
     public async Task Windows_is_used_first_and_the_chosen_pack_is_passed_to_it()
     {
         using var dir = new TempDir();

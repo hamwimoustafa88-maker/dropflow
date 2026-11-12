@@ -66,6 +66,29 @@ public sealed class PdfTranslateConverter : IConverter
             return ConversionResult.Fail("Could not read the PDF: " + ex.Message, sw.Elapsed);
         }
         if (read.Error is not null) return ConversionResult.Fail(read.Error, sw.Elapsed);
+        string? scanNote = null;
+        if ((!read.HasText || read.Blocks.Count == 0) && Engines.Pdf.Extraction.ScannedPdf.Reader is { } scans)
+        {
+            // A scan: read it with OCR first (into a folder deleted afterwards), then translate that text.
+            var work = Path.Combine(Path.GetTempPath(), "dropflow-scan-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(work);
+            try
+            {
+                progress.Report(new JobProgress(0.03, "Reading the scan with OCR"));
+                var searchable = await scans.MakeSearchableAsync(input, work, new InlineProgress<double>(p => progress.Report(new JobProgress(0.03 + p * 0.3, "Reading the scan with OCR"))), cancellationToken).ConfigureAwait(false);
+                read = await Task.Run(() => PdfTextReader.Read(searchable, cancellationToken), cancellationToken).ConfigureAwait(false);
+                scanNote = Engines.Pdf.Extraction.ScannedPdf.ReadWithOcrNote;
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ConversionResult.Fail("This PDF is a scan and OCR could not read it: " + ex.Message, sw.Elapsed);
+            }
+            finally
+            {
+                try { Directory.Delete(work, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+        }
+        if (read.Error is not null) return ConversionResult.Fail(read.Error, sw.Elapsed);
         if (!read.HasText || read.Blocks.Count == 0)
             return ConversionResult.Fail("This PDF has no text layer (it looks scanned). Run \"Make PDF searchable (OCR)\" first, then translate the result.", sw.Elapsed);
 
@@ -124,6 +147,7 @@ public sealed class PdfTranslateConverter : IConverter
         }
         progress.Report(new JobProgress(1, "Done"));
         var note = TranslationJobSupport.NoteFor(chosen, TranslationJobSupport.CountSkipped(units, direction));
+        if (scanNote is not null) note = note.Length == 0 ? scanNote : scanNote + " " + note;
         return ConversionResult.Ok(written, sw.Elapsed, note.Length == 0 ? null : note);
     }
 

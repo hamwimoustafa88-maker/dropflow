@@ -450,4 +450,22 @@ public class OcrPlannerTests
         Assert.Null(none.Plan);
         Assert.Contains("Language.OCR~~~en-US~0.0.1.0", none.Error);
     }
+
+    /// <summary>
+    /// Found by the conversion matrix: a picture of Arabic text came out as "pJl.9Jl.J" because "auto" ran Windows OCR with the
+    /// profile languages (English only on most PCs). The installer ships Tesseract with Arabic and English, which reads both in one
+    /// run (Windows OCR reads one language per run), so "auto" uses it whenever both are there.
+    /// </summary>
+    [Fact]
+    public void Auto_language_prefers_tesseract_with_arabic_and_english_over_an_english_only_windows_profile()
+    {
+        var plan = OcrPlanner.Plan([], OcrEnginePreference.Auto, Caps(["en-US"], true, "osd", "eng", "ara")).Plan!;
+        Assert.Equal(OcrEngineKind.Tesseract, plan.Engine);
+        Assert.Equal(["ara", "eng"], plan.TesseractLanguages);
+
+        // Only English data for Tesseract: Windows OCR stays the default (nothing better to offer).
+        Assert.Equal(OcrEngineKind.Windows, OcrPlanner.Plan([], OcrEnginePreference.Auto, Caps(["en-US"], true, "eng")).Plan!.Engine);
+        // The user can still force Windows OCR.
+        Assert.Equal(OcrEngineKind.Windows, OcrPlanner.Plan([], OcrEnginePreference.Windows, Caps(["en-US"], true, "eng", "ara")).Plan!.Engine);
+    }
 }

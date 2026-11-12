@@ -39,11 +39,16 @@ public static class AiModule
         var ocr = new OcrService(engines);
         var sessions = new OnnxSessionCache();
         var translator = new MarianTextTranslator(models);
+        var pdfOcr = new PdfOcrConverter(engines, rasterizer);
+        // Scans become readable for PDF to text/Word/Excel/EPUB and translation (they used to say "run OCR first"). Keep a reader that
+        // finds Tesseract if a later caller (a test) passes engines that find nothing.
+        if (Engines.Pdf.Extraction.ScannedPdf.Reader is null || engines.Locate(EngineId.Tesseract) is not null)
+            Engines.Pdf.Extraction.ScannedPdf.Reader = new ScannedPdfReader(pdfOcr);
         return
         [
             new TranscribeConverter(engines, models),
             new OcrConverter(ocr),
-            new PdfOcrConverter(engines, rasterizer),
+            pdfOcr,
             new BackgroundRemovalConverter(models, sessions),
             new RedactAutoConverter(models, ocr, sessions),
             new TextTranslateConverter(translator, ownsTranslator: true),   // disposes the translator (and the loaded models) with the converters

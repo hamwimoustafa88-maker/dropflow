@@ -33,6 +33,10 @@ public static class OcrPlanner
         // ---- "auto": no language named --------------------------------------------------------------------------
         if (requested.Count == 0)
         {
+            // Tesseract with Arabic + English (shipped with the installer) reads both scripts in one run and measured far better on
+            // Arabic than Windows OCR, which reads a single language per run (the profile's, usually English): prefer it for "auto".
+            if (preference == OcrEnginePreference.Auto && caps.TesseractInstalled && caps.TesseractLanguages.Contains("ara") && caps.TesseractLanguages.Contains("eng"))
+                return Ok(new OcrPlan(OcrEngineKind.Tesseract, null, ["ara", "eng"], "Tesseract (ara+eng)"));
             if (preference != OcrEnginePreference.Tesseract && hasWindowsPacks)
                 return Ok(new OcrPlan(OcrEngineKind.Windows, null, [], "Windows OCR with your Windows languages (English fallback)"));
             if (preference != OcrEnginePreference.Windows && caps.TesseractInstalled)
@@ -165,6 +169,16 @@ public sealed class OcrService
         var result = plan.Plan.Engine == OcrEngineKind.Windows
             ? await _windows.RecognizeAsync(prepared.Path, plan.Plan.WindowsTag, cancellationToken).ConfigureAwait(false)
             : await _tesseract.RecognizeAsync(prepared.Path, plan.Plan.TesseractLanguages, cancellationToken).ConfigureAwait(false);
+
+        // "auto" picked Tesseract (Arabic + English) but it read nothing: small text on a busy background is where Windows OCR does
+        // better, so ask it too before telling the user there is no text.
+        if (result.IsEmpty && plan.Plan.Engine == OcrEngineKind.Tesseract && request.Engine == OcrEnginePreference.Auto
+            && OcrLanguages.ParseList(request.Languages, out _).Count == 0 && _languages.InstalledTags().Count > 0)
+        {
+            var preparedSide = Math.Max(prepared.OriginalWidth, prepared.OriginalHeight) / prepared.ScaleToOriginal;
+            if (preparedSide <= AiPlatform.SystemOcrMaxImageDimension)
+                result = await _windows.RecognizeAsync(prepared.Path, null, cancellationToken).ConfigureAwait(false);
+        }
 
         return Math.Abs(prepared.ScaleToOriginal - 1) < 1e-9
             ? result with { ImageWidth = prepared.OriginalWidth, ImageHeight = prepared.OriginalHeight }

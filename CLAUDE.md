@@ -120,7 +120,9 @@ After every change to the project (code, docs, decisions, dependencies), before 
   (`VERCEL=1`) or in CI if a page is missing. Reproduced and verified locally with a no-op adapter (`NEXT_ADAPTER_PATH`). Also: Contact
   region (h3, WhatsApp, `<address>`) in the About card + footer About/Contact links, meta descriptions ≤ 160 characters, ScoutHub
   Organization as its own JSON-LD node (sameAs = ScoutHub's 6 accounts), `public/llms.txt`; the "ScoutHub" credit link is now 24 px tall
-  (WCAG 2.2 target size). Merged with the social-icons session's uncommitted work (owner: ship both). Full e2e 547/547, no console errors.
+  (WCAG 2.2 target size). Merged with the social-icons session's uncommitted work (owner: ship both). Full e2e 547/547, no console errors;
+  deployed (e5efca7), live e2e 322/322, Kashef re-scan **99 A+ / readiness 99** (was 92 A- / 95). The e2e header check now fetches with
+  `cache: "no-store"` (over https Chromium drops HSTS from cached responses, so it failed against the live site).
   Not fixable here: React/Next framework JS reported as "unused", DNSSEC (Vercel DNS), DMARC p=reject, PGP-signed security.txt.
   — web/scripts/{prerendered-html,csp-hashes,build-sw}.mjs, web/next.config.ts, web/src/{components/About.tsx,app/[locale]/page.tsx,lib/seo.ts}, web/messages/*, web/public/llms.txt, web/e2e/sections/seo.mjs, docs/status.md
 - 2026-11-12 — ScoutHub social accounts in the footer of every page (owner request; the developer's GitHub and WhatsApp links unchanged): six

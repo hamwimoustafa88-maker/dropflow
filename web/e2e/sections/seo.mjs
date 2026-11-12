@@ -206,7 +206,8 @@ export async function seo({ b, base }) {
   await section("security: headers on every route, security.txt, footer contact links, label-in-name, contrast", async () => {
     await b.goto(`${base}/en`, 800);
     for (const path of ["/en", "/ar", "/en/privacy", "/ar/terms", "/en/app", "/robots.txt", "/sitemap.xml", "/icon.svg"]) {
-      const h = await b.ev(`fetch(${JSON.stringify(path)}).then((r) => Object.fromEntries(r.headers))`);
+      // no-store: over https Chromium keeps no Strict-Transport-Security in its HTTP cache, so a cached response would hide it
+      const h = await b.ev(`fetch(${JSON.stringify(path)}, { cache: "no-store" }).then((r) => Object.fromEntries(r.headers))`);
       const csp = h["content-security-policy"] ?? "";
       const ok =
         h["x-content-type-options"] === "nosniff" && h["x-frame-options"] === "DENY" && /max-age=63072000; includeSubDomains; preload/.test(h["strict-transport-security"] ?? "") &&

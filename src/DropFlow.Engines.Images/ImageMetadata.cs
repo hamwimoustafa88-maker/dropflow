@@ -157,6 +157,12 @@ public static class ImageMetadata
             }
         }
 
+        // A TIFF's own text tags (Artist, Copyright...) are not in an EXIF block; show them as the EXIF fields they are.
+        if (format.StartsWith("TIF", StringComparison.Ordinal))
+            foreach (var (key, value) in TiffTags.Read(bytes))
+                if (!fields.Any(f => f.Group == MetadataGroup.Exif && f.Key == key))
+                    fields.Add(new MetadataField(MetadataGroup.Exif, key, Humanize(key), value, true, true));
+
         if (model.Iptc is { } iptc)
             foreach (var (key, _, value, editable) in iptc.Fields())
                 fields.Add(new MetadataField(MetadataGroup.Iptc, key, Humanize(key), value, editable, true));
@@ -203,12 +209,53 @@ public static class ImageMetadata
         if (!MetadataFormats.Supported.Contains(ext)) throw new ArgumentException($"Editing metadata is not supported for .{ext} files.");
         using var image = ReadImage(bytes);
         var m = Model.From(image);
-        m.ApplyAll(changes);
-        if (ext == "tiff" && m.ExifDirty && m.Exif is not null)
-            throw new ArgumentException("DropFlow cannot write EXIF fields into TIFF files; use the XMP or IPTC fields instead.");
+        m.ApplyAll(changes);   // validates every change (dates, read-only fields...) the same way for every format
+        if (ext == "tiff")
+        {
+            var tiffText = TiffTextChanges(changes, m.Exif);
+            m.ExifDirty = false;   // TIFF keeps these fields as its own tags, written below
+            m.WriteTo(image);
+            var data = ImageIo.Encode(image, ext, 92);
+            if (tiffText.Count > 0) data = TiffTags.Write(data, tiffText);
+            ImageIo.SaveBytes(data, output);
+            return;
+        }
         m.WriteTo(image);
         ImageIo.Save(image, output, ext, 92);
     }
+
+    /// <summary>
+    /// The EXIF changes a TIFF can hold: its own text tags (Artist, Copyright, ImageDescription, Make, Model, Software, DateTime).
+    /// "Remove all EXIF" removes those too. Any other EXIF field is refused with the list of what works instead of being dropped.
+    /// </summary>
+    private static Dictionary<string, string?> TiffTextChanges(IReadOnlyList<MetadataChange> changes, ExifProfile? edited)
+    {
+        var result = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var refused = new List<string>();
+        foreach (var change in changes.Where(c => c.Group == MetadataGroup.Exif))
+        {
+            var key = change.Key.Trim();
+            if (key == "*") { foreach (var name in TiffTags.TextTags.Keys) result[name] = null; }
+            else if (TiffTags.TextTags.ContainsKey(key)) result[key] = ExifString(edited, key);
+            else refused.Add(key);
+        }
+        if (refused.Count > 0)
+            throw new ArgumentException($"A TIFF keeps only these EXIF text fields: {string.Join(", ", TiffTags.TextTags.Keys)}. " +
+                $"Use the XMP or IPTC fields for {string.Join(", ", refused)}.");
+        return result;
+    }
+
+    private static string? ExifString(ExifProfile? exif, string key) => key switch
+    {
+        "Artist" => exif?.GetValue(ExifTag.Artist)?.Value,
+        "Copyright" => exif?.GetValue(ExifTag.Copyright)?.Value,
+        "ImageDescription" => exif?.GetValue(ExifTag.ImageDescription)?.Value,
+        "Make" => exif?.GetValue(ExifTag.Make)?.Value,
+        "Model" => exif?.GetValue(ExifTag.Model)?.Value,
+        "Software" => exif?.GetValue(ExifTag.Software)?.Value,
+        "DateTime" => exif?.GetValue(ExifTag.DateTime)?.Value,
+        _ => null,
+    };
 
     // ---------------------------------------------------------------- helpers
 

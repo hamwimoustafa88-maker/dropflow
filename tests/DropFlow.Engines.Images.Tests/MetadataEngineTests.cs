@@ -536,8 +536,42 @@ public class MetadataEngineTests
             Assert.Equal(Arabic, result.GetIptcProfile()!.GetValue(IptcTag.Caption)!.Value);
         }
         Assert.Equal(Arabic, Field(ImageMetadata.Read(output), MetadataGroup.Iptc, "Caption").Value);
-        var error = Assert.Throws<ArgumentException>(() => Edit(dir, input, new MetadataChange(MetadataGroup.Exif, "Artist", "x")));
+        var error = Assert.Throws<ArgumentException>(() => Edit(dir, input, new MetadataChange(MetadataGroup.Exif, "LensModel", "x")));
         Assert.Contains("TIFF", error.Message);
+        Assert.Contains("LensModel", error.Message);
+    }
+
+    /// <summary>
+    /// Owner request after the conversion matrix: Artist and Copyright were refused for TIFF ("cannot write EXIF fields into TIFF").
+    /// They are TIFF tags of their own (315, 33432), now written into IFD0, read back by DropFlow and by Magick.NET.
+    /// </summary>
+    [Fact]
+    public void Tiff_takes_artist_copyright_and_description_as_its_own_tags_and_can_remove_them()
+    {
+        using var dir = new TempDir();
+        var input = dir.Combine("p.tiff");
+        using (var img = new MagickImage(MagickColors.Teal, 40, 30)) img.Write(input);
+
+        var output = Edit(dir, input,
+            new MetadataChange(MetadataGroup.Exif, "Artist", "مصطفى Matrix"),
+            new MetadataChange(MetadataGroup.Exif, "Copyright", "(c) 2026 DropFlow"),
+            new MetadataChange(MetadataGroup.Exif, "ImageDescription", Arabic),
+            new MetadataChange(MetadataGroup.Xmp, "dc:title", Arabic));
+
+        var fields = ImageMetadata.Read(output);
+        Assert.Equal("مصطفى Matrix", Field(fields, MetadataGroup.Exif, "Artist").Value);
+        Assert.Equal("(c) 2026 DropFlow", Field(fields, MetadataGroup.Exif, "Copyright").Value);
+        Assert.Equal(Arabic, Field(fields, MetadataGroup.Exif, "ImageDescription").Value);
+        using (var result = new MagickImage(output))
+        {
+            Assert.Equal(MagickFormat.Tiff, result.Format);
+            Assert.Equal((40u, 30u), (result.Width, result.Height));
+            Assert.Equal(Arabic, XmpValue(result, Dc + "title"));
+            Assert.Equal("(c) 2026 DropFlow", result.GetAttribute("tiff:copyright"));
+        }
+
+        var removed = Edit(dir, output, new MetadataChange(MetadataGroup.Exif, "*", null));
+        Assert.DoesNotContain(ImageMetadata.Read(removed), f => f.Group == MetadataGroup.Exif && f.Key is "Artist" or "Copyright");
     }
 
     [Theory]

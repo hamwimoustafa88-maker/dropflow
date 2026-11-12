@@ -10,7 +10,10 @@ internal static class ImageIo
     public static readonly IReadOnlySet<string> Inputs =
         new HashSet<string> { "jpg", "png", "webp", "heic", "tiff", "avif", "bmp", "gif", "svg", "ico" };
 
-    /// <summary>Formats Magick.NET can write that are in the catalog's image outputs (pdf is handled by the PDF engine).</summary>
+    /// <summary>
+    /// Formats DropFlow can write that are in the catalog's image outputs (pdf is handled by the PDF engine). Magick.NET writes all of
+    /// them except HEIC, which <see cref="Heic.HeicEncoder"/> makes with FFmpeg (Magick.NET's libheif has no encoder).
+    /// </summary>
     public static readonly IReadOnlySet<string> Writable =
         new HashSet<string> { "jpg", "png", "webp", "heic", "tiff", "avif", "bmp", "gif", "ico" };
 
@@ -73,7 +76,8 @@ internal static class ImageIo
             if (ext == "ico" && (image.Width > 256 || image.Height > 256)) image.Resize(new MagickGeometry(256, 256));
             if (ext is "jpg" or "bmp") Flatten(image);
 
-            using (var stream = File.Create(temp)) image.Write(stream);
+            if (ext == "heic") File.WriteAllBytes(temp, Heic.HeicEncoder.Encode(image, quality ?? 90));
+            else using (var stream = File.Create(temp)) image.Write(stream);
             File.Move(temp, finalPath, overwrite: false);
             return finalPath;
         }
@@ -127,6 +131,7 @@ internal static class ImageIo
     /// <summary>Encodes to memory (used to measure size while searching for a quality that hits a target).</summary>
     public static byte[] Encode(MagickImage image, string ext, uint? quality)
     {
+        if (ext == "heic") return Heic.HeicEncoder.Encode(image, quality ?? 90);
         using var copy = (MagickImage)image.Clone();
         copy.Format = FormatOf(ext);
         if (quality is { } q && Lossy.Contains(ext)) copy.Quality = q;

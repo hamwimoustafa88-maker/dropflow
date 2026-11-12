@@ -70,7 +70,7 @@ internal sealed class CompressTool() : ImageTool("img.compress")
         byte[] Render(MagickImage img, uint? quality, bool reduceColors)
         {
             using var copy = (MagickImage)img.Clone();
-            copy.Format = ImageIo.FormatOf(ext);
+            if (ext != "heic") copy.Format = ImageIo.FormatOf(ext);
             if (ext == "png")
             {
                 copy.Settings.SetDefine(MagickFormat.Png, "compression-level", "9");
@@ -86,6 +86,8 @@ internal sealed class CompressTool() : ImageTool("img.compress")
                 copy.Quality = q;
             }
             if (ext == "jpg") ImageIo.Flatten(copy);
+            // Magick.NET cannot write HEIC: it is encoded by FFmpeg (see Heic.HeicEncoder).
+            if (ext == "heic") return Heic.HeicEncoder.Encode(copy, quality ?? 75u);
             return copy.ToByteArray();
         }
 

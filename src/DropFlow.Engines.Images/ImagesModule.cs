@@ -9,7 +9,14 @@ namespace DropFlow.Engines.Images;
 /// </summary>
 public static class ImagesModule
 {
-    public static IReadOnlyList<IConverter> Create(IEngineProvider engines) =>
+    public static IReadOnlyList<IConverter> Create(IEngineProvider engines)
+    {
+        // One provider per process in the app. Keep one that finds FFmpeg if a later caller (a test) passes a provider that finds nothing.
+        if (Heic.HeicEncoder.Engines is null || engines.Locate(EngineId.Ffmpeg) is not null) Heic.HeicEncoder.Engines = engines;
+        return Converters();
+    }
+
+    private static IReadOnlyList<IConverter> Converters() =>
     [
         new FormatConverter(),
         new CompressTool(),

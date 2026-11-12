@@ -12,6 +12,9 @@ internal sealed class FormatConverter() : ImageTool(ImageIo.Writable.Select(Oper
     public override bool Supports(string operation, string inputExtension) =>
         base.Supports(operation, inputExtension) && Operation.TargetOf(operation) != inputExtension;
 
+    /// <summary>HEIC is encoded by FFmpeg (shipped with the app), so the wheel can show it as needing the engine where it is missing.</summary>
+    public override EngineId EngineFor(string operation) => operation == Operation.Convert("heic") ? EngineId.Ffmpeg : EngineId.None;
+
     protected override IReadOnlyList<string> Process(ConversionJob job, string input, CancellationToken ct, out string? note)
     {
         note = null;

@@ -15,6 +15,8 @@ internal abstract class ImageTool(params string[] operations) : IConverter
 
     public virtual IReadOnlyList<ToolOption> OptionsFor(string operation) => [];
 
+    public virtual EngineId EngineFor(string operation) => EngineId.None;
+
     public Task<ConversionResult> RunAsync(ConversionJob job, IProgress<JobProgress> progress, CancellationToken cancellationToken) =>
         Task.Run(() =>
         {
@@ -44,7 +46,7 @@ internal abstract class ImageTool(params string[] operations) : IConverter
                 Cleanup(outputs);
                 return ConversionResult.Fail($"{Path.GetFileName(job.Inputs.FirstOrDefault() ?? "")}: {ex.Message}", started.Elapsed);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidDataException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidDataException or InvalidOperationException)
             {
                 Cleanup(outputs);
                 return ConversionResult.Fail(ex.Message, started.Elapsed);

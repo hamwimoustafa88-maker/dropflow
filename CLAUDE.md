@@ -122,7 +122,9 @@ After every change to the project (code, docs, decisions, dependencies), before 
   paths, handled), proves a changed Contact breaks it, and fails 30 days before Expires / 60 days before the key expires; e2e checks
   both files are served. SECURITY.md (en/ar) gives the fingerprint and the verify commands. scouthub.io looked up for the owner:
   someone else's parked domain (privacy service, expires 2026-12-03, redirects to ads, Windows Defender flagged its page) — nothing to
-  fix in the repo. — web/scripts/{security-txt,sign-security-txt}.mjs, web/public/.well-known/*, web/src/lib/__tests__/security-txt.test.ts, web/e2e/sections/seo.mjs, SECURITY.md, web/README.md, docs/status.md
+  fix in the repo. Verified: 916/916 Vitest locally and in CI (Linux, gpg ran), e2e seo 186/186, deployed (5f9e0ff); the live file
+  checks "Good signature" against the live key alone; Kashef re-scan c48dfc92: `security-txt.not-signed` resolved, nothing new,
+  still 99 A+ / readiness 99 (the finding was info-only). — web/scripts/{security-txt,sign-security-txt}.mjs, web/public/.well-known/*, web/src/lib/__tests__/security-txt.test.ts, web/e2e/sections/seo.mjs, SECURITY.md, web/README.md, docs/status.md
 - 2026-11-12 — Kashef scan fixes (owner: "connect to Kashef with this API key, run a full scan, fix everything it reports"): full scan of
   dropflow.scouthub.dev = security 92 (A-), readiness 95. Root cause of the main finding: the CSP script hashes never reached Vercel, because
   with a deployment adapter Next 16.4 writes prerendered HTML to `.next/server/route-cache/APP_PAGE/<hash>/$/<route>.html` and

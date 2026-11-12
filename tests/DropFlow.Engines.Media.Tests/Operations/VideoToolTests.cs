@@ -969,7 +969,7 @@ public class VideoRedactTests
         Assert.True(result.Success, result.Error);
         var a = h.Runner.Calls.Single().Args;
         // Pixelate (1/16 size, nearest-neighbour back up), then blur: a plain blur of large text can be sharpened back.
-        Assert.StartsWith("split=2[base][c0];[c0]crop=300:200:100:50,scale=18:12:flags=area,scale=300:200:flags=neighbor,boxblur=20:2[p0];[base][p0]overlay=100:50,", Args.After(a, "-vf"));
+        Assert.StartsWith("split=2[base][c0];[c0]crop=300:200:100:50,scale=18:12:flags=area,scale=300:200:flags=neighbor,boxblur=lr=20:lp=2:cr=20:cp=2[p0];[base][p0]overlay=100:50,", Args.After(a, "-vf"));
         Assert.True(Args.HasPair(a, "-c:a", "copy"));
         Assert.EndsWith("v (redacted).mp4", result.Outputs.Single());
     }
@@ -1003,7 +1003,7 @@ public class VideoRedactTests
     {
         using var h = new MediaHarness();
         await h.Run("vid.redact", h.Video("v.mp4"), MediaHarness.Opts(("w", 16), ("h", 16), ("strength", 60)));
-        Assert.Contains("boxblur=4:2", Args.After(h.Runner.Calls.Single().Args, "-vf")); // 16 / 4
+        Assert.Contains("boxblur=lr=4:lp=2:cr=3:cp=2", Args.After(h.Runner.Calls.Single().Args, "-vf")); // 16 / 4
     }
 
     [Theory]

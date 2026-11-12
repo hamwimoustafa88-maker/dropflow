@@ -93,8 +93,21 @@ internal static partial class ToolFilters
     /// (deconvolution recovers large text), so the box is first scaled down to 1/16 of its size (averaging whole blocks of pixels away)
     /// and back up with nearest-neighbour, and only then blurred to soften the blocks. One graph with one input and one output, so it
     /// can sit in <c>-vf</c>: the source is split once, every box is cut from the untouched source, and the patches are overlaid in order.
-    /// The blur radius is limited to a quarter of the box's short side because chroma planes are half size.
+    /// The blur radii come from <see cref="BlurRadii"/> (chroma planes are half size).
     /// </summary>
+    /// <summary>
+    /// Blur radii FFmpeg accepts for a box: boxblur needs each radius STRICTLY below half the short side of its plane, and the colour
+    /// planes of 4:2:0 video are half size. The luma radius keeps the old limit (a quarter of the short side); the chroma radius is
+    /// one less than that, so a box of any size (64 x 64, 16 x 16, 8 x 4) builds instead of failing with "Failed to configure input pad".
+    /// </summary>
+    public static (int Luma, int Chroma) BlurRadii(int width, int height, int strength)
+    {
+        var quarter = Math.Min(width, height) / 4;
+        var luma = Math.Clamp(strength, 1, Math.Max(1, quarter));
+        var chroma = Math.Clamp(Math.Min(luma, quarter - 1), 0, luma);
+        return (luma, chroma);
+    }
+
     public static string RedactBlur(IReadOnlyList<RedactBox> boxes, int strength)
     {
         if (boxes.Count == 0) throw new ArgumentException("At least one box is required.", nameof(boxes));
@@ -105,9 +118,9 @@ internal static partial class ToolFilters
         for (var i = 0; i < boxes.Count; i++)
         {
             var r = boxes[i].Rect;
-            var radius = Math.Clamp(strength, 1, Math.Max(1, Math.Min(r.Width, r.Height) / 4));
+            var (luma, chroma) = BlurRadii(r.Width, r.Height, strength);
             int smallW = Math.Max(2, Even(r.Width / 16)), smallH = Math.Max(2, Even(r.Height / 16));
-            graph.Append($"[c{i}]crop={r.Width}:{r.Height}:{r.X}:{r.Y},scale={smallW}:{smallH}:flags=area,scale={r.Width}:{r.Height}:flags=neighbor,boxblur={radius}:2[p{i}];");
+            graph.Append($"[c{i}]crop={r.Width}:{r.Height}:{r.X}:{r.Y},scale={smallW}:{smallH}:flags=area,scale={r.Width}:{r.Height}:flags=neighbor,boxblur=lr={luma}:lp=2:cr={chroma}:cp=2[p{i}];");
         }
 
         for (var i = 0; i < boxes.Count; i++)

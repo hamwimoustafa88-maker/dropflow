@@ -277,8 +277,8 @@ public class RedactBoxesTests
         Assert.True(result.Success, result.Error);
         var vf = h.Runner.Calls.Single().After("-vf")!;
         Assert.StartsWith("split=3[base][c0][c1];", vf);
-        Assert.Contains("[c0]crop=320:160:100:50,scale=20:10:flags=area,scale=320:160:flags=neighbor,boxblur=20:2[p0]", vf);
-        Assert.Contains("[c1]crop=64:64:0:0,scale=4:4:flags=area,scale=64:64:flags=neighbor,boxblur=16:2[p1]", vf);
+        Assert.Contains("[c0]crop=320:160:100:50,scale=20:10:flags=area,scale=320:160:flags=neighbor,boxblur=lr=20:lp=2:cr=20:cp=2[p0]", vf);
+        Assert.Contains("[c1]crop=64:64:0:0,scale=4:4:flags=area,scale=64:64:flags=neighbor,boxblur=lr=16:lp=2:cr=15:cp=2[p1]", vf);
         Assert.Contains("[base][p0]overlay=100:50:enable='between(t,1,2)'[o0]", vf);
         Assert.Contains("[o0][p1]overlay=0:0", vf);
         Assert.DoesNotContain("[o1]", vf);                                          // the last overlay is the graph's output

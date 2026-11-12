@@ -108,6 +108,31 @@ public class RotateSilenceRedactIntegrationTests
         Assert.True(cornerAfter < cornerBefore * 0.25, $"corner {cornerAfter} vs {cornerBefore}");
     }
 
+    /// <summary>
+    /// Found by the conversion matrix: every box whose short side was under about 84 px (a face, a number plate) failed with
+    /// "Failed to configure input pad on boxblur", because FFmpeg wants the chroma radius strictly below half the half-size plane.
+    /// </summary>
+    [EngineFact(EngineId.Ffmpeg)]
+    public async Task Small_boxes_the_size_of_a_face_or_a_number_plate_are_blurred()
+    {
+        using var dir = new TempDir();
+        var input = Path.Combine(dir.Path, "detail.mp4");
+        await RunFfmpeg("-f", "lavfi", "-i", "testsrc=size=640x360:rate=25:duration=2,noise=alls=90:allf=t+u",
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "16", "-pix_fmt", "yuv420p", input);
+
+        foreach (var (w, h) in new[] { (120, 80), (64, 64), (16, 16), (8, 4) })
+        {
+            var result = await Run("vid.redact", input, Opts(("x", 100), ("y", 100), ("w", w), ("h", h)));
+            Assert.True(result.Success, $"{w}x{h}: {result.Error}");
+            if (w >= 64)
+            {
+                var original = await Detail(input, 1, $"{w}:{h}:100:100");
+                var hidden = await Detail(result.Outputs.Single(), 1, $"{w}:{h}:100:100");
+                Assert.True(hidden < original * 0.25, $"{w}x{h}: detail {hidden} vs original {original}");
+            }
+        }
+    }
+
     [EngineFact(EngineId.Ffmpeg)]
     public async Task Target_size_that_is_reachable_never_ends_above_the_target()
     {

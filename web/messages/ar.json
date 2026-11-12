@@ -218,7 +218,16 @@
   "credit": {
     "rights": "© 2026 DropFlow. جميع الحقوق محفوظة.",
     "initiative": "إحدى مبادرات منصة <link>ScoutHub</link>",
-    "logoAlt": "ScoutHub"
+    "logoAlt": "ScoutHub",
+    "social": {
+      "label": "ScoutHub على مواقع التواصل",
+      "linkedin": "ScoutHub على لينكدإن",
+      "youtube": "ScoutHub على يوتيوب",
+      "facebook": "ScoutHub على فيسبوك",
+      "instagram": "ScoutHub على إنستغرام",
+      "telegram": "ScoutHub على تيليغرام",
+      "threads": "ScoutHub على ثريدز"
+    }
   },
   "footer": {
     "nav": "روابط الموقع",

@@ -18,6 +18,16 @@ export const SECURITY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/b
 export const SIGNING_POLICY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md";
 /** ScoutHub, the platform DropFlow is an initiative of (credit line of every page). */
 export const SCOUTHUB_URL = "https://scouthub.dev/";
+/** ScoutHub's own social accounts, shown as icons next to the credit line of every page, in this order (labels: `credit.social.<key>`). */
+export const SCOUTHUB_SOCIAL = [
+  { key: "linkedin", url: "https://www.linkedin.com/company/scouthub-lab/" },
+  { key: "youtube", url: "https://www.youtube.com/@ScoutHubLab" },
+  { key: "facebook", url: "https://www.facebook.com/profile.php?id=61595883873134" },
+  { key: "instagram", url: "https://www.instagram.com/scouthub.lab/" },
+  { key: "telegram", url: "https://t.me/scouthublab" },
+  { key: "threads", url: "https://www.threads.com/@scouthub.lab" },
+] as const;
+export type SocialKey = (typeof SCOUTHUB_SOCIAL)[number]["key"];
 export const GPL_URL = "https://www.gnu.org/licenses/gpl-3.0.html";
 /** Contact for anything that is not a bug or a security report (shown on the legal pages and in the footer). */
 export const WHATSAPP_URL = "https://wa.me/96170863903";

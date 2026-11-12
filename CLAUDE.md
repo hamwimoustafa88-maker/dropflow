@@ -122,6 +122,11 @@ After every change to the project (code, docs, decisions, dependencies), before 
   Organization as its own JSON-LD node, `public/llms.txt`. e2e 538/539 (the one failure, the 18 px "ScoutHub" credit link, predates this).
   Not fixable here: React/Next framework JS reported as "unused", DNSSEC (Vercel DNS), DMARC p=reject, PGP-signed security.txt.
   — web/scripts/{prerendered-html,csp-hashes,build-sw}.mjs, web/next.config.ts, web/src/{components/About.tsx,app/[locale]/page.tsx,lib/seo.ts}, web/messages/*, web/public/llms.txt, web/e2e/sections/seo.mjs, docs/status.md
+- 2026-11-12 — ScoutHub social accounts in the footer of every page (owner request; the developer's GitHub and WhatsApp links unchanged): six
+  icon links (LinkedIn, YouTube, Facebook, Instagram, Telegram, Threads) in the shared `SiteCredit` after the ScoutHub line, 44 px each, named in
+  ar/en (`credit.social.*`), new tab + noopener. URLs in `SCOUTHUB_SOCIAL` (site.ts, allow-listed in the no-upload test); glyphs inline from
+  Simple Icons (CC0; LinkedIn from v10.4.0). e2e seo checks them on all 8 pages (249/249). Main-folder `node_modules` was broken (empty
+  `@vitest`), fixed with `npm ci`. — web/src/components/{SiteCredit,SocialGlyph}.tsx, web/src/lib/site.ts, web/messages/*, web/e2e/sections/seo.mjs
 - 2026-10-23 — Footer credit on every page (owner request): one shared `SiteCredit` (landing footer, /app footer, Privacy, Terms) shows
   "© 2026 DropFlow. All rights reserved." (ar: "جميع الحقوق محفوظة") and "An initiative of the ScoutHub platform" with the ScoutHub logo (local copy of
   scouthub.dev/assets/img/favicon.svg in `public/icons/scouthub.svg`, link to https://scouthub.dev/). The wording is the owner's; the software stays GPL-3.0-or-later
@@ -339,16 +344,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   topmost drop-target wheel using a #01000000 hit-testable background and SetWindowPos for per-monitor DPI placement),
   tests/DropFlow.Hooks.Tests (16 tests, mutation-checked), docs/phase0-checklist.md. Spike smoke-launched OK on Windows 10 Pro 19045.
   Dropped FluentAssertions (v8+ commercial licence) in favour of plain xUnit asserts. Manual drag tests NOT yet run.
-- 2026-10-20 — Phase 1 landing page: scaffolded web/ (Next.js 16.4, Tailwind 4, next-intl 4; ar default + en, RTL, static
-  SSG, proxy redirects "/" by Accept-Language); own indigo/cyan identity + IBM Plex Sans Arabic; interactive simulated wheel
-  demo (convert/tools/actions), category explorer, PDF suite, media studio, privacy, roadmap; stats come from the catalog
-  (catalog/build.mjs now also writes web/src/data/catalog.json). Verified: lint clean, build OK, 0 prod vulnerabilities,
-  no hydration errors, no horizontal overflow at 390/768px, locale switch + wheel + tabs work (DOM-tested; screenshots were
-  unavailable in this environment, so visual polish is unreviewed). Disabled CTAs until a release/repo URL exists.
-- 2026-10-20 — Bootstrapped the repo from the approved plan: git init (main); moved first plan to docs/archive and the
-  Tangerine site text to docs/reference; wrote docs/plan.md, ADRs 0001–0005, LICENSE (GPL-3.0), README, CLAUDE.md;
-  created catalog/tools.json (428 conversions, 63 tools, 7 actions) + catalog/build.mjs which enforces Tangerine parity
-  (all 40 tools and every format target); enabled superpowers + ui-ux-pro-max; deleted the five cloned repos
-  (claude-skills, ponytail, rea, superpowers, ui-ux-pro-max-skill — clean, re-clonable from GitHub).
-
-

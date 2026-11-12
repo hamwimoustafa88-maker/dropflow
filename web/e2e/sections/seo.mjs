@@ -4,6 +4,15 @@ import { check, section } from "../helpers.mjs";
 const REPO = "https://github.com/hamwimoustafa88-maker/dropflow";
 const CONTRIBUTING = `${REPO}/blob/main/CONTRIBUTING.md`;
 const GPL = "https://www.gnu.org/licenses/gpl-3.0.html";
+// ScoutHub's social accounts in the credit line of every page, in order (owner's list, 2026-11-11).
+const SCOUTHUB_SOCIAL = [
+  "https://www.linkedin.com/company/scouthub-lab/",
+  "https://www.youtube.com/@ScoutHubLab",
+  "https://www.facebook.com/profile.php?id=61595883873134",
+  "https://www.instagram.com/scouthub.lab/",
+  "https://t.me/scouthublab",
+  "https://www.threads.com/@scouthub.lab",
+];
 const LOCALES = ["ar", "en"];
 const PATHS = ["", "/app", "/privacy", "/terms"];
 const PAGES = PATHS.flatMap((p) => LOCALES.map((l) => `/${l}${p}`));
@@ -149,6 +158,10 @@ export async function seo({ b, base }) {
       const c = await b.ev(`(() => { const e = document.querySelector('[data-testid=site-credit]'); const a = e?.querySelector('a'); const i = e?.querySelector('img'); return { n: document.querySelectorAll('[data-testid=site-credit]').length, rights: e?.querySelector('[data-testid=credit-rights]')?.textContent.trim(), init: e?.querySelector('[data-testid=credit-initiative]')?.textContent.trim(), href: a?.getAttribute('href'), rel: a?.rel, target: a?.target, img: i?.getAttribute('src'), loaded: !!i && i.complete && i.naturalWidth > 0 }; })()`);
       const [rights, init] = CREDIT[path.slice(1, 3)];
       check(`${path}: footer credit "${rights}" + "${init}" (logo from our own server, link to https://scouthub.dev/ in a new tab)`, c.n === 1 && c.rights === rights && c.init === init && c.href === "https://scouthub.dev/" && c.target === "_blank" && /noopener/.test(c.rel) && c.img === "/icons/scouthub.svg" && c.loaded, JSON.stringify(c));
+      const s = await b.ev(`(() => { const l = document.querySelector('[data-testid=site-credit] [data-testid=credit-social]'); return { label: l?.getAttribute('aria-label') ?? '', links: [...(l?.querySelectorAll('a') ?? [])].map((a) => ({ href: a.getAttribute('href'), target: a.target, rel: a.rel, name: a.getAttribute('aria-label') ?? '', glyph: !!a.querySelector('svg[aria-hidden=true] path'), h: a.getBoundingClientRect().height, w: a.getBoundingClientRect().width })) }; })()`);
+      const okSocial = s.label.includes("ScoutHub") && JSON.stringify(s.links.map((a) => a.href)) === JSON.stringify(SCOUTHUB_SOCIAL) &&
+        s.links.every((a) => a.target === "_blank" && /noopener/.test(a.rel) && a.name.startsWith("ScoutHub") && a.glyph && a.h >= 44 && a.w >= 44);
+      check(`${path}: ScoutHub's 6 social accounts next to the credit (named icons, new tab, noopener, >= 44 px)`, okSocial, JSON.stringify(s));
       const text = await b.ev("document.body.innerText");
       check(`${path}: no "proprietary" wording`, !RIGHTS.test(text), (text.match(RIGHTS) ?? [""])[0]);
     }

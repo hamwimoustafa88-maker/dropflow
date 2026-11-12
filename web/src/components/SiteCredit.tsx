@@ -1,13 +1,15 @@
 import { useTranslations } from "next-intl";
-import { SCOUTHUB_URL } from "@/lib/site";
+import { SCOUTHUB_SOCIAL, SCOUTHUB_URL } from "@/lib/site";
+import { SocialGlyph } from "./SocialGlyph";
 
 // The closing line of every page: copyright, then "an initiative of the ScoutHub platform" with the platform's logo
-// (a local copy of https://scouthub.dev/assets/img/favicon.svg, so the page never loads anything from another site).
+// (a local copy of https://scouthub.dev/assets/img/favicon.svg, so the page never loads anything from another site),
+// then ScoutHub's social accounts as icons (inline glyphs; each link is 44 px and named for screen readers).
 export function SiteCredit({ className = "" }: { className?: string }) {
   const t = useTranslations("credit");
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-x-4 gap-y-1.5 text-center text-xs text-muted sm:flex-row ${className}`}
+      className={`flex flex-col items-center justify-center gap-x-4 gap-y-1.5 text-center text-xs text-muted sm:flex-row sm:flex-wrap ${className}`}
       data-testid="site-credit"
     >
       <p data-testid="credit-rights">{t("rights")}</p>
@@ -30,6 +32,22 @@ export function SiteCredit({ className = "" }: { className?: string }) {
           })}
         </span>
       </p>
+      <ul aria-label={t("social.label")} className="-my-1.5 flex flex-wrap items-center justify-center" data-testid="credit-social">
+        {SCOUTHUB_SOCIAL.map(({ key, url }) => (
+          <li key={key}>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t(`social.${key}`)}
+              data-testid={`credit-social-${key}`}
+              className="inline-flex size-11 items-center justify-center rounded-full transition-colors duration-200 hover:bg-surface-2 hover:text-fg motion-reduce:transition-none"
+            >
+              <SocialGlyph name={key} />
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

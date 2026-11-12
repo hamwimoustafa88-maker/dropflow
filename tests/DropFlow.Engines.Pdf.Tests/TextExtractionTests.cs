@@ -118,6 +118,40 @@ public class TextExtractionTests
         Assert.StartsWith("# Price list", markdown);
     }
 
+    /// <summary>Matrix finding: a header whose cells sit closer than the cell gap (a narrow HTML table printed by Edge) was left out of the table.</summary>
+    [Fact]
+    public async Task A_tight_header_line_right_above_a_table_becomes_its_header_row()
+    {
+        using var dir = new TempDir();
+        var b = new PdfBuilder();
+        b.AddPage()
+            .Text("Name Qty Price", 72, 120)
+            .Table([["Apple", "3", "1.50"], ["Pear", "10", "2.00"]], [72, 250, 400], 140);
+        var pdf = b.Save(dir.Combine("tight.pdf"));
+
+        var result = await Kit.Ok(Kit.RunAsync("convert:md", [pdf]));
+
+        var markdown = File.ReadAllText(result.Outputs[0]).Replace("\r\n", "\n");
+        Assert.Contains("| Name | Qty | Price |\n| --- | --- | --- |\n| Apple | 3 | 1.50 |\n| Pear | 10 | 2.00 |", markdown);
+    }
+
+    [Fact]
+    public async Task A_sentence_above_a_table_stays_a_paragraph()
+    {
+        using var dir = new TempDir();
+        var b = new PdfBuilder();
+        b.AddPage()
+            .Text("These are the prices for this week.", 72, 120)
+            .Table([["Apple", "3", "1.50"], ["Pear", "10", "2.00"]], [72, 250, 400], 140);
+        var pdf = b.Save(dir.Combine("sentence.pdf"));
+
+        var result = await Kit.Ok(Kit.RunAsync("convert:md", [pdf]));
+
+        var markdown = File.ReadAllText(result.Outputs[0]).Replace("\r\n", "\n");
+        Assert.Contains("These are the prices for this week.\n", markdown);
+        Assert.Contains("| Apple | 3 | 1.50 |", markdown);
+    }
+
     [Fact]
     public async Task Table_cells_are_tab_separated_in_plain_text()
     {

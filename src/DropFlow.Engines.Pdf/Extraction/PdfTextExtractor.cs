@@ -102,6 +102,10 @@ internal static class PdfTextExtractor
                 continue;
             }
 
+            // A zero-width "letter" mapped to an ASCII symbol is a combining mark whose ToUnicode entry is wrong (LibreOffice maps the
+            // Arabic tanween of Tahoma to "$"): a real symbol always advances the pen, so it is not text.
+            if (Math.Abs(b.X - a.X) < 0.01 && value.All(c => c < 0x80 && !char.IsLetterOrDigit(c))) continue;
+
             var size = letter.PointSize > 0 ? letter.PointSize : Math.Max(1, letter.BoundingBox.Height);
             var font = letter.FontName ?? "";
             var bold = letter.FontDetails?.IsBold == true || font.Contains("Bold", StringComparison.OrdinalIgnoreCase);
@@ -132,15 +136,23 @@ internal static class PdfTextExtractor
             }
         }
 
+        // The page's main direction: an English sentence inside an Arabic document is laid out in a right-to-left paragraph, so its
+        // final full stop is drawn at its LEFT end and has to go back to the end of the sentence.
+        var arabic = glyphs.Sum(g => g.Text.Count(c => BidiOrder.KindOf(c) == CharKind.R));
+        var latin = glyphs.Sum(g => g.Text.Count(c => BidiOrder.KindOf(c) == CharKind.L));
+        // Any real share of Arabic means right-to-left paragraphs exist on the page; an LTR line there that starts with ". X" and ends
+        // with a letter was laid out right-to-left (in a left-to-right paragraph a line does not start with a full stop and a space).
+        var pageRtl = arabic >= 10 && arabic * 5 >= latin;
+
         foreach (var (baseY, _, members) in groups)
         {
-            var line = MakeLine(members.OrderBy(g => g.Left).ToList(), baseY);
+            var line = MakeLine(members.OrderBy(g => g.Left).ToList(), baseY, pageRtl);
             if (line is not null) lines.Add(line);
         }
         return lines;
     }
 
-    private static TextLine? MakeLine(List<Glyph> glyphs, double baseY)
+    private static TextLine? MakeLine(List<Glyph> glyphs, double baseY, bool pageRtl = false)
     {
         var visible = glyphs.Where(g => !string.IsNullOrWhiteSpace(g.Text)).ToList();
         if (visible.Count == 0) return null;
@@ -186,6 +198,7 @@ internal static class PdfTextExtractor
         var kinds = units.Select(BidiOrder.KindOf).ToList();
         var rtl = BidiOrder.MostlyRtl(kinds);
         var text = Finish(BidiOrder.VisualToLogical(units, BidiOrder.KindOf, rtl));
+        if (!rtl && pageRtl) text = TrailingPunctuationBack(text);
 
         var segments = new List<TextSegment>();
         for (var i = 0; i < cells.Count; i++)
@@ -194,6 +207,7 @@ internal static class PdfTextExtractor
             if (cellUnits.Count == 0 || i >= cellBounds.Count) continue;
             var cellRtl = BidiOrder.MostlyRtl(cellUnits.Select(BidiOrder.KindOf).ToList());
             var cellText = Finish(BidiOrder.VisualToLogical(cellUnits, BidiOrder.KindOf, cellRtl));
+            if (!cellRtl && pageRtl) cellText = TrailingPunctuationBack(cellText);
             if (cellText.Length > 0) segments.Add(new TextSegment(cellText, cellBounds[i].Left, cellBounds[i].Right));
         }
 
@@ -215,7 +229,21 @@ internal static class PdfTextExtractor
                 else sb.Append(c);
             }
         }
-        return sb.ToString().Trim();
+        return ArabicGlyphSharing.Fix(sb.ToString().Trim());
+    }
+
+    /// <summary>
+    /// A left-to-right line in a right-to-left paragraph ends with its punctuation drawn on the left: ". Invoice 4821" is read as
+    /// "Invoice 4821." when the line itself starts with letters or digits right after that punctuation.
+    /// </summary>
+    internal static string TrailingPunctuationBack(string text)
+    {
+        var i = 0;
+        while (i < text.Length && (text[i] is '.' or ',' or '!' or '?' or ':' or ';' || (i > 0 && text[i] == ' '))) i++;
+        if (i == 0 || i >= text.Length || !char.IsLetterOrDigit(text[i])) return text;
+        var tail = text[..i].Replace(" ", "");
+        var rest = text[i..].TrimEnd();
+        return char.IsLetterOrDigit(rest[^1]) ? rest + tail : text;
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -29,20 +29,18 @@ internal static class PdfTextTools
         var format = (ctx.Job.GetString("format", "both") ?? "both").ToLowerInvariant();
         if (format is not ("both" or "txt" or "md")) return ctx.Fail($"Unknown format '{format}'. Use txt, md or both.");
 
-        var document = PdfTextExtractor.Read(ctx.Input, ctx.Ct, f => ctx.Report(f * 0.9));
-        if (!document.HasText) return ctx.Fail(NoTextMessage);
+        var document = ScannedPdf.Read(ctx, 0.9, out var ocr, NoTextMessage);
 
         var outputs = new List<string>();
         if (format is "both" or "txt") outputs.Add(WriteText(ctx, "txt", "text", PlainTextWriter.Write(document), bom: true));
         if (format is "both" or "md") outputs.Add(WriteText(ctx, "md", "text", MarkdownWriter.Write(document), bom: false));
         ReportOutcome(ctx, document);
-        return ctx.Ok([.. outputs]);
+        return ocr ? ctx.OkWithNote(ScannedPdf.ReadWithOcrNote, [.. outputs]) : ctx.Ok([.. outputs]);
     }
 
     private static ConversionResult ConvertTo(JobContext ctx, string target)
     {
-        var document = PdfTextExtractor.Read(ctx.Input, ctx.Ct, f => ctx.Report(f * 0.9));
-        if (!document.HasText) return ctx.Fail(NoTextMessage);
+        var document = ScannedPdf.Read(ctx, 0.9, out var ocr, NoTextMessage);
 
         var content = target switch
         {
@@ -52,7 +50,7 @@ internal static class PdfTextTools
         };
         var path = WriteText(ctx, target, "converted", content, bom: target == "txt");
         ReportOutcome(ctx, document);
-        return ctx.Ok(path);
+        return ocr ? ctx.OkWithNote(ScannedPdf.ReadWithOcrNote, path) : ctx.Ok(path);
     }
 
     private static string WriteText(JobContext ctx, string extension, string suffix, string content, bool bom)

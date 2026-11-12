@@ -40,11 +40,29 @@ internal static class TableDetector
             }
             else
             {
+                if (items.Count > 0 && items[^1].Line is { } above && HeaderRow(above, group[0], table) is { } header)
+                {
+                    items.RemoveAt(items.Count - 1);
+                    table = table with { Rows = [header, .. table.Rows] };
+                }
                 items.Add(new PageItem(null, table));
             }
             i = j;
         }
         return items;
+    }
+
+    /// <summary>
+    /// A header row whose cells sit closer together than the cell gap reads as one line ("Item Qty Price") right above the table.
+    /// It joins the table when it is that close and has exactly one word per column.
+    /// </summary>
+    private static IReadOnlyList<string>? HeaderRow(TextLine above, TextLine firstRow, TableBlock table)
+    {
+        var columns = table.Rows[0].Count;
+        if (above.Segments.Count >= 2 || columns < 2) return null;
+        if (above.BaseY - firstRow.BaseY > 2.6 * Math.Max(above.FontSize, firstRow.FontSize)) return null;
+        var words = above.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length == columns && words.All(w => w.Length <= MaxAverageCellLength) ? words : null;
     }
 
     private static TableBlock? TryBuild(List<TextLine> rows)

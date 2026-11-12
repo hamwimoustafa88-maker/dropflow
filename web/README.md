@@ -25,7 +25,7 @@ next-intl. Files are processed **entirely in the browser** (Web Workers + WebAss
 | PWA | `scripts/sw.template.js`, `scripts/build-sw.mjs`, `public/manifest*.webmanifest` | `build` writes `public/sw.js` from the real build output (versioned caches + update flow). Registered on `/app` only. |
 | Engines | `scripts/vendor.mjs` | Copies the single-thread ffmpeg.wasm core + worker and the pdf.js worker/data from `node_modules` to `public/vendor` on install/dev/build. Served from our own origin, never a CDN. The 31 MB core is cached only on first use or "Save media offline". Also Tesseract.js (+ LSTM cores, Arabic/English models), libheif's ES module (HEIC) and ONNX Runtime Web, plus the U²-Net-P model, downloaded once with a pinned SHA-256 (`DROPFLOW_SKIP_MODELS=1` skips it). These are imported at runtime through `engine/lib/vendor-import.ts` (never bundled, so their wasm stays out of the app shell) and cached by the service worker on first use. |
 | Drop a link | `engine/lib/fetch-link.ts`, `components/app/AppShell.tsx` | A typed, pasted or dropped http(s) address is downloaded by the browser (GET, `credentials: "omit"`, no referrer, 1 GB cap, progress + cancel) and then handled like a dropped file. Sites without CORS get a bilingual "download it and drop it here, or use the Windows app" message. The ONLY module allowed to make a network request. |
-| Headers | `next.config.ts` | Every route: CSP (strict same-origin; `/app` stricter), nosniff, `X-Frame-Options: DENY`, HSTS preload, Permissions-Policy, COOP/CORP same-origin, own-origin ACAO (replaces Vercel's `*`, to verify after deploy). `/` is a 308 to `/ar`. `public/.well-known/security.txt` (RFC 9116). |
+| Headers | `next.config.ts` | Every route: CSP (strict same-origin; `/app` stricter), nosniff, `X-Frame-Options: DENY`, HSTS preload, Permissions-Policy, COOP/CORP same-origin, own-origin ACAO (replaces Vercel's `*`, to verify after deploy). `/` is a 308 to `/ar`. `public/.well-known/security.txt` (RFC 9116), PGP-signed (see below). |
 | Share images | `app/[locale]/opengraph-image.tsx`, `scripts/og-font.mjs` | Per-locale 1200x630 PNG; the Arabic one uses IBM Plex Sans Arabic Bold as TTF, fetched at prebuild into `.og-cache/` (gitignored) because next/og cannot read WOFF2. Without it the image falls back to Latin. |
 | SEO | `lib/site.ts`, `lib/seo.ts`, `app/robots.ts`, `app/sitemap.ts` | One base URL (`NEXT_PUBLIC_SITE_URL`, default `https://dropflow.scouthub.dev`); `pageMetadata()` gives every page canonical + hreflang (ar, en, x-default → ar), Open Graph and Twitter tags (a page that sets `openGraph` replaces the parent's, so each page calls it); JSON-LD (`SoftwareApplication` + `SoftwareSourceCode` + `FAQPage`, author = the ScoutHub organisation) on the landing page. All public links (GitHub, GPL) live in `lib/site.ts`. |
 | Downloads | `lib/downloads.ts`, `components/DownloadButtons.tsx`, `components/Developers.tsx` | ONE typed table of release files (Windows x64/ARM64/Portable/CLI, macOS, Linux .deb/.rpm/AppImage, Android); every link is GitHub's direct `releases/latest/download/<file>`, nothing is fetched. One `*_RELEASED` flag per platform: set it to `false` before deploying when the latest release lacks that platform's files (its buttons then show "Soon", never a 404). Lists are native `<details>` (work without JS); JS adds Esc / outside-click close, viewport flipping and a colour-only highlight of the visitor's OS. |
@@ -44,6 +44,21 @@ device. Still Windows-only (the app's tile says so and links to the latest relea
 HEIC/AVIF output (no licence-clean small encoder: HEVC needs x265, the AVIF wasm encoder is 3.5 MB), annotate (needs the visual
 editor), auto-redact (face model), password-protect/unlock PDF and the other desktop-only tools. Catalog `platforms` for `web` lists
 exactly the tools the registry implements (`webTools` in `engine/catalog-web.ts` reads it).
+
+## security.txt signature (yearly job)
+
+`public/.well-known/security.txt` carries an OpenPGP cleartext signature (RFC 9116 §2.3) by DropFlow's security.txt key
+`3AF6 2355 A1B5 E75A 5BBA 7E8A 644C 3E90 6373 8274`; its public half is `public/.well-known/pgp-key.txt` (the file's `Encryption`
+link). The private key is not in the repository: it lives in `%USERPROFILE%\.dropflow\gnupg` with its passphrase in
+`%USERPROFILE%\.dropflow\security-txt-pgp-passphrase.txt` (offline backup: `security-txt-pgp-secret-key.asc` and
+`security-txt-pgp-revocation.rev` in the same folder).
+
+- Edit a field: change the signed file directly, then `node scripts/sign-security-txt.mjs` (it strips the old signature, checks the
+  fields, signs, verifies with the public key alone and rewrites both files).
+- Renew: `node scripts/sign-security-txt.mjs --renew` moves `Expires` to 364 days from today. `src/lib/__tests__/security-txt.test.ts`
+  verifies the signature with gpg (CI has it; on Windows it finds Git's gpg) and fails 30 days before `Expires` and 60 days before the
+  key expires (2028-11-11; extending it is two `gpg --quick-set-expire` lines at the top of the script).
+- An encrypted report: `gpg --homedir ~/.dropflow/gnupg --pinentry-mode loopback --passphrase-file ~/.dropflow/security-txt-pgp-passphrase.txt --decrypt report.asc`.
 
 ## Gotchas found while building it (Next 16 / Turbopack)
 

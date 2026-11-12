@@ -236,6 +236,15 @@ export async function seo({ b, base }) {
         /^Canonical: https:\/\/dropflow\.scouthub\.dev\/\.well-known\/security\.txt$/m.test(sec.t) && /^Policy: https:\/\/github\.com\/.+\/SECURITY\.md$/m.test(sec.t),
       `${sec.s} ${sec.type}`,
     );
+    // The signature itself is checked with gpg by src/lib/__tests__/security-txt.test.ts; here: it is served signed, with its key.
+    const key = await b.ev(`fetch('/.well-known/pgp-key.txt').then(async (r) => ({ s: r.status, type: r.headers.get('content-type'), t: await r.text() }))`);
+    check(
+      "/.well-known/security.txt is served PGP-signed, and its Encryption link serves the public key (and nothing private)",
+      /^-----BEGIN PGP SIGNED MESSAGE-----\r?\n/.test(sec.t) && /^-----BEGIN PGP SIGNATURE-----\r?$/m.test(sec.t) && /^-----END PGP SIGNATURE-----\r?$/m.test(sec.t) &&
+        /^Encryption: https:\/\/dropflow\.scouthub\.dev\/\.well-known\/pgp-key\.txt$/m.test(sec.t) &&
+        key.s === 200 && /text\/plain/.test(key.type ?? "") && key.t.startsWith("-----BEGIN PGP PUBLIC KEY BLOCK-----") && !/PRIVATE/.test(key.t),
+      `${key.s} ${key.type} ${sec.t.slice(0, 40)}`,
+    );
 
     for (const loc of LOCALES) {
       await b.goto(`${base}/${loc}`, 900);

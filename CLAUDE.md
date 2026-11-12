@@ -65,6 +65,7 @@ when a program is missing.
 - Look at a window without clicking: `DropFlow.exe --snapshot-window <edit|annotate|crop|redact|background|qr|metadata|welcome|settings|encoder|history> out.png [--lang ar|en] [--dark] [--page N] [files…]` or `--snapshot-wheel <convert|tools|actions> out.png <files…>` (2x PNG, exits)
 - macOS/Linux app: `dotnet test tests/DropFlow.Desktop.Tests` · `dotnet run --project src/DropFlow.Desktop -- --snapshot out --lang ar` (renders the windows to PNG) · packages: `installer/linux/build-linux.sh VERSION`, `installer/macos/build-macos.sh VERSION` (set `AVALONIA_TELEMETRY_OPTOUT=1`)
 - Web: `cd web && npm install && npm run dev` · `npm run lint` · `npm run build` (Next 16 differs from older versions: read `web/node_modules/next/dist/docs/` first)
+- security.txt: `cd web && node scripts/sign-security-txt.mjs --renew` once a year (tests fail 30 days before Expires; needs the key in `%USERPROFILE%\.dropflow\gnupg`, web/README.md)
 - Android: `cd android && ./gradlew testDebugUnitTest assembleDebug assembleRelease` (`gradlew.bat` on Windows; release signing from
   `DROPFLOW_KEYSTORE*` env vars or `dropflow.*` Gradle properties, see android/README.md; CI: `.github/workflows/build-android.yml`)
 
@@ -112,6 +113,16 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-12 — security.txt is PGP-signed (owner: "do it, you have full permissions"; Kashef `security-txt.not-signed`): new dedicated
+  Ed25519 key `3AF6 2355 A1B5 E75A 5BBA 7E8A 644C 3E90 6373 8274` (+ cv25519 encryption subkey, both expire 2028-11-11), user ID
+  without an e-mail address; private key, passphrase, armored backup and revocation certificate only in `%USERPROFILE%\.dropflow`
+  (never in the repo). `web/scripts/sign-security-txt.mjs [--renew]` strips the old signature, checks the fields, clear-signs
+  (SHA-512), verifies with the public key alone and writes `public/.well-known/pgp-key.txt` (the new `Encryption` link); Expires is now
+  2027-11-11. `src/lib/__tests__/security-txt.test.ts` verifies it with gpg in a throw-away keyring (Git's MSYS gpg needs `/c/...`
+  paths, handled), proves a changed Contact breaks it, and fails 30 days before Expires / 60 days before the key expires; e2e checks
+  both files are served. SECURITY.md (en/ar) gives the fingerprint and the verify commands. scouthub.io looked up for the owner:
+  someone else's parked domain (privacy service, expires 2026-12-03, redirects to ads, Windows Defender flagged its page) — nothing to
+  fix in the repo. — web/scripts/{security-txt,sign-security-txt}.mjs, web/public/.well-known/*, web/src/lib/__tests__/security-txt.test.ts, web/e2e/sections/seo.mjs, SECURITY.md, web/README.md, docs/status.md
 - 2026-11-12 — Kashef scan fixes (owner: "connect to Kashef with this API key, run a full scan, fix everything it reports"): full scan of
   dropflow.scouthub.dev = security 92 (A-), readiness 95. Root cause of the main finding: the CSP script hashes never reached Vercel, because
   with a deployment adapter Next 16.4 writes prerendered HTML to `.next/server/route-cache/APP_PAGE/<hash>/$/<route>.html` and
@@ -342,8 +353,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   libraries; scroll reveal via CSS `animation-timeline`; favicon (`icon.svg`) + static OG image; `robots: noindex` until launch
   (Phase 8). Verified with headless Edge over DevTools (dark/light, ar/en, true 390px mobile: 0 horizontal overflow). Created
   private GitHub repo hamwimoustafa88-maker/dropflow and pushed `main`.
-- 2026-10-20 — Phase 0 spike (code only): installed .NET 10 SDK 10.0.402 via winget (user approved); created DropFlow.sln,
-  src/DropFlow.Hooks (DragDetector + LowLevelInputHook), src/DropFlow.Spike (WPF, PerMonitorV2, asInvoker manifest, non-activating
-  topmost drop-target wheel using a #01000000 hit-testable background and SetWindowPos for per-monitor DPI placement),
-  tests/DropFlow.Hooks.Tests (16 tests, mutation-checked), docs/phase0-checklist.md. Spike smoke-launched OK on Windows 10 Pro 19045.
-  Dropped FluentAssertions (v8+ commercial licence) in favour of plain xUnit asserts. Manual drag tests NOT yet run.

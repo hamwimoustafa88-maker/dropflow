@@ -24,6 +24,21 @@ Only the maintainer can see the report. You can expect an acknowledgement within
 Fixes are released as soon as practical, and the advisory is published afterwards with credit to you unless you prefer to stay anonymous.
 DropFlow is maintained by one person in their spare time, so these are goals rather than guarantees, and there is no bug bounty.
 
+### security.txt and our PGP key
+
+<https://dropflow.scouthub.dev/.well-known/security.txt> is signed with DropFlow's OpenPGP key (Ed25519), fingerprint
+**`3AF6 2355 A1B5 E75A 5BBA  7E8A 644C 3E90 6373 8274`**, published at <https://dropflow.scouthub.dev/.well-known/pgp-key.txt>.
+To check that the contact details are ours:
+
+```sh
+curl -sO https://dropflow.scouthub.dev/.well-known/pgp-key.txt
+curl -sO https://dropflow.scouthub.dev/.well-known/security.txt
+gpg --import pgp-key.txt && gpg --verify security.txt
+```
+
+The fingerprint gpg prints must match the one above. You may also use this key to encrypt the sensitive part of a report you send
+through the private advisory form.
+
 ## What is in scope
 
 DropFlow processes untrusted files, so these matter most:
@@ -50,6 +65,10 @@ about the unsigned installer are known (see the README).
 واذكر الإصدار المتأثر وخطوات إعادة المشكلة، بالعربية أو بالإنجليزية. لا يرى البلاغ إلا صاحب المشروع.
 
 نسعى للرد خلال 7 أيام وتقييم المشكلة خلال 30 يوماً، ونذكر اسمك عند نشر الإصلاح إلا إذا فضّلت عدم ذكره. الإصلاحات الأمنية تصدر لآخر إصدار فقط.
+
+ملف <https://dropflow.scouthub.dev/.well-known/security.txt> موقَّع بمفتاح OpenPGP الخاص بـ DropFlow، وبصمته
+<span dir="ltr">`3AF6 2355 A1B5 E75A 5BBA  7E8A 644C 3E90 6373 8274`</span>، والمفتاح العام منشور على
+<https://dropflow.scouthub.dev/.well-known/pgp-key.txt> (أوامر التحقق في القسم الإنجليزي أعلاه).
 أهم ما يعنينا: أي طريقة تجعل محتوى ملفات المستخدم أو أسماءها تغادر جهازه، أو ملف مصمَّم يكتب خارج مجلد الناتج أو يستبدل الملف الأصلي
 أو يشغّل أوامر عبر FFmpeg أو غيره.
 

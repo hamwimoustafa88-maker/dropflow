@@ -1,5 +1,18 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+# DropFlow: https://dropflow.scouthub.dev
+# Signed with DropFlow's OpenPGP key 3AF6 2355 A1B5 E75A 5BBA 7E8A 644C 3E90 6373 8274 (the Encryption link below).
 Contact: https://github.com/hamwimoustafa88-maker/dropflow/security/advisories/new
-Expires: 2027-10-21T00:00:00Z
+Expires: 2027-11-11T00:00:00Z
+Encryption: https://dropflow.scouthub.dev/.well-known/pgp-key.txt
 Preferred-Languages: ar, en
 Canonical: https://dropflow.scouthub.dev/.well-known/security.txt
 Policy: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQQ69iNVobXnWlu6fopkTD6QY3OCdAUCavV19gAKCRBkTD6QY3OC
+dPsBAQCIlZ36GrhnrikCHwSxM+6u19wMmt9k76W+kFN8gLJWegD/ZMPe7aVBOtV9
+lyWhRcf7N1AAVbP8OgaQBoAWy37Yrgw=
+=Rmw0
+-----END PGP SIGNATURE-----

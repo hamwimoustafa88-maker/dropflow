@@ -7,7 +7,15 @@ namespace DropFlow.Engines.Pdf.Tests;
 /// <summary>Writes a small EPUB by hand (not with the production EPUB writer) in the shape real books have: nested folders, a nav document, images, scripts to strip.</summary>
 internal static class EpubFixture
 {
-    public static string Write(string path, bool drm = false, string title = "Sample Book", string language = "en")
+    /// <summary>A small JPEG (60 x 90, blue) used as a cover picture; written with Magick.NET, not by the product.</summary>
+    public static byte[] CoverJpeg()
+    {
+        using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.SteelBlue, 60, 90) { Format = ImageMagick.MagickFormat.Jpeg };
+        return image.ToByteArray();
+    }
+
+    /// <param name="cover">Adds a cover picture that is not in the text: EPUB 3 <c>properties="cover-image"</c> and the EPUB 2 meta.</param>
+    public static string Write(string path, bool drm = false, string title = "Sample Book", string language = "en", bool cover = false)
     {
         using var scratch = new TempDir();
         var png = Samples.Png(scratch.Combine("cover.png"), 8, 8);
@@ -27,8 +35,10 @@ internal static class EpubFixture
 
         Add(zip, "OPS/package.opf",
             "<?xml version=\"1.0\" encoding=\"utf-8\"?><package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" unique-identifier=\"id\">" +
-            $"<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:identifier id=\"id\">urn:uuid:1234</dc:identifier><dc:title>{title}</dc:title><dc:creator>An Author</dc:creator><dc:language>{language}</dc:language></metadata>" +
+            $"<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:identifier id=\"id\">urn:uuid:1234</dc:identifier><dc:title>{title}</dc:title><dc:creator>An Author</dc:creator><dc:language>{language}</dc:language>" +
+            (cover ? "<meta name=\"cover\" content=\"cover\"/>" : "") + "</metadata>" +
             "<manifest>" +
+            (cover ? "<item id=\"cover\" href=\"images/cover.jpg\" media-type=\"image/jpeg\" properties=\"cover-image\"/>" : "") +
             "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>" +
             "<item id=\"c1\" href=\"text/ch1.xhtml\" media-type=\"application/xhtml+xml\"/>" +
             "<item id=\"c2\" href=\"text/ch2.xhtml\" media-type=\"application/xhtml+xml\"/>" +
@@ -51,6 +61,11 @@ internal static class EpubFixture
             "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>NOTES should be skipped (linear no)</p></body></html>");
         Add(zip, "OPS/style.css", "p { color: red }");
         zip.CreateEntryFromFile(png, "OPS/images/cover pic.png");
+        if (cover)
+        {
+            using var entry = zip.CreateEntry("OPS/images/cover.jpg").Open();
+            entry.Write(CoverJpeg());
+        }
         return path;
     }
 

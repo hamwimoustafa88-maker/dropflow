@@ -65,7 +65,15 @@ internal static partial class Mobi
         }
 
         var language = header.Language ?? BookLanguage.Detect(body);
-        return new EpubBook(string.IsNullOrWhiteSpace(title) ? fallbackTitle : title.Trim(), author, language, body);
+        return new EpubBook(string.IsNullOrWhiteSpace(title) ? fallbackTitle : title.Trim(), author, language, body) { Cover = Cover(records, header) };
+    }
+
+    /// <summary>The picture EXTH 201 names (an offset from the first picture record), when it is one.</summary>
+    private static byte[]? Cover(List<byte[]> records, MobiHeader header)
+    {
+        if (header.FirstImage < 0 || header.CoverOffset < 0) return null;
+        var index = header.FirstImage + header.CoverOffset;
+        return index < records.Count && records[index].Length <= EpubReader.MaxImageBytes && BookHtml.SniffImage(records[index]) is not null ? records[index] : null;
     }
 
     // ---- Palm database ------------------------------------------------------------------------------------------------------
@@ -148,6 +156,9 @@ internal static partial class Mobi
         public Dictionary<int, string> Exth { get; } = [];
         public List<string> Authors { get; } = [];
 
+        /// <summary>EXTH 201: the cover picture, counted from the first picture record; -1 when there is none.</summary>
+        public int CoverOffset { get; private set; } = -1;
+
         private void ReadExth(byte[] r0, int start)
         {
             var count = BinaryPrimitives.ReadUInt32BigEndian(r0.AsSpan(start + 8));
@@ -158,7 +169,9 @@ internal static partial class Mobi
                 var length = (int)BinaryPrimitives.ReadUInt32BigEndian(r0.AsSpan(position + 4));
                 if (length < 8 || position + length > r0.Length) break;
                 var value = r0.AsSpan(position + 8, length - 8);
-                if (type is 100 or 503 or 524 or 105 or 101)
+                if (type == 201 && value.Length == 4 && BinaryPrimitives.ReadUInt32BigEndian(value) is var cover and < 0xFFFF)
+                    CoverOffset = (int)cover;
+                else if (type is 100 or 503 or 524 or 105 or 101)
                 {
                     var text = Encoding.GetString(value).TrimEnd('\0').Trim();
                     if (type == 100) { if (text.Length > 0) Authors.Add(text); }
@@ -293,11 +306,31 @@ internal static partial class Mobi
         html = Regex.Replace(html, @"</body>\s*</html>\s*$", "", RegexOptions.IgnoreCase);
 
         var chapters = PageBreak().Split(html).Where(c => !string.IsNullOrWhiteSpace(Regex.Replace(c, "<[^>]*>", "")) || c.Contains("<img", StringComparison.OrdinalIgnoreCase)).ToList();
+        // A table of contents page (what the guide's "toc" reference points at, made of nothing but a heading and links) is navigation,
+        // not text: the other formats build their own.
+        if (GuideToc().Match(ascii) is { Success: true } toc && FilePos().Match(toc.Value) is { Success: true } tocPos)
+        {
+            var anchor = $"id=\"filepos{long.Parse(tocPos.Groups["pos"].Value, System.Globalization.CultureInfo.InvariantCulture)}\"";
+            var index = chapters.FindIndex(c => c.Contains(anchor, StringComparison.Ordinal));
+            if (index >= 0 && chapters.Count > 1 && IsLinkList(chapters[index])) chapters.RemoveAt(index);
+        }
         if (chapters.Count == 0) chapters.Add(html);
         var body = new StringBuilder();
         for (var i = 0; i < chapters.Count; i++)
             body.Append("<section id=\"ch").Append(i + 1).Append("\">").Append(chapters[i]).Append("</section>\n");
         return BookHtml.Clean(body.ToString(), src => src.StartsWith("recindex:", StringComparison.Ordinal) && int.TryParse(src[9..], out var n) ? Image(records, header, n) : null);
+    }
+
+    [GeneratedRegex(@"<reference\b[^>]*\btype\s*=\s*[""']?toc\b[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex GuideToc();
+
+    /// <summary>True when a chapter has links and no text outside them and its headings.</summary>
+    private static bool IsLinkList(string chapterHtml)
+    {
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument("<body>" + chapterHtml + "</body>");
+        if (document.QuerySelector("a[href]") is null) return false;
+        foreach (var element in document.QuerySelectorAll("a, h1, h2, h3, h4, h5, h6").ToList()) element.Remove();
+        return string.IsNullOrWhiteSpace(document.Body!.TextContent) && document.Body.QuerySelector("img") is null;
     }
 
     private static string? Image(List<byte[]> records, MobiHeader header, int oneBased)
@@ -391,7 +424,7 @@ internal static partial class Mobi
 }
 
 /// <summary>PalmDOC compression: a byte-oriented LZ77 (literals, back references of 3-10 bytes within 2047, and "space + letter" pairs).</summary>
-internal static class PalmDoc
+internal static partial class PalmDoc
 {
     public static void Decompress(ReadOnlySpan<byte> input, MemoryStream output)
     {

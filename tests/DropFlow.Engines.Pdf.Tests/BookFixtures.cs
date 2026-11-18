@@ -23,14 +23,17 @@ internal static class BookFixtures
 
     // ---- FB2 --------------------------------------------------------------------------------------------------------------------
 
-    public static string Fb2Arabic(string path)
+    /// <param name="cover">Adds a &lt;coverpage&gt; whose picture (a JPEG binary) is not used in the text.</param>
+    public static string Fb2Arabic(string path, bool cover = false)
     {
         var png = Convert.ToBase64String(Png());
         var xml =
             "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
             "<FictionBook xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\" xmlns:l=\"http://www.w3.org/1999/xlink\">\n" +
             "<description><title-info><genre>prose_classic</genre><author><first-name>أحمد</first-name><last-name>شوقي</last-name></author>" +
-            $"<book-title>{ArabicTitle}</book-title><lang>ar</lang></title-info>" +
+            $"<book-title>{ArabicTitle}</book-title>" +
+            (cover ? "<coverpage><image l:href=\"#cover.jpg\"/></coverpage>" : "") +
+            "<lang>ar</lang></title-info>" +
             "<document-info><author><nickname>tester</nickname></author><date>2026</date><id>1</id><version>1.0</version></document-info></description>\n" +
             "<body><title><p>" + ArabicTitle + "</p></title>\n" +
             "<section id=\"s1\"><title><p>" + ArabicChapter + "</p></title>" +
@@ -44,6 +47,7 @@ internal static class BookFixtures
             "</body>\n" +
             "<body name=\"notes\"><section id=\"n1\"><title><p>1</p></title><p>حاشية</p></section></body>\n" +
             $"<binary id=\"pic.png\" content-type=\"image/png\">{png}</binary>\n" +
+            (cover ? $"<binary id=\"cover.jpg\" content-type=\"image/jpeg\">{Convert.ToBase64String(EpubFixture.CoverJpeg())}</binary>\n" : "") +
             "</FictionBook>\n";
         File.WriteAllText(path, xml, new UTF8Encoding(false));
         return path;

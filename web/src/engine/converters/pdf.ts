@@ -1,6 +1,6 @@
 // PDF converter manifest (LIGHT: no pdf-lib / pdf.js import here; the implementations are loaded on demand).
 // Operations that really work in a browser: merge, split, rotate, organize, metadata, watermark, page numbers
-// (pdf-lib, Web Worker) and pages->images, text/markdown extraction, compress-by-rendering (pdf.js, main thread).
+// (pdf-lib, Web Worker) and pages->images, text/markdown extraction, pages->comic book (CBZ), compress-by-rendering (pdf.js, main thread).
 // Not offered: protect/unlock/OCR/redact/sign/Office conversions (the Windows app does those).
 
 import type { Converter, Job, ProgressFn, Runtime, ToolOption } from "../types";
@@ -9,13 +9,14 @@ import { PAGE_NUMBER_POSITIONS } from "../lib/pdf-layout";
 const MB = 1024 * 1024;
 
 const WORKER_OPS = ["pdf.merge", "pdf.split", "pdf.rotate", "pdf.organize", "pdf.metadata", "pdf.watermark", "pdf.page-numbers"] as const;
-const RENDER_OPS = ["convert:png", "convert:jpg", "convert:txt", "convert:md", "pdf.to-images", "pdf.extract-text", "pdf.compress"] as const;
+const RENDER_OPS = ["convert:png", "convert:jpg", "convert:txt", "convert:md", "convert:cbz", "pdf.to-images", "pdf.extract-text", "pdf.compress"] as const;
 
 const OPERATIONS: readonly string[] = [
   "convert:png",
   "convert:jpg",
   "convert:txt",
   "convert:md",
+  "convert:cbz",
   "pdf.merge",
   "pdf.split",
   "pdf.rotate",

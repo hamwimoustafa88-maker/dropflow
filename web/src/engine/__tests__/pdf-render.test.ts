@@ -172,6 +172,29 @@ describe("pages -> images", () => {
     expect(spy.blobCalls.every((c) => c.type === "image/jpeg" && c.quality === 0.92)).toBe(true);
   });
 
+  it("convert:cbz draws every page at 200 DPI as a JPEG (quality 0.9) into one numbered comic book with a ComicInfo.xml", async () => {
+    fake.pages = [
+      { width: 72, height: 144 },
+      { width: 144, height: 72 },
+    ];
+    const seen: number[] = [];
+    const out = await run(job("convert:cbz", {}, pdfFile(5000, "مجلة.pdf")), (f) => seen.push(f));
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe("مجلة.cbz");
+    expect(out[0].type).toBe("application/vnd.comicbook+zip");
+    expect(spy.rendered.map((r) => [r.w, r.h])).toEqual([[200, 400], [400, 200]]);
+    expect(spy.blobCalls.every((c) => c.type === "image/jpeg" && c.quality === 0.9)).toBe(true);
+    const { unzipSync } = await import("fflate");
+    const files = unzipSync(new Uint8Array(await out[0].arrayBuffer()));
+    expect(Object.keys(files)).toEqual(["001.jpg", "002.jpg", "ComicInfo.xml"]);
+    expect([...files["001.jpg"]]).toEqual([...TINY_JPEG]);
+    const info = new TextDecoder().decode(files["ComicInfo.xml"]);
+    expect(info).toContain("<Title>مجلة</Title>");
+    expect(info).toContain("<PageCount>2</PageCount>");
+    expect(seen[seen.length - 1]).toBeGreaterThan(0.9);
+    expect(spy.destroyed).toBe(1);
+  });
+
   it("convert:jpg is jpg at scale 2", async () => {
     fake.pages = [{ width: 100, height: 100 }];
     const out = await run(job("convert:jpg"));

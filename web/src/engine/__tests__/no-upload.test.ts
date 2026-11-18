@@ -85,6 +85,18 @@ describe("no code path uploads user data", () => {
       "src/lib/site.ts: https://wa.me/96181035672", // a link the visitor may click (WhatsApp contact), never fetched
       "src/engine/converters/media-engine.ts: http://localhost", // a base for parsing relative URLs, never fetched
       "src/engine/lib/strip-meta.ts: http://ns.adobe.com/xap", // the XMP packet signature we look FOR, not a request
+      // XML namespace names written into (or recognised in) e-book and comic files; names, never fetched
+      "src/engine/lib/comic.ts: http://www.w3.org/2001/XMLSchema-instance",
+      "src/engine/lib/epub.ts: http://www.w3.org/1999/xhtml",
+      "src/engine/lib/epub.ts: http://www.idpf.org/2007/ops",
+      "src/engine/lib/epub.ts: http://www.idpf.org/2008/embedding",
+      "src/engine/lib/epub.ts: http://ns.adobe.com/pdf/enc#RC",
+      "src/engine/lib/epub.ts: http://www.idpf.org/2007/opf",
+      "src/engine/lib/epub.ts: http://purl.org/dc/elements/1.1/",
+      "src/engine/lib/fb2.ts: http://www.gribuser.ru/xml/fictionbook/2.0",
+      "src/engine/lib/fb2.ts: http://www.w3.org/1999/xlink",
+      "src/engine/lib/zipped-books.ts: http://www.idpf.org/2007/opf",
+      "src/engine/lib/zipped-books.ts: http://purl.org/dc/elements/1.1/",
     ];
     expect([...urls].filter((u) => !allowed.includes(u))).toEqual([]);
   });

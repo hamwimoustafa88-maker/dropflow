@@ -16,14 +16,14 @@ function sum(bytes: number[]): number {
   for (let i = 0; i < bytes.length; i += 4) s = (s + (((bytes[i] ?? 0) << 24) | ((bytes[i + 1] ?? 0) << 16) | ((bytes[i + 2] ?? 0) << 8) | (bytes[i + 3] ?? 0))) >>> 0;
   return s;
 }
-function testFont(flavor: number, outlineTag: "glyf" | "CFF "): Uint8Array {
+function testFont(flavor: number, outlineTag: "glyf" | "CFF ", replace: Record<string, number[]> = {}): Uint8Array {
   const head = [...be32(0x00010000), ...be32(0x00028000), ...be32(0), ...be32(0x5f0f3cf5), 0, 11, 0x03, 0xe8, ...new Array(36).fill(0)];
   const tables: [string, number[]][] = [
     ["head", head],
     [outlineTag, Array.from({ length: 3001 }, (_, i) => (i * 7) % 13)], // compressible, odd length
     ["name", Array.from({ length: 37 }, (_, i) => (i * 131 + 17) & 0xff)], // short: stays uncompressed
     ["OS/2", Array.from({ length: 96 }, () => 0)],
-  ];
+  ].map(([t, d]) => [t as string, replace[t as string] ?? (d as number[])]);
   tables.sort((a, b) => (a[0] < b[0] ? -1 : 1));
   const n = tables.length;
   const out: number[] = [...be32(flavor), 0, n, 0, 64, 0, 2, 0, 0];
@@ -67,12 +67,13 @@ function assertChecksums(file: Uint8Array) {
 const tablesOf = (f: Sfnt) => [...f.tables.entries()].filter(([t]) => t !== "head").map(([t, d]) => [t, [...d]]);
 
 describe("fonts converter manifest", () => {
-  it("offers TTF/OTF to WOFF and WOFF back, nothing else", () => {
+  it("offers TTF/OTF to WOFF and EOT, WOFF back and to EOT, nothing else (no WOFF2: no Brotli in browsers)", () => {
     expect(fontsConverter.supports("convert:woff", "ttf")).toBe(true);
     expect(fontsConverter.supports("convert:woff", "otf")).toBe(true);
     expect(fontsConverter.supports("convert:ttf", "woff")).toBe(true);
     expect(fontsConverter.supports("convert:otf", "woff")).toBe(true);
-    for (const [op, ext] of [["convert:woff", "woff"], ["convert:ttf", "otf"], ["convert:otf", "ttf"], ["convert:woff2", "ttf"], ["convert:eot", "ttf"], ["convert:ttf", "woff2"], ["convert:woff", "png"]])
+    for (const ext of ["ttf", "otf", "woff"]) expect(fontsConverter.supports("convert:eot", ext), ext).toBe(true);
+    for (const [op, ext] of [["convert:woff", "woff"], ["convert:ttf", "otf"], ["convert:otf", "ttf"], ["convert:woff2", "ttf"], ["convert:eot", "woff2"], ["convert:eot", "eot"], ["convert:ttf", "eot"], ["convert:ttf", "woff2"], ["convert:woff", "png"]])
       expect(fontsConverter.supports(op, ext), `${op} ${ext}`).toBe(false);
     expect(registry.find("convert:woff", "ttf")?.id).toBe("fonts");
     expect(fontsConverter.options("convert:woff")).toEqual([]);
@@ -151,7 +152,7 @@ describe("sfnt and WOFF 1.0", () => {
     expect(code(() => convertFontBytes(woff, "otf"))).toBe("fontOutlines"); // TrueType outlines: OTF needs the Windows app
     expect(code(() => convertFontBytes(convertFontBytes(testFont(CFF, "CFF "), "woff"), "ttf"))).toBe("fontOutlines");
     expect(code(() => convertFontBytes(new Uint8Array([0x74, 0x74, 0x63, 0x66, ...new Array(20).fill(0)]), "woff"))).toBe("fontCollection");
-    expect(code(() => convertFontBytes(new Uint8Array([0x77, 0x4f, 0x46, 0x32, ...new Array(60).fill(0)]), "ttf"))).toBe("unsupported");
+    expect(code(() => convertFontBytes(new Uint8Array([0x77, 0x4f, 0x46, 0x32, ...new Array(60).fill(0)]), "ttf"))).toBe("woff2"); // a ".ttf" that is WOFF2
     expect(code(() => convertFontBytes(new TextEncoder().encode("this is not a font at all"), "woff"))).toBe("notAFont");
     const damaged = woff.slice(0, 60);
     expect(code(() => convertFontBytes(damaged, "ttf"))).toBe("corrupt");
@@ -180,3 +181,143 @@ describe.skipIf(!existsSync(`${fa}.woff`) || !existsSync(`${fa}.ttf`))("a WOFF m
     assertChecksums(writeSfnt(fromWoff));
   });
 });
+
+// ---- EOT (output only) ---------------------------------------------------------------------------------------------------------------
+
+const be16 = (v: number) => [(v >>> 8) & 0xff, v & 0xff];
+/** A 'name' table (format 0) with a Macintosh Roman family name and Windows Unicode names, Arabic family included. */
+function nameTable(): number[] {
+  const records: [number, number, number, number, number[]][] = [
+    [1, 0, 0, 1, [..."Mac Family"].map((c) => c.charCodeAt(0))],
+    [3, 1, 0x0409, 1, [..."خط تجريبي"].flatMap((c) => be16(c.charCodeAt(0)))],
+    [3, 1, 0x0409, 2, [..."Bold Italic"].flatMap((c) => be16(c.charCodeAt(0)))],
+    [3, 1, 0x0409, 4, [..."خط تجريبي Bold Italic"].flatMap((c) => be16(c.charCodeAt(0)))],
+    [3, 1, 0x0409, 5, [..."Version 1.002"].flatMap((c) => be16(c.charCodeAt(0)))],
+  ];
+  const storageStart = 6 + 12 * records.length;
+  const out = [...be16(0), ...be16(records.length), ...be16(storageStart)];
+  const storage: number[] = [];
+  for (const [p, e, l, id, bytes] of records) {
+    out.push(...be16(p), ...be16(e), ...be16(l), ...be16(id), ...be16(bytes.length), ...be16(storage.length));
+    storage.push(...bytes);
+  }
+  return [...out, ...storage];
+}
+/** OS/2 version 4 with recognisable values: weight 700, fsType 8, PANOSE 1..10, ranges, italic. */
+function os2Table(): number[] {
+  const t = new Array(96).fill(0);
+  t.splice(0, 2, ...be16(4));
+  t.splice(4, 2, ...be16(700));
+  t.splice(8, 2, ...be16(8));
+  t.splice(32, 10, ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  t.splice(42, 16, ...be32(0x11111111), ...be32(0x22222222), ...be32(0x33333333), ...be32(0x44444444));
+  t.splice(62, 2, ...be16(0x0001));
+  t.splice(78, 8, ...be32(0x20000001), ...be32(0x80000000));
+  return t;
+}
+
+interface EotHeader {
+  eotSize: number; fontDataSize: number; version: number; flags: number; panose: number[]; charset: number; italic: number; weight: number;
+  fsType: number; magic: number; unicode: number[]; codePages: number[]; adjustment: number; names: string[]; rootString: number;
+  fontData: Uint8Array; end: number;
+}
+
+/** Reads an EOT header independently (little endian, field by field from the specification). */
+function readEot(b: Uint8Array): EotHeader {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let o = 0;
+  const u8 = () => b[o++];
+  const u16 = () => ((o += 2), v.getUint16(o - 2, true));
+  const u32 = () => ((o += 4), v.getUint32(o - 4, true));
+  const utf16 = (n: number) => {
+    let s = "";
+    for (let i = 0; i < n; i += 2) s += String.fromCharCode(v.getUint16(o + i, true));
+    o += n;
+    return s;
+  };
+  const eotSize = u32(), fontDataSize = u32(), version = u32(), flags = u32();
+  const panose = [...b.subarray(o, (o += 10))];
+  const charset = u8(), italic = u8(), weight = u32(), fsType = u16(), magic = u16();
+  const unicode = [u32(), u32(), u32(), u32()];
+  const codePages = [u32(), u32()];
+  const adjustment = u32();
+  for (let i = 0; i < 4; i++) u32();
+  const names: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    expect(u16()).toBe(0); // padding
+    names.push(utf16(u16()));
+  }
+  expect(u16()).toBe(0); // padding 5
+  const rootString = u16();
+  return {
+    eotSize, fontDataSize, version, flags, panose, charset, italic, weight, fsType, magic, unicode, codePages, adjustment, names, rootString,
+    fontData: b.subarray(o, o + fontDataSize), end: o + fontDataSize,
+  };
+}
+
+describe("EOT", () => {
+  const ttf = testFont(TRUETYPE, "glyf", { name: nameTable(), "OS/2": os2Table() });
+
+  it("writes the header from OS/2, head and name, then the original font unchanged", () => {
+    const eot = convertFontBytes(ttf, "eot");
+    const h = readEot(eot);
+    expect(h.eotSize).toBe(eot.length);
+    expect(h.end).toBe(eot.length);
+    expect(h.version).toBe(0x00020001);
+    expect(h.flags).toBe(0);
+    expect(h.magic).toBe(0x504c);
+    expect(h.panose).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(h.charset).toBe(1);
+    expect(h.italic).toBe(1);
+    expect(h.weight).toBe(700);
+    expect(h.fsType).toBe(8);
+    expect(h.unicode).toEqual([0x11111111, 0x22222222, 0x33333333, 0x44444444]);
+    expect(h.codePages).toEqual([0x20000001, 0x80000000]);
+    const headAdjustment = new DataView(ttf.buffer).getUint32(readSfntOffset(ttf, "head") + 8);
+    expect(h.adjustment).toBe(headAdjustment);
+    // The Windows Unicode US English names win over the Macintosh one; Arabic survives in logical order.
+    expect(h.names).toEqual(["خط تجريبي", "Bold Italic", "Version 1.002", "خط تجريبي Bold Italic"]);
+    expect(h.rootString).toBe(0);
+    expect([...h.fontData]).toEqual([...ttf]);
+  });
+
+  it("a WOFF becomes an EOT holding the desktop font it wraps (valid checksums)", () => {
+    const eot = convertFontBytes(convertFontBytes(ttf, "woff"), "eot");
+    const h = readEot(eot);
+    const inner = h.fontData;
+    assertChecksums(inner);
+    expect(tablesOf(readSfnt(inner))).toEqual(tablesOf(readSfnt(ttf)));
+    expect(h.adjustment).toBe(new DataView(inner.buffer, inner.byteOffset).getUint32(readSfntOffset(inner, "head") + 8));
+    expect(h.names[0]).toBe("خط تجريبي");
+  });
+
+  it("a font without OS/2 or name still gets a valid header (defaults)", () => {
+    const font = readSfnt(testFont(CFF, "CFF "));
+    font.tables.delete("OS/2");
+    font.tables.delete("name");
+    const otf = writeSfnt(font);
+    const h = readEot(convertFontBytes(otf, "eot"));
+    expect(h.weight).toBe(400);
+    expect(h.italic).toBe(0);
+    expect(h.panose).toEqual(new Array(10).fill(0));
+    expect(h.names).toEqual(["", "", "", ""]);
+    expect([...h.fontData]).toEqual([...otf]);
+  });
+
+  it("runs through the converter contract", async () => {
+    const file = new File([ttf as BlobPart], "عنوان.ttf");
+    const [out] = await fontsConverter.run({ id: "1", operation: "convert:eot", files: [file], options: {} }, () => {}, new AbortController().signal);
+    expect(out.name).toBe("عنوان.eot");
+    expect(out.type).toBe("application/vnd.ms-fontobject");
+    expect(readEot(new Uint8Array(await out.arrayBuffer())).names[0]).toBe("خط تجريبي");
+  });
+});
+
+function readSfntOffset(file: Uint8Array, wanted: string): number {
+  const n = (file[4] << 8) | file[5];
+  for (let i = 0; i < n; i++) {
+    const r = 12 + i * 16;
+    if (String.fromCharCode(...file.subarray(r, r + 4)) === wanted) return ((file[r + 8] << 24) | (file[r + 9] << 16) | (file[r + 10] << 8) | file[r + 11]) >>> 0;
+  }
+  throw new Error(`no ${wanted}`);
+}

@@ -402,7 +402,13 @@
       "noEvents": "No events found",
       "fontCollection": "Font collections are not supported",
       "notAFont": "Not a font file",
-      "fontOutlines": "Changing the outlines needs the Windows app"
+      "fontOutlines": "Changing the outlines needs the Windows app",
+      "woff2": "WOFF2 needs the Windows app",
+      "notABook": "Not a readable e-book",
+      "bookDrm": "Protected by DRM",
+      "bookEmpty": "The book has no text",
+      "comicEmpty": "No pictures in this comic",
+      "comicArchive": "RAR and 7z comics need the Windows app"
     },
     "sr": {
       "wheelPage": "Page {page} of {total}"

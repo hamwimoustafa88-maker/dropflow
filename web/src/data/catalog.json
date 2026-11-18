@@ -329,7 +329,8 @@
       ],
       "engine": "libreoffice",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ]
     },
     {
@@ -349,7 +350,8 @@
       ],
       "engine": "dotnet",
       "platforms": [
-        "windows"
+        "windows",
+        "web"
       ]
     },
     {

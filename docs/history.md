@@ -2,6 +2,17 @@
 
 Entries moved out of the "Project History" list in `CLAUDE.md` (which keeps the newest 30). Newest first.
 
+- 2026-10-21 — Engines merged and wired (five agents worked in parallel on separate folders): Media (FFmpeg conversions, 20 tools,
+  Encoder planner + 12 presets, subtitles), Pdf (managed PDFsharp/PdfPig/PDFium tools, qpdf and LibreOffice drivers, 113 Office pairs),
+  Archive (safe extraction, zip/tar/gz/7z, QR, ICO/favicons, hash/Base64/rename, phone-share server), AI (Whisper, OCR, background
+  removal, auto-redaction, model manager), Web (HTML → PDF via WebView2). App: DropFlow Encoder window, model-download prompt with
+  retry-once, `IInteractiveTool` (windows opened by the runner), Send to phone window, all modules loaded; CLI loads Images/Media/Pdf/
+  Archive. Wheel now offers general tools for mixed/unknown/folder selections; catalog `minFiles` lets ZIP work on one item.
+  New `DropFlow.App.Tests` checks the whole registry (59 of 63 tools and 417 of 419 conversions have converters; gaps pinned in a test).
+  Fixes found on the way: HTML → PDF stalled 20–30 s when a new WebView2 was created right after the last closed (now reused);
+  Arabic-keyboard digits accepted in Encoder fields. Full solution: ~2,380 tests pass, 65 skip (missing engines/models). Honest gaps in
+  `docs/status.md`. THIRD-PARTY-NOTICES lists every package, program and model. — src/DropFlow.Engines.*, src/DropFlow.AI, src/DropFlow.App/**,
+  src/DropFlow.Core/{Wheel,Runner,Catalog,App}, tests/DropFlow.App.Tests, docs/*
 - 2026-10-21 — Phases 1/4/7/8 app layer: DropFlow.Hooks + Overlay + App run end to end (hooks → wheel → options dialog →
   JobQueue → toast/history/undo), tray, settings (language, wheel keys, startup, right-click menu, engines), single-instance
   with pipe forwarding + RequestBatcher for Explorer verbs, Send To, update check (Velopack/GitHub). Images engine (Magick.NET:

@@ -116,6 +116,14 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-18 — Second round (owner: "continue fonts and e-books; new WhatsApp number; fix the picomatch alert; commit and push; you have full permissions to
+  test what was left to me; plan macOS/Linux/Android"): WhatsApp is +961 81 035 672 everywhere; picomatch has NO patched version (advisory
+  first_patched_version = null; `audit fix --force` would only downgrade vitest), so CI now runs `web/scripts/audit-check.mjs` (fails on any advisory
+  without a written reason and a review date). MOBI 6 writer (Windows, own code) and web e-books/comics/EOT (own TS; WOFF2 refused: no Brotli streams in
+  Edge 157). Real-input checks with SendInput on this PC: real Velopack update 0.2.0 → 0.3.0, Tab/mouse-wheel flip during a real OLE drag, progress ring,
+  real conversion; fixed What's new/Home opening behind other windows, bare second launch → Home, a second concurrent update install. Edge drags reach no
+  drop target after hovering Explorer (Edge/OLE, documented). Plan: docs/plan-mac-linux-android.md. Catalog 1257 conversions. — src/DropFlow.App/{Program.cs,
+  Services/AppHost.cs,Services/UpdateService.cs}, src/DropFlow.Engines.Pdf/Books/MobiWriter.cs, web/src/engine/{lib,converters}/**, web/scripts/audit-check.mjs, docs/*
 - 2026-11-18 — Feature round from another open-source converter's ideas (owner: "apply every idea and the site colours; no outside parties";
   own code only, nothing copied, its name never used; approved packages: YamlDotNet and Svg.Skia — Svg.Skia NOT added: it pulls in MS-PL Svg.Custom).
   Web: violet/mint palette on warm paper + dark mode by system (replaces "always light"), "How it works" timeline, What's new, At a glance,
@@ -361,14 +369,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   refuses LAN listening without admin rights, so phones could never connect); settings list/download/delete AI models; the
   phone window explains the Windows Firewall prompt. Next 16/Turbopack gotchas are in `web/README.md`. — web/**, src/DropFlow.Engines.Archive,
   src/DropFlow.App/Views, docs/status.md, docs/release.md
-- 2026-10-21 — Engines merged and wired (five agents worked in parallel on separate folders): Media (FFmpeg conversions, 20 tools,
-  Encoder planner + 12 presets, subtitles), Pdf (managed PDFsharp/PdfPig/PDFium tools, qpdf and LibreOffice drivers, 113 Office pairs),
-  Archive (safe extraction, zip/tar/gz/7z, QR, ICO/favicons, hash/Base64/rename, phone-share server), AI (Whisper, OCR, background
-  removal, auto-redaction, model manager), Web (HTML → PDF via WebView2). App: DropFlow Encoder window, model-download prompt with
-  retry-once, `IInteractiveTool` (windows opened by the runner), Send to phone window, all modules loaded; CLI loads Images/Media/Pdf/
-  Archive. Wheel now offers general tools for mixed/unknown/folder selections; catalog `minFiles` lets ZIP work on one item.
-  New `DropFlow.App.Tests` checks the whole registry (59 of 63 tools and 417 of 419 conversions have converters; gaps pinned in a test).
-  Fixes found on the way: HTML → PDF stalled 20–30 s when a new WebView2 was created right after the last closed (now reused);
-  Arabic-keyboard digits accepted in Encoder fields. Full solution: ~2,380 tests pass, 65 skip (missing engines/models). Honest gaps in
-  `docs/status.md`. THIRD-PARTY-NOTICES lists every package, program and model. — src/DropFlow.Engines.*, src/DropFlow.AI, src/DropFlow.App/**,
-  src/DropFlow.Core/{Wheel,Runner,Catalog,App}, tests/DropFlow.App.Tests, docs/*

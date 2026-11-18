@@ -23,12 +23,31 @@ Last updated: 2026-11-18 (feature round, see the first section; before that 2026
   (FB2 ↔ EPUB, CBZ/CBR → PDF/EPUB, PDF → CBZ, HTMLZ/TXTZ, MOBI/AZW3 reading; `Engines.Pdf/Books`). SVG/SVGZ → **vector** PDF through the app's own browser
   engine (`Office/SvgPdf`: the drawing as an `<img>`, so no script and no network; page = the drawing's size, no margins; verified with real WebView2 and
   headless Chrome: text stays selectable, no embedded picture). Catalog: 1252 conversions, 73 tools, 13 categories.
-- **Built, NOT verified with real input** (the shell cannot drag): Tab and the mouse wheel during a real OLE drag, the browser drag from Chrome/Edge/Firefox
-  (formats, placeholder, download after the pick), the Home window's drop zone with a real Explorer drop, the progress ring on screen during a real job,
-  "Open with", clipboard results with other apps holding the clipboard, the portable zip marker in a real release, What's new after a real Velopack update.
-  Real camera RAW files other than a hand-made DNG, real DICOM/FITS, real Office files with macros, APE/DSD audio were not available.
+- **Verified with real input on this PC (2026-11-18, SendInput mouse/keyboard + screenshots, the installed app):** the installed 0.2.0 showed "Version
+  0.3.0 is available", "Update and restart" updated it through Velopack and 0.3.0 started; What's new appeared after that real update (but behind the
+  user's window: fixed, `BringToFront`); a real Explorer drag + Shift opened the image wheel (front: PNG/WEBP/HEIC/TIFF/AVIF/BMP/GIF/ICO/PDF/SVG, "Tab ⟳
+  more"); **Tab during the real OLE drag flipped to the back** (SVGZ, JXL, JP2, PSD, TGA, QOI, DOCX, pinned tools, + Add) and Explorer kept focus (Tab did
+  not leak); **the mouse wheel flipped it back**; releasing on WEBP wrote `photo2 (converted).webp`; a 7000×5000 PNG → AVIF showed the **progress ring** on
+  screen during the job; the Home window lists recent results with thumbnails, Open / Open with / Open folder / Retry / Undo.
+  Found and fixed: a bare second launch opened Settings (now Home, `AppCommandLine.ForSecondLaunch`) and Home opened behind other windows; a second update
+  install could start while one ran (Velopack lock error in the log; now refused, the toast becomes a download bar).
+- **Browser drag (Edge 157), measured:** the drag carries `UniformResourceLocatorW`, `text/x-moz-url` and `HTML Format` (no file list) and
+  `DropFormats` reads the link; when the key is tapped while the pointer is over the browser, the wheel gets the drag at once (placeholder
+  `icon-512.png`, picture wheel). When the pointer was first over Explorer/the desktop, **no** other window receives Edge's drag until the pointer passes
+  back over Edge — also a plain test window with DropFlow stopped, so this is Edge/OLE behaviour, not DropFlow (seen with injected input; not tried with a
+  physical mouse). Workaround for users: tap the key while still over the browser, or move back over it once.
+- **Still NOT verified with real input:** the Home drop zone with a real Explorer drop (the test host's own IDE window kept coming to the front), Firefox and
+  Chrome drags, "Open with", clipboard results with other apps holding the clipboard, the portable zip marker in a real release. Real camera RAW files other
+  than a hand-made DNG, real DICOM/FITS, real Office files with macros, APE/DSD audio were not available.
 - **Not done:** Svg.Skia was not added (it pulls in Svg.Custom, MS-PL, GPL-incompatible); SVG → vector PDF uses the browser engine instead. Without a
   browser engine (the CLI) SVG → PDF is still a picture. Real MOBI/AZW3/CBR files from other tools were not available (hand-made samples only).
+- **MOBI writing (Windows, own code, `Books/MobiWriter.cs`):** EPUB/FB2/HTMLZ/TXTZ/AZW3 → MOBI 6 (PalmDOC compression, EXTH, cover + thumbnail, pictures
+  by `recindex`, `filepos` contents). Verified by round trip with our reader, a test-only independent parser/decoder (`MobiInspector`), a separate Python
+  decoder, and six deliberate mutations that the tests caught. NOT verified: Calibre (not installed), a real Kindle; Arabic on old MOBI 6 devices; AZW3/KF8
+  writing not done.
+- **Web e-books, comics, EOT (own TypeScript, no package):** EPUB/FB2/HTMLZ/TXTZ ↔ each other + HTML/MD/TXT (own tolerant parser `lib/markup.ts`, no
+  DOCTYPE entity expansion), CBZ → PDF/EPUB, PDF → CBZ (pdf.js, 200 DPI), TTF/OTF/WOFF → EOT. 1056 Vitest, e2e `books` 26/26, `pdf` updated. WOFF2 refused:
+  `CompressionStream`/`DecompressionStream("brotli")` throw in Edge 157 (an e2e check fails the day they exist). Not tried in Firefox/Safari; no epubcheck.
 
 **Conversion matrix (2026-11-12, [conversion-matrix.md](conversion-matrix.md)):** every wheel item on 67 real, independently produced
 files on Windows (1290 cells, outputs re-opened by other readers, Arabic words checked in logical order) and on 62 files in the

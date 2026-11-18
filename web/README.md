@@ -5,7 +5,7 @@ next-intl. Files are processed **entirely in the browser** (Web Workers + WebAss
 
 - Dev: `npm run dev` · Build: `npm run build` · Lint: `npm run lint` · Unit tests: `npm test` (Vitest)
 - E2E (headless Edge over DevTools): `npm run build && npx next start --port 3200`, then `node e2e/run.mjs http://localhost:3200`
-  (`--only=images,pdf,text,wheel,media,link,extras,offline,quality,privacy,landing,legal,seo`, `--out=<dir>` for screenshots/downloads).
+  (`--only=images,pdf,text,wheel,media,link,extras,books,offline,quality,privacy,landing,legal,seo`, `--out=<dir>` for screenshots/downloads).
 - Conversion matrix (slow, ~35 min, opt-in): `node e2e/run.mjs http://localhost:3200 --only=matrix --out=<dir>` runs EVERY operation the wheel
   offers on ~60 generated samples (Arabic/English/scanned/multi-page PDFs, EXIF-rotated/transparent/HEIC/SVG/QR pictures, stereo audio in 9
   formats, 10 videos, UTF-8/UTF-16/windows-1256 subtitles, ZIP/TAR/GZ) and re-checks every output with FFmpeg/ffprobe, pdf-lib, pdf.js and
@@ -49,6 +49,14 @@ device. Still Windows-only (the app's tile says so and links to the latest relea
 HEIC/AVIF output (no licence-clean small encoder: HEVC needs x265, the AVIF wasm encoder is 3.5 MB), annotate (needs the visual
 editor), auto-redact (face model), password-protect/unlock PDF and the other desktop-only tools. Catalog `platforms` for `web` lists
 exactly the tools the registry implements (`webTools` in `engine/catalog-web.ts` reads it).
+
+E-books, comics and fonts are our own TypeScript, ported from the Windows modules (no library): `engine/lib/markup.ts` is a tolerant
+HTML/XML reader and writer (Web Workers have no DOMParser; DOCTYPE entities are never expanded), `lib/epub.ts`, `lib/fb2.ts`,
+`lib/zipped-books.ts` and `lib/book-text.ts` read and write EPUB 3 (reflowable and fixed-layout), FB2, HTMLZ, TXTZ, HTML, Markdown and
+text with the language's direction (`dir`, `xml:lang`, `page-progression-direction`), `lib/comic.ts` reads CBZ (natural page order,
+ComicInfo.xml) for CBZ → PDF/EPUB, and PDF → CBZ draws the pages with pdf.js. Fonts: TTF/OTF ↔ WOFF and → EOT (`lib/eot.ts`). Still
+Windows-only there: WOFF2 (needs Brotli; `CompressionStream("brotli")` does not exist in Edge/Chrome 157, checked by the e2e), TTF ↔ OTF
+outlines, MOBI/AZW3 input, CBR/CB7 input, and e-books to PDF/Word/ODT/RTF.
 
 ## security.txt signature (yearly job)
 

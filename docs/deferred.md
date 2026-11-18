@@ -82,15 +82,18 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
   because it depends on MS-PL Svg.Custom). The CLI has no browser engine, so there SVG → PDF stays a picture; to resume, pass
   `ChromiumHtmlPdfRenderer` to `PdfModule.Create` in `src/DropFlow.Cli/Program.cs` when Chrome/Edge is found.
 - **E3 DWG/DXF and e-mail (EML/MSG/MHTML):** the owner declined ACadSharp and MimeKit; MSG would also need an MPL-1.1 dependency.
-- **E4 Fonts and e-books:** merged. Still left out: CFF → TrueType outlines, writing MOBI/AZW3, web WOFF2 (the browser has no Brotli encoder).
+- **E4 Fonts and e-books:** merged, plus MOBI 6 writing (Windows) and e-books/comics/EOT on the web (2026-11-18). Still left out: AZW3/KF8 writing; HTMLZ/TXTZ
+  covers are not read and the EPUB/FB2/HTMLZ/TXTZ writers do not write a cover; web WOFF2 (waits for browser Brotli streams), web MOBI/AZW3 reading,
+  CBR/CB7 and e-books → PDF/Office on the web.
 - **E5 3D models, geospatial (GPX/KML/GeoJSON/Shapefile), G-code, Gerber, HWP/OFD, game formats:** not in this round (niche for the audience).
 - **E6 An online preset gallery** needs a server (an outside party); presets are shared as local files instead. **AI upscaling** needs a model download
   and owner approval. **Windows 11 top-level menu** needs a signed sparse MSIX and a native DLL.
 - **E7 Smaller pieces left out:** "ask at drop time" size estimate, "subfolder when a job makes many files", Retry for tools that need a password asks again,
   thumbnails only for formats Windows decodes (PNG/JPG/GIF/BMP/TIFF/ICO, WebP/HEIC with their Windows extensions), two-way phone sharing.
-- **E8 Real-input checks to do by hand:** see the "Built, NOT verified" list in status.md (Tab/mouse wheel during a real drag, a browser drag from each browser,
-  the Home drop zone, the progress ring, Open with, clipboard results, the portable zip, What's new after an update).
-- **E9 Website deploy timing:** the landing page's numbers come from the catalog (now 1252 conversions); deploy it together with the next release, so the site
+- **E8 Real-input checks:** done on 2026-11-18 with injected input for the update, What's new, Tab/mouse-wheel flip, the ring and an Edge drag (status.md).
+  Left: the Home drop zone, Firefox/Chrome drags, Open with, clipboard results, the portable zip; and Edge's "no drop target after Explorer" behaviour with a
+  physical mouse.
+- **E9 Website deploy timing:** the landing page's numbers come from the catalog (now 1257 conversions); deploy it together with the next release, so the site
   never promises what the released app cannot do (done: deployed with v0.3.0).
 
 ## D. Known limits worth remembering

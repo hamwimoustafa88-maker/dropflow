@@ -77,6 +77,7 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
 ## E. Feature round 2026-11-18 (postponed on purpose)
 - **E1 macOS, Linux and Android** do not have this round's features yet (wheel back face, arrange window, progress ring, presets UI, Home window,
   browser drag, output rules…). The shared Core pieces (routes, presets, data/image/subtitle formats) already run there; the UI does not.
+  Plan (Arabic, ordered, with what needs the owner's decision): [plan-mac-linux-android.md](plan-mac-linux-android.md).
 - **E2 SVG → vector PDF in the CLI:** done in the app through the browser engine (WebView2 / headless Chrome, no new package; Svg.Skia was not added
   because it depends on MS-PL Svg.Custom). The CLI has no browser engine, so there SVG → PDF stays a picture; to resume, pass
   `ChromiumHtmlPdfRenderer` to `PdfModule.Create` in `src/DropFlow.Cli/Program.cs` when Chrome/Edge is found.

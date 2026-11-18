@@ -33,8 +33,10 @@ public static class Program
 
         if (!instance.IsPrimary)
         {
-            // Already running: hand the request over. A bare second launch opens the settings.
-            var forwarded = args.Length == 0 ? ["--settings"] : args;
+            // Already running: hand the request over. A bare second launch opens the Home window. This process was started by the
+            // user, so it may pass its right to come to the front on to the running one (otherwise its window opens behind).
+            var forwarded = AppCommandLine.ForSecondLaunch(args);
+            AllowSetForegroundWindow(-1); // ASFW_ANY
             if (instance.Forward(forwarded, TimeSpan.FromSeconds(3))) return 0;
             ExplainUnreachableInstance();
             return 1;
@@ -46,6 +48,9 @@ public static class Program
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int processId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(int processId);
 
     /// <summary>The running DropFlow could not be reached (elevated or hung): say so instead of exiting silently.</summary>
     private static void ExplainUnreachableInstance()

@@ -288,7 +288,7 @@ internal sealed class AppHost : IDisposable
     {
         var window = new WhatsNewWindow(Kit, Version, WhatsNew.Slides(Loc));
         window.Show();
-        window.Activate();
+        BringToFront(window); // after an update DropFlow starts in the background: without this the window sat behind the user's work
     }
 
     private void StartHooks()
@@ -641,7 +641,7 @@ internal sealed class AppHost : IDisposable
 
     public void ShowSettings()
     {
-        if (_settingsWindow is { IsVisible: true }) { _settingsWindow.Activate(); return; }
+        if (_settingsWindow is { IsVisible: true }) { BringToFront(_settingsWindow); return; }
         var engines = Enum.GetValues<EngineId>().Where(e => e != EngineId.None && e != EngineId.Ffprobe).ToList();
         _settingsWindow = new SettingsWindow(Kit, new SettingsContext(
             Settings, SystemIntegration.IsStartupEnabled(), SystemIntegration.IsContextMenuInstalled(), ApplyFromWindow,
@@ -653,7 +653,7 @@ internal sealed class AppHost : IDisposable
                 () => _modelDownloads.EnsureAsync(m.Id, m.DisplayName), () => Models.Delete(m.Id)))],
             PinnedRows(), ShowWheelEditor, PresetRows()));
         _settingsWindow.Show();
-        _settingsWindow.Activate();
+        BringToFront(_settingsWindow);
     }
 
     /// <summary>The welcome guide (first run and tray). Returns false when it could not be shown.</summary>
@@ -692,12 +692,25 @@ internal sealed class AppHost : IDisposable
     /// <summary>The main window: drop zone, collected files, recent conversions (tray → Open DropFlow, double-click, History).</summary>
     private void ShowHistory()
     {
-        if (_homeWindow is { IsVisible: true }) { _homeWindow.Activate(); return; }
+        if (_homeWindow is { IsVisible: true }) { BringToFront(_homeWindow); return; }
         _homeWindow = new HomeWindow(Kit, new HomeContext(History, Disposer, files => OpenWheelFor(files, null), Retry,
             op => op.StartsWith(Recipe.PresetPrefix, StringComparison.Ordinal) ? Presets().FirstOrDefault(p => p.PresetOperation == op)?.DisplayName(Loc.Language) ?? op
                 : Operation.IsConvert(op) ? Loc.Format("home.convertedTo", Operation.TargetOf(op).ToUpperInvariant()) : Catalog.Tool(op)?.Name(Loc.Language) ?? op));
         _homeWindow.Show();
-        _homeWindow.Activate();
+        BringToFront(_homeWindow);
+    }
+
+    /// <summary>
+    /// Puts a window DropFlow opened on its own (after an update, from a second launch) above the others. Windows refuses focus to a
+    /// background app, so a plain Activate left these windows hidden behind whatever the user was doing; a brief Topmost raises the
+    /// window without taking the keyboard away from the user.
+    /// </summary>
+    private static void BringToFront(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+        window.Topmost = true;
+        window.Activate();
+        window.Topmost = false;
     }
 
     /// <summary>
@@ -729,6 +742,14 @@ internal sealed class AppHost : IDisposable
         else ShowShelf();
     }
 
+    /// <summary>"Update and restart": the toast turns into a download bar (no button to press twice), then DropFlow restarts.</summary>
+    private async Task InstallUpdateAsync()
+    {
+        ShowToast(Loc["update.downloading"], null, 0, [], null);
+        var done = await _updates.InstallAsync(p => _ui.BeginInvoke(() => ShowToast(Loc["update.downloading"], null, p / 100.0, [], null)));
+        if (done == false) ShowToast(Loc["update.installFailed"], null, null, [], TimeSpan.FromSeconds(8));
+    }
+
     private async Task CheckForUpdatesAsync(bool interactive)
     {
         if (interactive) ShowToast(Loc["update.checking"], null, -1, [], null);
@@ -737,7 +758,7 @@ internal sealed class AppHost : IDisposable
         {
             case UpdateState.Available:
                 ShowToast(Loc.Format("update.available", check.Version!), null, null,
-                    [(Loc["update.install"], () => _ = _updates.InstallAsync())], null);
+                    [(Loc["update.install"], () => _ = InstallUpdateAsync())], null);
                 break;
             case UpdateState.UpToDate when interactive:
                 ShowToast(Loc["update.none"], null, null, [], TimeSpan.FromSeconds(5));

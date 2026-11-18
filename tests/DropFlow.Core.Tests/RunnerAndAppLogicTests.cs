@@ -361,6 +361,9 @@ public class AppLogicTests
         Assert.Equal(AppCommandKind.Start, AppCommandLine.Parse([]).Kind);
         Assert.True(AppCommandLine.Parse(["--minimized"]).Minimized);
         Assert.Equal(AppCommandKind.Settings, AppCommandLine.Parse(["--settings"]).Kind);
+        // a bare second double-click opens the Home window (it used to open the settings)
+        Assert.Equal(AppCommandKind.History, AppCommandLine.Parse(AppCommandLine.ForSecondLaunch([])).Kind);
+        Assert.Equal(["--tools", "x.pdf"], AppCommandLine.ForSecondLaunch(["--tools", "x.pdf"]));
         Assert.Equal(AppCommandKind.Shelf, AppCommandLine.Parse(["--shelf"]).Kind);
         Assert.Equal(AppCommandKind.Quit, AppCommandLine.Parse(["--QUIT"]).Kind);
         var tools = AppCommandLine.Parse(["--tools", @"C:\f.pdf"]);

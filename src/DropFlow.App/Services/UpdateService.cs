@@ -15,6 +15,7 @@ internal sealed class UpdateService(string repoUrl)
 {
     private UpdateManager? _manager;
     private UpdateInfo? _pending;
+    private int _installing;
 
     private UpdateManager Manager => _manager ??= new UpdateManager(new GithubSource(repoUrl, null, false));
 
@@ -35,13 +36,17 @@ internal sealed class UpdateService(string repoUrl)
         }
     }
 
-    /// <summary>Downloads the pending update and restarts into it. Returns false when there is nothing to install or it failed.</summary>
-    public async Task<bool> InstallAsync()
+    /// <summary>
+    /// Downloads the pending update and restarts into it. True: restarting; false: nothing to install or it failed; null: an install is
+    /// already running (a second press of "Update and restart" used to start a second download, which then failed on Velopack's lock).
+    /// </summary>
+    public async Task<bool?> InstallAsync(Action<int>? progress = null)
     {
+        if (Interlocked.Exchange(ref _installing, 1) == 1) return null;
         try
         {
             if (_pending is null) return false;
-            await Manager.DownloadUpdatesAsync(_pending);
+            await Manager.DownloadUpdatesAsync(_pending, progress);
             Manager.ApplyUpdatesAndRestart(_pending);
             return true;
         }
@@ -49,6 +54,10 @@ internal sealed class UpdateService(string repoUrl)
         {
             FileLog.Error("update install", ex);
             return false;
+        }
+        finally
+        {
+            Volatile.Write(ref _installing, 0);
         }
     }
 }

@@ -515,6 +515,8 @@
   "update.install": "حدّث وأعد التشغيل",
   "update.failed": "تعذّر البحث عن تحديثات.",
   "update.notInstalled": "التحديثات تعمل مع النسخة المثبّتة من DropFlow.",
+  "update.downloading": "جارٍ تنزيل التحديث…",
+  "update.installFailed": "تعذّر تثبيت التحديث. يبقى DropFlow يعمل كما هو.",
   "settings.hotkey.duplicate": "يجب أن يختلف الاختصاران.",
   "settings.clipboardHotkey": "الاختصار العام (الحافظة ← العجلة)",
   "settings.namePattern": "أسماء النتائج (فارغ = \"الاسم (converted)\"). الرموز: {name} {tool} {ext} {date} {time} {index}",

@@ -22,6 +22,9 @@ public sealed record AppCommand(AppCommandKind Kind, IReadOnlyList<string> Paths
 /// </summary>
 public static class AppCommandLine
 {
+    /// <summary>What a second launch hands to the running DropFlow: its own arguments, or "open the Home window" for a bare double-click.</summary>
+    public static string[] ForSecondLaunch(string[] args) => args.Length == 0 ? ["--history"] : args;
+
     public static AppCommand Parse(IEnumerable<string> args)
     {
         var kind = AppCommandKind.Start;

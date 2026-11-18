@@ -42,7 +42,9 @@ public sealed class RegistryCoverageTests : IDisposable
     public void Every_declared_route_is_reachable_with_the_real_converters()
     {
         var registry = Registry();
-        var routes = new Core.Routing.RouteConverter(registry, Catalog, TestSupport.Engines.Locator);
+        // Reachability is about the converters existing; whether THIS machine has LibreOffice/FFmpeg is a runtime question (the planner
+        // then offers no route that needs a missing program, which RouteTests covers). CI machines have no LibreOffice.
+        var routes = new Core.Routing.RouteConverter(registry, Catalog, new EveryEngine());
         registry.Register(routes);
         var problems = new List<string>();
         foreach (var (category, targets) in Catalog.Routes)
@@ -55,6 +57,8 @@ public sealed class RegistryCoverageTests : IDisposable
             }
         AssertNone(problems);
     }
+
+    private sealed class EveryEngine : IEngineProvider { public string? Locate(EngineId engine) => "present"; }
 
     [Fact]
     public void Every_implemented_operation_exists_in_the_catalog()

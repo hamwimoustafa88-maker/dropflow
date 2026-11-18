@@ -29,7 +29,7 @@
     <PackageReference Include="ReverseMarkdown" Version="6.2.1" />
     <!-- Comic books (cbz/cbr/cb7): the same SharpCompress version the Archive engine uses. -->
     <PackageReference Include="SharpCompress" Version="0.50.7" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
   </ItemGroup>
 
 </Project>

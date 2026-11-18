@@ -9,7 +9,7 @@ The repository is public and open to contributors; the DropFlow name/logo are re
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
 multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
-are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.3.0 is live (2026-11-18; Windows x64 + ARM64, macOS, Linux, Android; unsigned except Android). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); since 2026-11-11 the Vercel MCP connector reads deployments and build logs (team id `team_OrtB2bAfjUT4usaCRVFnerWJ`). No Vercel CLI login on this machine. External audit: Kashef (https://kashef.scouthub.dev, API key from the owner, never committed; scouthub.dev is verified there, so scans include active checks). .NET 10 SDK 10.0.402 is
+are inert "Soon" badges until a release exists. GitHub: public repo `hamwimoustafa88-maker/dropflow` (remote `origin`, branch `main`); release v0.3.1 is live (2026-11-18; Windows x64 + ARM64, macOS, Linux, Android; unsigned except Android). Vercel: LIVE at https://dropflow.scouthub.dev (project `moustafa-hamwis-projects/dropflow`, checked from outside 2026-10-21); since 2026-11-11 the Vercel MCP connector reads deployments and build logs (team id `team_OrtB2bAfjUT4usaCRVFnerWJ`). No Vercel CLI login on this machine. External audit: Kashef (https://kashef.scouthub.dev, API key from the owner, never committed; scouthub.dev is verified there, so scans include active checks). .NET 10 SDK 10.0.402 is
 installed (new terminals may need a restart to see it on PATH). The dev machine now has FFmpeg 9.0.2, qpdf 12.4.2, LibreOffice, Tesseract and
 four AI models, and the installer ships FFmpeg, qpdf and Tesseract (+ Arabic data) inside (ADR-0012): users never download a program.
 `tools/fetch-engines.ps1` fetches them at build time (never commit binaries); engine-dependent tests skip visibly via `[EngineFact]` / `[ModelFact]`
@@ -116,6 +116,9 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-18 — v0.3.1 (owner: "release 0.3.1 now so the fixes reach users"): ships the fixes found by the real-input checks (windows come to the
+  front, bare second launch → Home, one update install at a time), MOBI 6 writing, and What's new now shows only for a new feature version (0.3 → 0.4,
+  `WhatsNew.ShouldShow`, `WhatsNewRuleTests`), so 0.3.0 → 0.3.1 does not repeat the slides. — src/DropFlow.App/Views/WhatsNewWindow.cs, *.csproj, web/src/lib/downloads.ts
 - 2026-11-18 — Second round (owner: "continue fonts and e-books; new WhatsApp number; fix the picomatch alert; commit and push; you have full permissions to
   test what was left to me; plan macOS/Linux/Android"): WhatsApp is +961 81 035 672 everywhere; picomatch has NO patched version (advisory
   first_patched_version = null; `audit fix --force` would only downgrade vitest), so CI now runs `web/scripts/audit-check.mjs` (fails on any advisory
@@ -360,12 +363,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   web 834 Vitest + 206 browser checks. Note for the owner: the PDF agent reports copying about six PDFs from Documents/Downloads/Desktop
   to a temp folder for smoke tests (not requested; it says it deleted them). — src/DropFlow.Engines.Pdf, src/DropFlow.Overlay/OptionForm.cs,
   src/DropFlow.Core/Resources, docs/status.md
-- 2026-10-21 — DropFlow Web (Phase 6) merged: `/ar/app` and `/en/app` convert files in the browser (Canvas, pdf-lib, pdf.js, fflate,
-  single-thread ffmpeg.wasm in Web Workers) with a generated options form, paged wheels driven by Shift/Ctrl/Alt, and an offline PWA.
-  Privacy is enforced: a static test finds no fetch/XHR/beacon/WebSocket in app code and the `/app` CSP only allows self/blob/data
-  connections (tested to block a foreign POST, beacon, WebSocket and image ping). Re-verified here: lint, build, 834 Vitest tests,
-  `npm audit --omit=dev` = 0, and 206/206 headless-Edge checks. `@ffmpeg/core` is GPL-2.0-or-later (served from `/vendor`, generated
-  at build time, gitignored, recorded in THIRD-PARTY-NOTICES). Also: phone-share server moved from HttpListener to Kestrel (the former
-  refuses LAN listening without admin rights, so phones could never connect); settings list/download/delete AI models; the
-  phone window explains the Windows Firewall prompt. Next 16/Turbopack gotchas are in `web/README.md`. — web/**, src/DropFlow.Engines.Archive,
-  src/DropFlow.App/Views, docs/status.md, docs/release.md

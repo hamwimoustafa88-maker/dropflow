@@ -100,9 +100,17 @@ internal static class WhatsNew
         [.. Current.Select(c => new Slide(c.Glyph, loc[$"whatsnew.{c.Key}.title"], loc[$"whatsnew.{c.Key}.text"]))];
 
     /// <summary>
-    /// Show after an update (a different version than last seen, or none recorded: versions before this setting), never on a first install
-    /// (the welcome guide shows then).
+    /// Show after an update to a new feature version (0.3 → 0.4; or none recorded: versions before this setting), never on a first install
+    /// (the welcome guide shows then) and not for a fix-only release (0.3.0 → 0.3.1 has the same slides).
     /// </summary>
     public static bool ShouldShow(string currentVersion, string? lastSeen, bool firstRun) =>
-        !firstRun && !string.Equals(lastSeen, currentVersion, StringComparison.OrdinalIgnoreCase);
+        !firstRun && !string.Equals(FeatureLine(lastSeen), FeatureLine(currentVersion), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>"0.3.1+abc" → "0.3"; anything else as it is.</summary>
+    private static string? FeatureLine(string? version)
+    {
+        if (version is null) return null;
+        var parts = version.Split('+', '-')[0].Split('.');
+        return parts.Length >= 2 ? $"{parts[0]}.{parts[1]}" : version;
+    }
 }

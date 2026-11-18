@@ -7,7 +7,7 @@ import { RELEASE_DOWNLOAD_URL } from "./site";
 // A platform whose files are not attached to the latest release yet must be `false`: its buttons then show "Soon" instead
 // of a link that would answer 404. (Windows x64 Setup, Portable and the CLI zip are in every release since v0.1.2.)
 /** The version the download buttons point to (releases/latest). Update together with a release. */
-export const LATEST_VERSION = "0.3.0";
+export const LATEST_VERSION = "0.3.1";
 export const WINDOWS_ARM64_RELEASED = true;
 export const MACOS_RELEASED = true;
 export const LINUX_RELEASED = true;

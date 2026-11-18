@@ -13,7 +13,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>dropflow-desktop</AssemblyName>
     <RootNamespace>DropFlow.Desktop</RootNamespace>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <ApplicationIcon />
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
     <!-- Avalonia's compiled bindings are not used (the UI is built in code), so no XAML compiler step is needed. -->

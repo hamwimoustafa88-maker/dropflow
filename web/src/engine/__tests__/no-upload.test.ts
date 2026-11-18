@@ -82,7 +82,7 @@ describe("no code path uploads user data", () => {
       "src/lib/site.ts: https://t.me/scouthublab",
       "src/lib/site.ts: https://www.threads.com/@scouthub.lab",
       "src/lib/site.ts: https://www.gnu.org/licenses/gpl-3.0.html", // a link the visitor may click, never fetched
-      "src/lib/site.ts: https://wa.me/96170863903", // a link the visitor may click (WhatsApp contact), never fetched
+      "src/lib/site.ts: https://wa.me/96181035672", // a link the visitor may click (WhatsApp contact), never fetched
       "src/engine/converters/media-engine.ts: http://localhost", // a base for parsing relative URLs, never fetched
       "src/engine/lib/strip-meta.ts: http://ns.adobe.com/xap", // the XMP packet signature we look FOR, not a request
     ];

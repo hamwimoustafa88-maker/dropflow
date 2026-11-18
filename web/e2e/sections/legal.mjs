@@ -2,7 +2,7 @@ import { check, freshApp, section } from "../helpers.mjs";
 import { sleep } from "../cdp.mjs";
 
 const ISSUES = "https://github.com/hamwimoustafa88-maker/dropflow/issues";
-const WA = "https://wa.me/96170863903";
+const WA = "https://wa.me/96181035672";
 const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/;
 
 // Privacy Policy and Terms of Use: four static pages (ar/en x privacy/terms), reachable from the landing footer and the app.

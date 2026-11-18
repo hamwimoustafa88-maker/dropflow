@@ -14,7 +14,7 @@
   <a href="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml"><img src="https://github.com/hamwimoustafa88-maker/dropflow/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Web-4338ca" alt="Platforms: Windows, macOS, Linux, Android, Web">
-  <a href="https://wa.me/96170863903"><img src="https://img.shields.io/badge/WhatsApp-chat%20with%20the%20team-0a7a46?logo=whatsapp&logoColor=white" alt="Chat with the team on WhatsApp"></a>
+  <a href="https://wa.me/96181035672"><img src="https://img.shields.io/badge/WhatsApp-chat%20with%20the%20team-0a7a46?logo=whatsapp&logoColor=white" alt="Chat with the team on WhatsApp"></a>
 </p>
 
 <p align="center">
@@ -224,7 +224,7 @@ Roadmap: [docs/plan.md](docs/plan.md) (Arabic) · postponed work: [docs/deferred
 
 ## Contact
 
-[![WhatsApp +961 70 863 903](https://img.shields.io/badge/WhatsApp-%2B961%2070%20863%20903-0a7a46?logo=whatsapp&logoColor=white)](https://wa.me/96170863903)
+[![WhatsApp +961 81 035 672](https://img.shields.io/badge/WhatsApp-%2B961%2081%20035%20672-0a7a46?logo=whatsapp&logoColor=white)](https://wa.me/96181035672)
 
 Questions, ideas, partnerships: WhatsApp. Bugs and feature requests: [GitHub Issues](https://github.com/hamwimoustafa88-maker/dropflow/issues).
 

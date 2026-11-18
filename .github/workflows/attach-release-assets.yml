@@ -48,6 +48,8 @@ jobs:
           [ -d dl/macos ]     && find dl/macos -type f -name '*.dmg' -exec cp {} out/ \;
           [ -d dl/linux ]     && find dl/linux -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -exec cp {} out/ \;
           [ -d dl/android ]   && find dl/android -type f -name '*.apk' -exec cp {} out/ \;
+          # The ARM64 build downloads the previous release's package to make a delta; never upload that old file.
+          find out -maxdepth 1 -name '*.nupkg' ! -name "*-${TAG#v}-*" -delete
           ls -la out
           gh release download "$TAG" --pattern SHA256SUMS.txt --dir out/sums --clobber
           # Do not add a line twice if this ran before.

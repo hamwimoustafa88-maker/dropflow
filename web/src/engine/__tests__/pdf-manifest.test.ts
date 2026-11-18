@@ -10,7 +10,7 @@ const here = (rel: string) => fileURLToPath(new URL(rel, import.meta.url));
 const read = (rel: string) => readFileSync(here(rel), "utf8");
 
 const OPS = pdfConverter.operations;
-const RENDER = ["convert:png", "convert:jpg", "convert:txt", "convert:md", "pdf.to-images", "pdf.extract-text", "pdf.compress"];
+const RENDER = ["convert:png", "convert:jpg", "convert:txt", "convert:md", "convert:cbz", "pdf.to-images", "pdf.extract-text", "pdf.compress"];
 const WORKER = ["pdf.merge", "pdf.split", "pdf.rotate", "pdf.organize", "pdf.metadata", "pdf.watermark", "pdf.page-numbers"];
 
 describe("pdf manifest", () => {
@@ -19,9 +19,9 @@ describe("pdf manifest", () => {
     expect(new Set(OPS).size).toBe(OPS.length);
   });
 
-  it("only offers png, jpg, txt, md as conversions (what a browser can truly do from a PDF)", () => {
+  it("only offers png, jpg, txt, md and cbz as conversions (what a browser can truly do from a PDF)", () => {
     const converts = OPS.filter((o) => o.startsWith("convert:")).map((o) => o.slice("convert:".length));
-    expect(converts.sort()).toEqual(["jpg", "md", "png", "txt"]);
+    expect(converts.sort()).toEqual(["cbz", "jpg", "md", "png", "txt"]);
   });
 
   it("every tool id is a real catalog tool that is available on the web", () => {

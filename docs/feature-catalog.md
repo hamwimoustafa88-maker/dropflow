@@ -16,8 +16,8 @@
 | Slides | pptx, ppt, odp, key | pdf, jpg, png, odp, pptx | 18 | 2 | windows |
 | Data | json, jsonl, xml, yaml, vcf, ics | json, jsonl, xml, yaml, csv, tsv, xlsx, html | 44 | 4 | windows, web |
 | Spreadsheets | xlsx, xls, ods, csv, tsv, numbers | xlsx, ods, csv, tsv, pdf, json, html | 38 | 2 | windows |
-| E-books | epub, fb2, mobi, azw3, htmlz, txtz | pdf, docx, odt, txt, md, html, rtf, epub, fb2, htmlz, txtz | 62 | 2 | windows |
-| Comics | cbz, cbr, cb7 | pdf, epub, cbz | 8 | 2 | windows |
+| E-books | epub, fb2, mobi, azw3, htmlz, txtz | pdf, docx, odt, txt, md, html, rtf, epub, fb2, htmlz, txtz | 62 | 2 | windows, web |
+| Comics | cbz, cbr, cb7 | pdf, epub, cbz | 8 | 2 | windows, web |
 | Fonts | ttf, otf, woff, woff2 | ttf, otf, woff, woff2, eot | 16 | 4 | windows, web |
 | Subtitles | srt, vtt, ass, smi, lrc, ttml, dfxp, sub, sbv | srt, vtt, ass, txt, lrc, sbv | 49 | 3 | windows, web |
 | Archives | zip, tar, gz, tgz, rar, 7z | zip, tar, gz, 7z | 20 | 4 | windows, web |

@@ -400,6 +400,26 @@ async function judge(op, sample, outputs, ctx) {
       }
       return pass(`${outputs.length} ${fmt} pages, sizes match, ink on every page`);
     }
+    if (op === "convert:cbz") {
+      // A comic book: one 200 DPI JPEG per page, numbered, plus a ComicInfo.xml with the page count.
+      if (kind !== "zip" || outExt !== "cbz") return fail(`output is ${kind} (${o.name})`);
+      const z = zipEntries(o.bytes);
+      const pages = Object.keys(z).filter((n) => n !== "ComicInfo.xml").sort();
+      if (pages.length !== src.count) return fail(`${pages.length} pictures for ${src.count} pages`);
+      if (!new TextDecoder().decode(z["ComicInfo.xml"] ?? new Uint8Array()).includes(`<PageCount>${src.count}</PageCount>`)) return fail("ComicInfo.xml is missing or has the wrong page count");
+      for (let i = 0; i < pages.length; i++) {
+        const bytes = Buffer.from(z[pages[i]]);
+        if (pages[i] !== `${String(i + 1).padStart(Math.max(3, String(src.count).length), "0")}.jpg` || sniff(bytes) !== "jpg") return fail(`entry ${pages[i]} is not page ${i + 1} as a JPEG`);
+        const px = pixels(bytes, "jpg");
+        if (!px) return fail(`page ${i + 1}: FFmpeg cannot decode it`);
+        const pg = src.pages[i];
+        const k = 200 / 72;
+        const [ew, eh] = pg.rot % 180 ? [pg.h * k, pg.w * k] : [pg.w * k, pg.h * k];
+        // Huge pages are drawn smaller (canvas budget), never larger and never out of shape.
+        if (px.w > ew + 3 || !near(px.w / px.h, ew / eh, 0.03)) return fail(`page ${i + 1}: ${px.w}x${px.h}, expected ${Math.round(ew)}x${Math.round(eh)}`);
+      }
+      return pass(`${pages.length} JPEG pages at 200 DPI + ComicInfo.xml`);
+    }
     const textOp = op === "convert:txt" || op === "convert:md" || op === "pdf.extract-text";
     if (textOp) {
       const text = o.bytes.toString("utf8");

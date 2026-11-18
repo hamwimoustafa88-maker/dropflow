@@ -62,9 +62,24 @@ describe("wheel builder with the real registry", () => {
     expect(ops(mixed.tools)).toEqual(["arc.zip", "gen.rename", "gen.hash", "gen.base64"]); // rename: 2+ files
   });
 
-  it("pdf: png/jpg/txt/md converts and the real pdf tools, in catalog order", () => {
+  it("e-books, comics and fonts: what the browser writes is on the wheel, the rest is named in the Windows-app hint", async () => {
+    const { windowsHint } = await import("../windows-hint");
+    const labels = (files: { name: string }[]) => windowsHint(files, registry)?.items.map((i) => i.label).filter(Boolean);
+    expect(ops(buildWheels([f("a.epub")], registry, NO_ACTIONS).convert)).toEqual(["convert:txt", "convert:md", "convert:html", "convert:fb2", "convert:htmlz", "convert:txtz"]);
+    expect(labels([f("a.epub")])).toEqual(["PDF", "DOCX", "ODT", "RTF"]);
+    expect(ops(buildWheels([f("a.fb2")], registry, NO_ACTIONS).convert)).toContain("convert:epub");
+    expect(ops(buildWheels([f("a.mobi")], registry, NO_ACTIONS).convert)).toEqual([]);
+    expect(ops(buildWheels([f("a.cbz")], registry, NO_ACTIONS).convert)).toEqual(["convert:pdf", "convert:epub"]);
+    expect(ops(buildWheels([f("a.cbr")], registry, NO_ACTIONS).convert)).toEqual([]);
+    expect(labels([f("a.cbr")])).toEqual(["PDF", "EPUB", "CBZ"]);
+    expect(ops(buildWheels([f("a.ttf")], registry, NO_ACTIONS).convert)).toEqual(["convert:woff", "convert:eot"]);
+    expect(labels([f("a.ttf")])).toEqual(["OTF", "WOFF2"]);
+    expect(ops(buildWheels([f("a.woff2")], registry, NO_ACTIONS).convert)).toEqual([]);
+  });
+
+  it("pdf: png/jpg/txt/md/cbz converts and the real pdf tools, in catalog order", () => {
     const w = buildWheels([f("a.pdf")], registry, NO_ACTIONS);
-    expect(ops(w.convert)).toEqual(["convert:jpg", "convert:png", "convert:txt", "convert:md"]);
+    expect(ops(w.convert)).toEqual(["convert:jpg", "convert:png", "convert:txt", "convert:md", "convert:cbz"]);
     const pdfTools = ops(w.tools).filter((o) => o.startsWith("pdf."));
     expect(pdfTools).toEqual(["pdf.compress", "pdf.split", "pdf.organize", "pdf.metadata", "pdf.to-images", "pdf.extract-text", "pdf.rotate", "pdf.watermark", "pdf.page-numbers"]);
     expect(ops(w.tools)).not.toContain("pdf.merge"); // needs 2+

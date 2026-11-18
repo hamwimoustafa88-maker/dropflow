@@ -1,5 +1,5 @@
 // DropFlow Web end-to-end test in headless Edge over the DevTools protocol.
-//   node e2e/run.mjs [baseUrl=http://localhost:3200] [--only=images,pdf,...] [--out=<dir for screenshots/downloads>]
+//   node e2e/run.mjs [baseUrl=http://localhost:3200] [--only=images,pdf,books,...] [--out=<dir for screenshots/downloads>]
 // The slow conversion matrix (sections/matrix.mjs) runs only when asked: --only=matrix, or DROPFLOW_MATRIX=1 with the rest.
 // Needs a production server (`npm run build && npx next start --port 3200`). Uses real files written by the test,
 // real file inputs / drag events (DOM.setFileInputFiles, Input.dispatchDragEvent) and real downloads; asserts the bytes.
@@ -22,6 +22,7 @@ import { quality } from "./sections/quality.mjs";
 import { seo } from "./sections/seo.mjs";
 import { link } from "./sections/link.mjs";
 import { extras } from "./sections/extras.mjs";
+import { books } from "./sections/books.mjs";
 import { matrix } from "./sections/matrix.mjs";
 
 const args = process.argv.slice(2);
@@ -45,6 +46,7 @@ try {
   if (wants("media")) await media(ctx);
   if (wants("link")) await link(ctx);
   if (wants("extras")) await extras(ctx);
+  if (wants("books")) await books(ctx);
   if (wants("offline")) await offline(ctx);
   if (wants("legal")) await legal(ctx);
   if (wants("seo")) await seo(ctx);

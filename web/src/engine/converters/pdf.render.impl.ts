@@ -124,6 +124,39 @@ export async function renderToImages(
   }
 }
 
+// ---------------------------------------------------------------- pdf -> comic book (CBZ)
+
+/** Like the Windows app: every page drawn at 200 DPI as a JPEG (quality 90), numbered, with a ComicInfo.xml. */
+export const CBZ_SCALE = 200 / 72;
+
+export async function renderToCbz(file: File, onProgress: ProgressFn, signal: AbortSignal): Promise<File[]> {
+  const open = await openPdf(file, signal);
+  const canvas = makeCanvas();
+  try {
+    const pages: { bytes: Uint8Array; ext: string }[] = [];
+    const n = open.doc.numPages;
+    for (let i = 1; i <= n; i++) {
+      throwIfAborted(signal);
+      const page = await open.doc.getPage(i);
+      try {
+        await paintPage(open, page, CBZ_SCALE, canvas, signal);
+        const blob = await canvasBlob(canvas, "image/jpeg", 0.9);
+        pages.push({ bytes: new Uint8Array(await blob.arrayBuffer()), ext: "jpg" });
+      } finally {
+        page.cleanup();
+      }
+      onProgress((0.95 * i) / n);
+    }
+    const { writeCbz } = await import("../lib/comic");
+    const name = file.name.replace(/\.[^.]+$/, "");
+    const bytes = writeCbz(pages, { title: name });
+    return [new File([bytes as BlobPart], `${name}.cbz`, { type: "application/vnd.comicbook+zip" })];
+  } finally {
+    freeCanvas(canvas);
+    await closePdf(open);
+  }
+}
+
 // ---------------------------------------------------------------- pdf -> text / markdown
 
 export async function extractText(file: File, format: "txt" | "md", onProgress: ProgressFn, signal: AbortSignal): Promise<File[]> {
@@ -237,6 +270,8 @@ export async function runPdfRenderOp(job: Job, onProgress: ProgressFn, signal: A
         onProgress,
         signal,
       );
+    case "convert:cbz":
+      return renderToCbz(file, onProgress, signal);
     case "convert:txt":
       return extractText(file, "txt", onProgress, signal);
     case "convert:md":

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-// @ts-expect-error plain .mjs build script without types
 import { ACCEPTED, problems } from "../../../scripts/audit-check.mjs";
 
 const report = (...ids: string[]) => ({

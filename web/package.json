@@ -24,12 +24,12 @@
     "jsqr": "1.4.0",
     "libheif-js": "1.23.5",
     "next": "16.4.6",
-    "next-intl": "^4.14.9",
-    "onnxruntime-web": "1.30.0",
+    "next-intl": "^4.15.1",
+    "onnxruntime-web": "1.31.1",
     "pdf-lib": "1.17.1",
-    "pdfjs-dist": "6.4.299",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "pdfjs-dist": "6.5.438",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "tesseract.js": "7.0.0",
     "utif2": "4.1.0"
   },
@@ -42,6 +42,6 @@
     "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   }
 }

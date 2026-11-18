@@ -86,7 +86,7 @@ with the `dropflow` CLI.
 Counts come from [`catalog/tools.json`](catalog/tools.json), the single source of truth shared by every app (full list:
 [docs/feature-catalog.md](docs/feature-catalog.md)):
 
-<p align="center"><strong><!--n:conversions-->1252<!--/n--> conversions · <!--n:tools-->73<!--/n--> tools · <!--n:actions-->7<!--/n--> file actions · <!--n:families-->13<!--/n--> format families</strong></p>
+<p align="center"><strong><!--n:conversions-->1257<!--/n--> conversions · <!--n:tools-->73<!--/n--> tools · <!--n:actions-->7<!--/n--> file actions · <!--n:families-->13<!--/n--> format families</strong></p>
 
 | Area | What you get |
 |---|---|

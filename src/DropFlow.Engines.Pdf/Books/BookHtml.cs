@@ -14,8 +14,8 @@ internal static class BookFormats
     /// <summary>Text e-books: read in-process into one HTML body (see <see cref="BookReader"/>).</summary>
     public static readonly string[] Inputs = ["epub", "fb2", "mobi", "azw3", "htmlz", "txtz"];
 
-    /// <summary>Text e-book formats this module writes in-process.</summary>
-    public static readonly string[] Outputs = ["epub", "fb2", "htmlz", "txtz"];
+    /// <summary>Text e-book formats this module writes in-process (MOBI as Mobipocket 6; AZW3/KF8 is only read).</summary>
+    public static readonly string[] Outputs = ["epub", "fb2", "htmlz", "txtz", "mobi"];
 
     /// <summary>Comic book archives: pictures in a zip (cbz), rar (cbr) or 7z (cb7).</summary>
     public static readonly string[] Comics = ["cbz", "cbr", "cb7"];

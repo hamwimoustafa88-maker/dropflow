@@ -85,7 +85,27 @@ internal static class Fb2
 
         var cleaned = BookHtml.Clean(body.ToString(), _ => null);
         return new EpubBook(title, authors.Count > 0 ? string.Join(", ", authors) : null,
-            string.IsNullOrEmpty(language) ? BookLanguage.Detect(cleaned) : language, cleaned);
+            string.IsNullOrEmpty(language) ? BookLanguage.Detect(cleaned) : language, cleaned)
+        { Cover = Cover(root, info) };
+    }
+
+    /// <summary>The picture of &lt;title-info&gt;&lt;coverpage&gt;&lt;image l:href="#id"/&gt;, taken from its &lt;binary&gt;.</summary>
+    private static byte[]? Cover(XElement root, XElement? info)
+    {
+        var ns = root.Name.Namespace;
+        var href = info?.Element(ns + "coverpage")?.Elements(ns + "image").FirstOrDefault()?.Attributes().FirstOrDefault(a => a.Name.LocalName == "href")?.Value;
+        if (href is null || !href.StartsWith('#')) return null;
+        var binary = root.Elements(ns + "binary").FirstOrDefault(b => b.Attribute("id")?.Value == href[1..]);
+        if (binary is null) return null;
+        try
+        {
+            var bytes = Convert.FromBase64String(new string(binary.Value.Where(c => !char.IsWhiteSpace(c)).ToArray()));
+            return bytes.Length <= EpubReader.MaxImageBytes && BookHtml.SniffImage(bytes) is not null ? bytes : null;
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Parses the XML, honouring its declared encoding (often windows-1251). A zipped FB2 (".fb2.zip" renamed) is opened too.</summary>

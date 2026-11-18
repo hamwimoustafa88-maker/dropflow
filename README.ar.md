@@ -88,7 +88,7 @@ DropFlow محوّل ملفات مجاني ومفتوح المصدر مبني ع�
 الأرقام من [`catalog/tools.json`](catalog/tools.json)، المصدر الوحيد للأدوات الذي تشترك فيه كل التطبيقات (القائمة الكاملة في
 [docs/feature-catalog.md](docs/feature-catalog.md)):
 
-<p align="center"><strong><!--n:conversions-->1252<!--/n--> تحويلاً · <!--n:tools-->73<!--/n--> أداة · <!--n:actions-->7<!--/n--> إجراءات على الملفات · <!--n:families-->13<!--/n--> عائلات صيغ</strong></p>
+<p align="center"><strong><!--n:conversions-->1257<!--/n--> تحويلاً · <!--n:tools-->73<!--/n--> أداة · <!--n:actions-->7<!--/n--> إجراءات على الملفات · <!--n:families-->13<!--/n--> عائلات صيغ</strong></p>
 
 | المجال | ما تحصل عليه |
 |---|---|

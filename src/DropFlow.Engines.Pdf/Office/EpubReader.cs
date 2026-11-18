@@ -18,7 +18,12 @@ internal enum EpubImages
     Drop,
 }
 
-internal sealed record EpubBook(string Title, string? Author, string Language, string BodyHtml);
+internal sealed record EpubBook(string Title, string? Author, string Language, string BodyHtml)
+{
+    /// <summary>The cover picture the book declares (EPUB cover-image, FB2 coverpage, MOBI EXTH 201), when it has one. It may or may not
+    /// also appear in the text.</summary>
+    public byte[]? Cover { get; init; }
+}
 
 /// <summary>
 /// Reads an EPUB (a zip of XHTML chapters) without any engine: container.xml -> package document -> spine order -> chapters.
@@ -90,7 +95,8 @@ internal static class EpubReader
                 string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(path) : title,
                 string.IsNullOrEmpty(author) ? null : author,
                 string.IsNullOrEmpty(language) ? Books.BookLanguage.Detect(body.ToString()) : language,
-                body.ToString());
+                body.ToString())
+            { Cover = Cover(zip, opf, manifest) };
         }
         catch (InvalidDataException ex)
         {
@@ -233,6 +239,24 @@ internal static class EpubReader
     }
 
     // ---- helpers --------------------------------------------------------------------------------------------------------
+
+    /// <summary>The cover picture: the EPUB 3 manifest item with <c>properties="cover-image"</c>, else the EPUB 2 <c>&lt;meta name="cover"&gt;</c>.</summary>
+    private static byte[]? Cover(ZipArchive zip, XDocument opf, Dictionary<string, (string Href, string Type, string Props)> manifest)
+    {
+        var item = manifest.Values.Where(m => m.Props.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("cover-image")).Select(m => m.Href).FirstOrDefault();
+        if (item is null)
+        {
+            var id = opf.Descendants().FirstOrDefault(e => e.Name.LocalName == "meta" && e.Attribute("name")?.Value == "cover")?.Attribute("content")?.Value;
+            if (id is not null && manifest.TryGetValue(id, out var declared)) item = declared.Href;
+        }
+        var entry = item is null ? null : zip.GetEntry(item);
+        if (entry is null || entry.Length > MaxImageBytes) return null;
+        using var stream = entry.Open();
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        var bytes = buffer.ToArray();
+        return Books.BookHtml.SniffImage(bytes) is null ? null : bytes;
+    }
 
     private static void RejectDrm(ZipArchive zip, string name)
     {

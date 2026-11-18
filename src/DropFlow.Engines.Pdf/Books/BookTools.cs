@@ -6,8 +6,8 @@ using DropFlow.Engines.Pdf.Office;
 namespace DropFlow.Engines.Pdf.Books;
 
 /// <summary>
-/// E-books in-process: EPUB, FB2, MOBI/AZW3 (read only), HTMLZ and TXTZ to HTML, Markdown, plain text, and to each other (EPUB, FB2, HTMLZ,
-/// TXTZ). PDF and pictures go through the browser engine (<see cref="BrowserDocumentTools"/>), Word/ODT/RTF through LibreOffice.
+/// E-books in-process: EPUB, FB2, MOBI, AZW3 (read only), HTMLZ and TXTZ to HTML, Markdown, plain text, and to each other (EPUB, FB2, HTMLZ,
+/// TXTZ, MOBI 6). PDF and pictures go through the browser engine (<see cref="BrowserDocumentTools"/>), Word/ODT/RTF through LibreOffice.
 /// </summary>
 internal static class BookTools
 {
@@ -54,6 +54,9 @@ internal static class BookTools
                 break;
             case "txtz":
                 ZippedBooks.WriteTxtz(book, path);
+                break;
+            case "mobi":
+                MobiWriter.Write(book, path, ctx.Ct);
                 break;
             default:
                 throw new ConversionFailure($"Cannot write .{target} books.");

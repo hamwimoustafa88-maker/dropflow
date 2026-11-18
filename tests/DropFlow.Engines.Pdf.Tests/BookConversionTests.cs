@@ -25,7 +25,7 @@ public sealed class BookConversionTests : IDisposable
     {
         var converters = PdfModule.Create(new NoEngines());
         string[] inputs = ["epub", "fb2", "mobi", "azw3", "htmlz", "txtz"];
-        string[] inProcess = ["html", "md", "txt", "epub", "fb2", "htmlz", "txtz"];
+        string[] inProcess = ["html", "md", "txt", "epub", "fb2", "htmlz", "txtz", "mobi"];
         foreach (var input in inputs)
         {
             foreach (var target in inProcess.Where(t => t != input))
@@ -41,8 +41,7 @@ public sealed class BookConversionTests : IDisposable
             }
             Assert.DoesNotContain(converters, c => c.Supports($"convert:{input}", input));
         }
-        Assert.DoesNotContain(converters, c => c.Supports("convert:mobi", "epub"));
-        Assert.DoesNotContain(converters, c => c.Supports("convert:azw3", "epub"));
+        Assert.DoesNotContain(converters, c => c.Supports("convert:azw3", "epub")); // KF8 is read, never written
     }
 
     // ---- FB2 --------------------------------------------------------------------------------------------------------------------

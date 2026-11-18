@@ -71,6 +71,8 @@ describe("no code path uploads user data", () => {
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/TRADEMARK.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/THIRD-PARTY-NOTICES.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://scouthub.dev/", // the ScoutHub platform link in the credit line, clicked by the visitor, never fetched
+      "src/lib/site.ts: https://scouthub.dev/projects/dropflow/", // DropFlow's page on the lab site (credit line), clicked by the visitor, never fetched
+      "src/lib/site.ts: https://scouthub.dev/en/projects/dropflow/",
       // ScoutHub's social accounts (icons in the credit line), clicked by the visitor, never fetched
       "src/lib/site.ts: https://www.linkedin.com/company/scouthub-lab/",
       "src/lib/site.ts: https://www.youtube.com/@ScoutHubLab",

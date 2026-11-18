@@ -47,9 +47,9 @@ export function pageMetadata({ locale, path, title, description, imageAlt }: { l
 export const siteMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: "DropFlow",
-  authors: [{ name: "ScoutHub" }],
-  creator: "ScoutHub",
-  publisher: "ScoutHub",
+  authors: [{ name: "ScoutHub Lab" }],
+  creator: "ScoutHub Lab",
+  publisher: "ScoutHub Lab",
   category: "technology",
 };
 
@@ -65,7 +65,7 @@ export function softwareJsonLd(locale: string, description: string, faq: { q: st
       {
         "@type": "Organization",
         ...scouthub,
-        name: "ScoutHub",
+        name: "ScoutHub Lab",
         url: SCOUTHUB_URL,
         logo: { "@type": "ImageObject", url: `${SITE_URL}/icons/scouthub.svg` },
         sameAs: SCOUTHUB_SOCIAL.map((s) => s.url),

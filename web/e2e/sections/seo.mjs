@@ -152,7 +152,7 @@ export async function seo({ b, base }) {
           d.signing?.href === `${REPO}/blob/main/docs/code-signing-policy.md` && [d.license, d.issues, d.security, d.signing].every((x) => x.h >= 44 && /noopener/.test(x.rel)), JSON.stringify([d.license, d.issues, d.security, d.signing]));
       check(`/${loc}: header nav links to the developer section`, d.nav);
     }
-    const CREDIT = { ar: ["© 2026 DropFlow. جميع الحقوق محفوظة.", "إحدى مبادرات منصة ScoutHub"], en: ["© 2026 DropFlow. All rights reserved.", "An initiative of the ScoutHub platform"] };
+    const CREDIT = { ar: ["© 2026 DropFlow. جميع الحقوق محفوظة.", "إحدى مبادرات مختبر ScoutHub Lab"], en: ["© 2026 DropFlow. All rights reserved.", "An initiative of ScoutHub Lab"] };
     for (const path of PAGES) {
       await b.goto(`${base}${path}`, path.endsWith("/app") ? 1600 : 900);
       const c = await b.ev(`(() => { const e = document.querySelector('[data-testid=site-credit]'); const a = e?.querySelector('a'); const i = e?.querySelector('img'); return { n: document.querySelectorAll('[data-testid=site-credit]').length, rights: e?.querySelector('[data-testid=credit-rights]')?.textContent.trim(), init: e?.querySelector('[data-testid=credit-initiative]')?.textContent.trim(), href: a?.getAttribute('href'), rel: a?.rel, target: a?.target, img: i?.getAttribute('src'), loaded: !!i && i.complete && i.naturalWidth > 0 }; })()`);

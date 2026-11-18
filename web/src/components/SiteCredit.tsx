@@ -1,12 +1,13 @@
-import { useTranslations } from "next-intl";
-import { SCOUTHUB_SOCIAL, SCOUTHUB_URL } from "@/lib/site";
+import { useLocale, useTranslations } from "next-intl";
+import { SCOUTHUB_PROJECT_URL, SCOUTHUB_SOCIAL, SCOUTHUB_URL } from "@/lib/site";
 import { SocialGlyph } from "./SocialGlyph";
 
-// The closing line of every page: copyright, then "an initiative of the ScoutHub platform" with the platform's logo
+// The closing line of every page: copyright, then "an initiative of ScoutHub Lab" with the lab's logo and a link to DropFlow's page there
 // (a local copy of https://scouthub.dev/assets/img/favicon.svg, so the page never loads anything from another site),
 // then ScoutHub's social accounts as icons (inline glyphs; each link is 44 px and named for screen readers).
 export function SiteCredit({ className = "" }: { className?: string }) {
   const t = useTranslations("credit");
+  const locale = useLocale();
   return (
     <div
       className={`flex flex-col items-center justify-center gap-x-4 gap-y-1.5 text-center text-xs text-muted sm:flex-row sm:flex-wrap ${className}`}
@@ -31,6 +32,17 @@ export function SiteCredit({ className = "" }: { className?: string }) {
             ),
           })}
         </span>
+      </p>
+      <p>
+        <a
+          href={SCOUTHUB_PROJECT_URL[locale === "en" ? "en" : "ar"]}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="credit-project"
+          className="inline-flex min-h-6 items-center underline-offset-4 hover:underline"
+        >
+          {t("project")}
+        </a>
       </p>
       <ul aria-label={t("social.label")} className="-my-1.5 flex flex-wrap items-center justify-center" data-testid="credit-social">
         {SCOUTHUB_SOCIAL.map(({ key, url }) => (

@@ -18,6 +18,8 @@ export const SECURITY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/b
 export const SIGNING_POLICY_URL = "https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md";
 /** ScoutHub, the platform DropFlow is an initiative of (credit line of every page). */
 export const SCOUTHUB_URL = "https://scouthub.dev/";
+/** DropFlow's page on the lab site (second link of the credit line): helps Google tie the two sites together and index it. */
+export const SCOUTHUB_PROJECT_URL = { ar: "https://scouthub.dev/projects/dropflow/", en: "https://scouthub.dev/en/projects/dropflow/" } as const;
 /** ScoutHub's own social accounts, shown as icons next to the credit line of every page, in this order (labels: `credit.social.<key>`). */
 export const SCOUTHUB_SOCIAL = [
   { key: "linkedin", url: "https://www.linkedin.com/company/scouthub-lab/" },

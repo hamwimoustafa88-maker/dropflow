@@ -3,10 +3,14 @@ using System.Text;
 
 namespace DropFlow.Engines.Media.Subtitles;
 
-/// <summary>Writes a <see cref="SubtitleDocument"/> as SRT, WebVTT, ASS or plain text.</summary>
+/// <summary>Writes a <see cref="SubtitleDocument"/> as SRT, WebVTT, ASS, plain text, LRC lyrics or YouTube SBV.</summary>
 public static class SubtitleWriter
 {
     private static readonly UTF8Encoding Utf8NoBom = new(false);
+
+    /// <summary>The formats this writer produces (SAMI, TTML and MicroDVD are read only).</summary>
+    public static IReadOnlyList<SubtitleFormat> Writable { get; } =
+        [SubtitleFormat.Srt, SubtitleFormat.Vtt, SubtitleFormat.Ass, SubtitleFormat.Txt, SubtitleFormat.Lrc, SubtitleFormat.Sbv];
 
     public static string Write(SubtitleDocument doc, SubtitleFormat target, SubtitleWriteOptions? options = null)
     {
@@ -17,14 +21,17 @@ public static class SubtitleWriter
             SubtitleFormat.Srt => WriteSrt(doc, nl),
             SubtitleFormat.Vtt => WriteVtt(doc, nl),
             SubtitleFormat.Ass => WriteAss(doc, nl),
-            _ => WriteTxt(doc, nl, options.CollapseRepeats),
+            SubtitleFormat.Txt => WriteTxt(doc, nl, options.CollapseRepeats),
+            SubtitleFormat.Lrc => WriteLrc(doc, nl),
+            SubtitleFormat.Sbv => WriteSbv(doc, nl),
+            _ => throw new ArgumentException($"{target} is a format DropFlow reads but does not write.", nameof(target)),
         };
     }
 
     /// <summary>Text to bytes (UTF-8), with a BOM according to <see cref="SubtitleWriteOptions.Bom"/> and the format's default.</summary>
     public static byte[] ToBytes(string text, SubtitleFormat target, SubtitleWriteOptions? options = null)
     {
-        var bom = options?.Bom ?? target != SubtitleFormat.Vtt;
+        var bom = options?.Bom ?? target is not (SubtitleFormat.Vtt or SubtitleFormat.Sbv);
         var body = Utf8NoBom.GetBytes(text);
         if (!bom) return body;
         return [0xEF, 0xBB, 0xBF, .. body];
@@ -112,6 +119,61 @@ public static class SubtitleWriter
             sb.Append(line).Append(nl);
         }
         return sb.ToString();
+    }
+
+    // ------------------------------------------------------------------ LRC
+
+    /// <summary>
+    /// <c>[mm:ss.xx]text</c>, one line per cue (LRC has no line breaks or styling: lines are joined with a space, tags dropped).
+    /// LRC has no end times, so an empty <c>[mm:ss.xx]</c> line clears the screen where a gap follows a cue and after the last one.
+    /// </summary>
+    private static string WriteLrc(SubtitleDocument doc, string nl)
+    {
+        var sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(doc.Title)) sb.Append("[ti:").Append(SingleLine(doc.Title).Replace("]", ")", StringComparison.Ordinal)).Append(']').Append(nl);
+        var cues = doc.Cues.Where(c => SubtitleText.ToPlain(c.Text).Trim().Length > 0).ToList();
+        for (var i = 0; i < cues.Count; i++)
+        {
+            var cue = cues[i];
+            var line = SingleLine(SubtitleText.ToPlain(SubtitleText.TidyLines(cue.Text)));
+            sb.Append('[').Append(LrcClock(cue.Start)).Append(']').Append(line).Append(nl);
+            var next = i + 1 < cues.Count ? cues[i + 1].Start : (TimeSpan?)null;
+            if (next is null || LrcClock(next.Value) != LrcClock(cue.End) && next.Value > cue.End)
+                sb.Append('[').Append(LrcClock(cue.End)).Append(']').Append(nl);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>LRC time <c>mm:ss.xx</c> (hundredths, rounded); minutes grow past 99 when needed.</summary>
+    public static string LrcClock(TimeSpan t)
+    {
+        var cs = (long)Math.Round(t.TotalMilliseconds / 10.0, MidpointRounding.AwayFromZero);
+        if (cs < 0) cs = 0;
+        return string.Create(CultureInfo.InvariantCulture, $"{cs / 6000:00}:{cs / 100 % 60:00}.{cs % 100:00}");
+    }
+
+    // ------------------------------------------------------------------ SBV
+
+    /// <summary>YouTube SBV: <c>H:MM:SS.mmm,H:MM:SS.mmm</c>, the text lines (no markup), a blank line.</summary>
+    private static string WriteSbv(SubtitleDocument doc, string nl)
+    {
+        var sb = new StringBuilder();
+        foreach (var cue in doc.Cues)
+        {
+            var text = SubtitleText.TidyLines(SubtitleText.ToPlain(cue.Text));
+            if (text.Length == 0) continue;
+            sb.Append(SbvClock(cue.Start)).Append(',').Append(SbvClock(cue.End)).Append(nl);
+            sb.Append(text.Replace("\n", nl, StringComparison.Ordinal)).Append(nl).Append(nl);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>SBV time <c>H:MM:SS.mmm</c>.</summary>
+    public static string SbvClock(TimeSpan t)
+    {
+        var ms = (long)Math.Round(t.TotalMilliseconds, MidpointRounding.AwayFromZero);
+        if (ms < 0) ms = 0;
+        return string.Create(CultureInfo.InvariantCulture, $"{ms / 3_600_000}:{ms / 60_000 % 60:00}:{ms / 1000 % 60:00}.{ms % 1000:000}");
     }
 
     // ------------------------------------------------------------------ time

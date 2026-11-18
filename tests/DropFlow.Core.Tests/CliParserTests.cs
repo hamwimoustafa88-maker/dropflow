@@ -66,6 +66,22 @@ public class CliParserTests
         Assert.True(Ok("engines", "--json").Json);
     }
 
+    [Fact]
+    public void Formats_and_events_are_understood()
+    {
+        Assert.Equal(CliKind.Formats, Ok("formats").Kind);
+        Assert.True(Ok("formats", "--json").Json);
+        Assert.True(Ok("convert", "a.png", "--to", "jpg", "--events").Events);
+        Assert.True(Ok("run", "img.compress", "a.png", "--events").Events);
+    }
+
+    [Fact]
+    public void The_usage_documents_every_exit_code()
+    {
+        foreach (var code in new[] { "0 success", "1 a job failed", "2 usage error", "3 nothing to convert" })
+            Assert.Contains(code, CliParser.Usage);
+    }
+
     [Theory]
     [InlineData("convert", "a.png")]                      // missing --to
     [InlineData("convert", "--to", "png")]                // missing files

@@ -11,7 +11,7 @@ namespace DropFlow.Engines.Pdf.Office;
 internal static class DocumentHtml
 {
     /// <summary>Extensions this class can turn into HTML (HTML itself needs no preparation and is not listed).</summary>
-    public static readonly IReadOnlyList<string> Inputs = ["txt", "md", "docx", "csv", "tsv", "xlsx", "json", "epub"];
+    public static readonly IReadOnlyList<string> Inputs = ["txt", "md", "docx", "csv", "tsv", "xlsx", "json", .. Books.BookFormats.Inputs];
 
     public static bool Supports(string extension) => Inputs.Contains(extension.TrimStart('.').ToLowerInvariant());
 
@@ -28,7 +28,7 @@ internal static class DocumentHtml
             "docx" => Rich(DocxReader.Read(path), title),
             "md" => DocumentTools.MarkdownToHtml(TextFile.Read(path), title),
             "csv" or "tsv" or "xlsx" or "json" => Tabular.ToHtml(Tabular.Read(path), title),
-            "epub" => EpubReader.ToHtmlDocument(EpubReader.Read(path, EpubImages.Inline)),
+            _ when Books.BookFormats.IsBook(extension) => EpubReader.ToHtmlDocument(Books.BookReader.Read(path, EpubImages.Inline)),
             _ => throw new ConversionFailure($"{Path.GetFileName(path)}: .{extension} cannot be turned into a page."),
         };
         return WithBase(html, folder);

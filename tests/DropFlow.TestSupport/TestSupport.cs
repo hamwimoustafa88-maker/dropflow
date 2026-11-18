@@ -22,6 +22,16 @@ public sealed class EngineFactAttribute : FactAttribute
     }
 }
 
+/// <summary>The <see cref="EngineFactAttribute"/> of a theory: every case is skipped, visibly, when the engine is not installed.</summary>
+public sealed class EngineTheoryAttribute : TheoryAttribute
+{
+    public EngineTheoryAttribute(EngineId engine)
+    {
+        if (Engines.Locator.Locate(engine) is null)
+            Skip = $"{engine} is not installed (install it from the DropFlow engine installer or winget to run this test).";
+    }
+}
+
 /// <summary>What a given FFmpeg build can do: builds differ (a macOS or minimal build may lack libass or an audio encoder).</summary>
 public static class FfmpegCapabilities
 {

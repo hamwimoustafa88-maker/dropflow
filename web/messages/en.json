@@ -28,7 +28,8 @@
   "nav": {
     "features": "Features",
     "formats": "Formats",
-    "developers": "Developers"
+    "developers": "Developers",
+    "how": "How it works"
   },
   "hero": {
     "badge": "100% local",
@@ -180,7 +181,8 @@
       "security": "Security policy",
       "signing": "Code signing policy",
       "license": "License (GPL-3.0)"
-    }
+    },
+    "cli": "Command line"
   },
   "faq": {
     "title": "FAQ",
@@ -270,7 +272,8 @@
       "open": "Open wheel",
       "empty": "Nothing here",
       "picker": "Wheels",
-      "center": "{count, plural, one {# file} other {# files}}"
+      "center": "{count, plural, one {# file} other {# files}}",
+      "pageHint": "{page}/{total} · PgDn or mouse wheel for more"
     },
     "more": "More",
     "files": {
@@ -391,7 +394,15 @@
       "invalidColor": "Invalid colour: {value}",
       "nothingToDo": "Nothing to change",
       "needTwoImages": "Pick two or more pictures",
-      "invalidPattern": "Invalid pattern: {value}"
+      "invalidPattern": "Invalid pattern: {value}",
+      "dataInvalid": "Not valid {format}",
+      "dataInvalidLine": "Not valid {format} (line {line})",
+      "notTable": "Not a table",
+      "noContacts": "No contacts found",
+      "noEvents": "No events found",
+      "fontCollection": "Font collections are not supported",
+      "notAFont": "Not a font file",
+      "fontOutlines": "Changing the outlines needs the Windows app"
     },
     "sr": {
       "wheelPage": "Page {page} of {total}"
@@ -432,7 +443,9 @@
       "img_qr": "Read QR",
       "img_ocr": "Text (OCR)",
       "img_remove_bg": "Remove background",
-      "gen_rename": "Rename"
+      "gen_rename": "Rename",
+      "data_to_vcard": "Make contacts",
+      "data_to_ical": "Make calendar"
     },
     "opt": {
       "quality": "Quality",
@@ -898,5 +911,91 @@
     "title": "Contact us",
     "whatsapp": "WhatsApp",
     "aria": "WhatsApp: chat with the team (opens in a new tab)"
+  },
+  "steps": {
+    "title": "How it works",
+    "drag": {
+      "title": "Drag a file",
+      "text": "From any folder."
+    },
+    "key": {
+      "title": "Tap a key",
+      "text": "Shift converts. Ctrl edits. Alt acts."
+    },
+    "pick": {
+      "title": "Drop on a choice",
+      "text": "The wheel opens at your cursor."
+    },
+    "done": {
+      "title": "Done",
+      "text": "Saved next to the original."
+    }
+  },
+  "glance": {
+    "title": "At a glance",
+    "price": "Price",
+    "priceValue": "Free",
+    "license": "License",
+    "version": "Version",
+    "platforms": "Platforms",
+    "offline": "Offline",
+    "offlineValue": "100% on your device",
+    "conversions": "Conversions",
+    "languages": "Languages",
+    "languagesValue": "العربية · English",
+    "updates": "Updates",
+    "updatesValue": "Automatic"
+  },
+  "news": {
+    "title": "New in",
+    "flip": {
+      "title": "Two-sided wheel",
+      "text": "Press Tab for more."
+    },
+    "routes": {
+      "title": "Multi-step routes",
+      "text": "CSV to PNG, in one drop."
+    },
+    "presets": {
+      "title": "Presets",
+      "text": "WhatsApp, Discord, e-mail. Or your own."
+    },
+    "browser": {
+      "title": "From the browser",
+      "text": "Drag a picture or a link."
+    },
+    "formats": {
+      "title": "New formats",
+      "text": "RAW, fonts, e-books, YAML."
+    },
+    "home": {
+      "title": "Home window",
+      "text": "Recent results. Retry, undo."
+    }
+  },
+  "pairs": {
+    "badge": "Free · offline · no upload",
+    "titleA": "Convert",
+    "titleB": "to",
+    "title": "Convert {from} to {to}",
+    "short": "{from} to {to}",
+    "lead": "On your own device. Nothing is uploaded.",
+    "step1": "Drag the {from} file",
+    "step2": "Tap Shift",
+    "step3": "Drop on {to}",
+    "tryWeb": "Convert in the browser",
+    "related": "Related",
+    "popular": "Popular conversions",
+    "metaTitle": "Convert {from} to {to} free, offline · DropFlow",
+    "metaDescription": "Convert {from} to {to} on your own computer with DropFlow: free, open source, nothing is uploaded.",
+    "metaDescriptionWeb": "Convert {from} to {to} free in your browser or on your computer with DropFlow. Nothing is uploaded."
+  },
+  "cli": {
+    "title": "on the command line",
+    "lead": "The same engines, in scripts.",
+    "exitCodes": "Exit codes",
+    "note": "Results go next to each source. Originals are never changed.",
+    "metaTitle": "Command line · DropFlow",
+    "metaDescription": "The dropflow command: convert files and run tools from scripts, offline. Examples and exit codes."
   }
 }

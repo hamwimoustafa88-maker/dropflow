@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plain net10.0 like the other engines, so the Windows app, the CLI and the macOS/Linux app all load it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.Engines.Data.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same version as DropFlow.Engines.Pdf (MIT). -->
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <!-- YAML reading and writing (MIT), approved by the owner for this engine only. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+</Project>

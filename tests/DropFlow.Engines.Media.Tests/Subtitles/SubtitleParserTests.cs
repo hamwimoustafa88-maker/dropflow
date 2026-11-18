@@ -460,6 +460,39 @@ public class SubtitleDecoderTests
     }
 
     [Fact]
+    public void Text_that_is_neither_arabic_nor_western_falls_back_to_the_system_code_page()
+    {
+        TextEncoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        const string korean = "1\n00:00:01,000 --> 00:00:02,000\n안녕하세요 여러분, 반갑습니다\n";
+        var bytes = TextEncoding.GetEncoding(949).GetBytes(korean);
+
+        Assert.Equal(korean, SubtitleDecoder.Decode(bytes, out var enc, systemCodePage: 949));
+        Assert.Equal("cp949", enc);
+        // The Arabic and Western guesses still win over the system code page when they fit.
+        Assert.Equal("windows-1256", Decoded(TextEncoding.GetEncoding(1256).GetBytes("1\n00:00:01,000 --> 00:00:02,000\nمرحبا بالعالم\n"), 949));
+        Assert.Equal("windows-1252", Decoded(TextEncoding.GetEncoding(1252).GetBytes("1\n00:00:01,000 --> 00:00:02,000\nÇa va très bien\n"), 949));
+        // A system code page that cannot help (UTF-8, or one .NET does not know) ends in windows-1252, never an exception.
+        Assert.Equal("windows-1252", Decoded(bytes, 65001));
+        Assert.Equal("windows-1252", Decoded(bytes, 0));
+
+        static string Decoded(byte[] b, int cp)
+        {
+            SubtitleDecoder.Decode(b, out var name, cp);
+            return name;
+        }
+    }
+
+    [Fact]
+    public void The_arabic_cp1256_sample_file_decodes_to_utf8_text()
+    {
+        var bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "samples", "subtitles", "arabic-cp1256.srt"));
+        var text = SubtitleDecoder.Decode(bytes, out var enc);
+        Assert.Equal("windows-1256", enc);
+        Assert.Contains("مرحباً بكم في الفيلم", text, StringComparison.Ordinal);
+        Assert.Contains("هذا سطر ثانٍ", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Binary_data_is_recognised()
     {
         Assert.True(SubtitleDecoder.LooksBinary([0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]));

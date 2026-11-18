@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>dropflow</AssemblyName>
     <RootNamespace>DropFlow.Cli</RootNamespace>
-    <Version>0.1.2</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,9 +19,11 @@
     <ProjectReference Include="..\DropFlow.Engines.Common\DropFlow.Engines.Common.csproj" />
     <ProjectReference Include="..\DropFlow.AI\DropFlow.AI.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Archive\DropFlow.Engines.Archive.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Fonts\DropFlow.Engines.Fonts.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Images\DropFlow.Engines.Images.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Media\DropFlow.Engines.Media.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Data\DropFlow.Engines.Data.csproj" />
   </ItemGroup>
 
 </Project>

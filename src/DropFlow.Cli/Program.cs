@@ -29,10 +29,15 @@ public static class Program
         if (args.Length > 0 && args[0].Equals("doctor", StringComparison.OrdinalIgnoreCase))
             return await DoctorCommand.RunAsync(args.Skip(1).ToList(), engines, models, version, dataDir, Console.Out, cts.Token);
 
+        var catalog = ToolCatalog.LoadEmbedded();
         var registry = new ToolRegistry().Register(Modules.Create(engines, models));
-        var recipes = BuiltInRecipes.Available(registry).Concat(new RecipeStore(Path.Combine(dataDir, "recipes.json")).Load()).ToList();
+        registry.Register(new DropFlow.Core.Routing.RouteConverter(registry, catalog, engines)); // chains such as EPUB → PDF → PNG
+        var userRecipes = new RecipeStore(Path.Combine(dataDir, "recipes.json")).Load();
+        var presets = BuiltInRecipes.All.Concat(userRecipes).Where(r => r.OnWheel).ToList();
+        registry.Register(new DropFlow.Core.Routing.PresetConverter(registry, catalog, () => presets)); // dropflow run preset:whatsapp-video clip.mp4
+        var recipes = BuiltInRecipes.Available(registry).Concat(userRecipes).ToList();
 
-        var runner = new CliRunner(registry, ToolCatalog.LoadEmbedded(), engines, recipes, new PermanentDelete(), Console.Out, Console.Error, version);
+        var runner = new CliRunner(registry, catalog, engines, recipes, new PermanentDelete(), Console.Out, Console.Error, version);
         return await runner.RunAsync(args, cts.Token);
     }
 }
@@ -60,6 +65,8 @@ internal static class Modules
         .. DropFlow.Engines.Media.MediaModule.Create(engines),
         .. DropFlow.Engines.Pdf.PdfModule.Create(engines),
         .. DropFlow.Engines.Archive.ArchiveModule.Create(engines),
+        .. DropFlow.Engines.Data.DataModule.Create(engines),
+        .. DropFlow.Engines.Fonts.FontsModule.Create(engines),
         .. DropFlow.AI.AiModule.Create(engines, models),
     ];
 }

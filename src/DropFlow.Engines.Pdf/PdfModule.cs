@@ -1,4 +1,5 @@
 using DropFlow.Core.Operations;
+using DropFlow.Engines.Pdf.Books;
 using DropFlow.Engines.Pdf.Infrastructure;
 using DropFlow.Engines.Pdf.Office;
 using DropFlow.Engines.Pdf.Rendering;
@@ -41,15 +42,17 @@ public static class PdfModule
             .. PdfCompareTools.Specs(),
             .. PdfImageTools.Specs(),
             .. PdfATools.Specs(),
-            .. ImageToPdfTools.Specs(),
+            .. ImageToPdfTools.Specs(svgByBrowser: htmlRenderer is not null),
             .. PdfTextTools.Specs(),
             .. PdfExportTools.Specs(),
             .. TabularTools.Specs(),
             .. DocumentTools.Specs(),
-            .. EpubTools.Specs(),
+            .. BookTools.Specs(),
+            .. ComicTools.Specs(),
+            .. MacroTools.Specs(),
         ]),
         new SpecConverter(EngineId.Qpdf, new QpdfTools(engines, runner).Specs()),
-        .. htmlRenderer is null ? [] : new IConverter[] { new SpecConverter(EngineId.None, new BrowserDocumentTools(htmlRenderer).Specs()) },
+        .. htmlRenderer is null ? [] : new IConverter[] { new SpecConverter(EngineId.None, [.. new BrowserDocumentTools(htmlRenderer).Specs(), .. new SvgPdf(htmlRenderer).Specs()]) },
         new SpecConverter(EngineId.LibreOffice, new LibreOfficeTools(engines, runner, browserRenders: htmlRenderer is not null).Specs()),
     ];
 }

@@ -60,6 +60,7 @@ describe("no code path uploads user data", () => {
     const allowed = [
       "src/lib/site.ts: https://dropflow.scouthub.dev", // the site's own canonical address (metadata, robots.txt, sitemap), never fetched
       "src/lib/seo.ts: https://schema.org", // the JSON-LD vocabulary identifier, a name inside structured data, never fetched
+      "src/app/[locale]/convert/[pair]/page.tsx: https://schema.org", // the same JSON-LD vocabulary name (HowTo), never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/issues", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/SECURITY.md", // a link the visitor may click, never fetched
       "src/lib/site.ts: https://github.com/hamwimoustafa88-maker/dropflow/blob/main/docs/code-signing-policy.md", // a link the visitor may click, never fetched

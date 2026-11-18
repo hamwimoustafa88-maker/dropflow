@@ -12,6 +12,30 @@ export async function wheelUx({ b, base, out, files }) {
   const dl = join(out, "dl-wheel");
   await setDownloadDir(b, dl);
 
+  await section("wheel: a long wheel turns its pages with PageDown / PageUp and the mouse wheel (Tab stays focus navigation)", async () => {
+    await freshApp(b, base, "en");
+    await addFiles(b, [files.png]);
+    const first = await wedgeIds(b);
+    const hint = await b.ev("document.querySelector('[data-testid=wheel-page-hint]')?.textContent ?? ''");
+    check("the PNG convert wheel is paged and says how to see more", first.some((id) => id.startsWith("more:")) && /^1\/\d/.test(hint), `${first.join(",")} | ${hint}`);
+    await b.key("PageDown", { vk: 34 });
+    await sleep(300);
+    const second = await wedgeIds(b);
+    check("PageDown shows the next page", JSON.stringify(second) !== JSON.stringify(first) && /^2\//.test(await b.ev("document.querySelector('[data-testid=wheel-page-hint]').textContent")), second.join(","));
+    await b.key("PageUp", { vk: 33 });
+    await sleep(300);
+    check("PageUp goes back to the first page", JSON.stringify(await wedgeIds(b)) === JSON.stringify(first));
+    const box = await b.box("[data-wedge]");
+    await b.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: box.x, y: box.y, deltaX: 0, deltaY: 120 });
+    await sleep(400);
+    check("one mouse-wheel notch over the wheel turns the page", JSON.stringify(await wedgeIds(b)) !== JSON.stringify(first));
+    const focusBefore = await b.ev("document.activeElement?.getAttribute('data-wedge') ?? document.activeElement?.tagName");
+    await b.key("Tab", { vk: 9 });
+    await sleep(150);
+    const focusAfter = await b.ev("document.activeElement?.getAttribute('data-wedge') ?? document.activeElement?.tagName");
+    check("Tab still moves keyboard focus (it does not turn the page)", focusBefore !== focusAfter, `${focusBefore} -> ${focusAfter}`);
+  });
+
   await section("wheel: Shift / Ctrl / Alt held at DROP time pick Convert / Tools / Actions", async () => {
     for (const [mod, want, file, label] of [
       ["shift", "convert", files.png, "Shift -> Convert"],

@@ -15,9 +15,36 @@ internal static class ImageToPdfTools
 {
     /// <summary>
     /// Extensions this module can turn into PDF pages. HEIC (phone photos) is decoded by Magick.NET's bundled libheif - nothing to
-    /// install; it is verified against a real HEVC HEIC file (tests/samples/heic).
+    /// install; it is verified against a real HEVC HEIC file (tests/samples/heic). Camera RAW is developed by the LibRaw inside Magick.NET.
     /// </summary>
-    public static readonly string[] Inputs = ["jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "svg", "heic"];
+    public static readonly string[] Inputs =
+    [
+        "jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "svg", "heic",
+        "svgz", "psd", "jxl", "jp2", "tga", "qoi", "dds", "pcx", "exr", "hdr", "dcm", "fits",
+        "dng", "cr2", "cr3", "nef", "arw", "orf", "rw2", "raf",
+    ];
+
+    /// <summary>
+    /// Formats the bytes alone do not identify, so the extension must: ICO and Targa have no signature, SVGZ is plain gzip, and camera
+    /// RAW files are TIFF inside (sniffed, they would give the small embedded preview instead of the photo).
+    /// </summary>
+    private static MagickFormat? FormatHint(string ext) => ext switch
+    {
+        "ico" => MagickFormat.Ico,
+        "tga" => MagickFormat.Tga,
+        "svgz" => MagickFormat.Svgz,
+        "pcx" => MagickFormat.Pcx,
+        "dcm" => MagickFormat.Dcm,
+        "dng" => MagickFormat.Dng,
+        "cr2" => MagickFormat.Cr2,
+        "cr3" => MagickFormat.Cr3,
+        "nef" => MagickFormat.Nef,
+        "arw" => MagickFormat.Arw,
+        "orf" => MagickFormat.Orf,
+        "rw2" => MagickFormat.Rw2,
+        "raf" => MagickFormat.Raf,
+        _ => null,
+    };
 
     public static readonly IReadOnlyList<ToolOption> Options =
     [
@@ -28,10 +55,13 @@ internal static class ImageToPdfTools
     private const double MaxPageSide = 14400;
     private const double FixedPageMargin = 36;
 
-    public static IEnumerable<OperationSpec> Specs()
+    /// <param name="svgByBrowser">True when the browser engine turns a single SVG into a vector PDF (<see cref="Office.SvgPdf"/>), so this
+    /// picture path leaves "convert:pdf" for SVG/SVGZ to it (one owner per pair). Many pictures into one PDF keep using this path.</param>
+    public static IEnumerable<OperationSpec> Specs(bool svgByBrowser = false)
     {
         yield return new OperationSpec("img.to-pdf", Inputs, ctx => Task.FromResult(Build(ctx, group: true)), Options);
-        yield return new OperationSpec("convert:pdf", Inputs, ctx => Task.FromResult(Build(ctx, group: false)));
+        yield return new OperationSpec("convert:pdf", svgByBrowser ? [.. Inputs.Where(i => !Office.SvgPdf.Inputs.Contains(i))] : Inputs,
+            ctx => Task.FromResult(Build(ctx, group: false)));
     }
 
     private static ConversionResult Build(JobContext ctx, bool group)
@@ -102,14 +132,27 @@ internal static class ImageToPdfTools
 
     private sealed record PictureFrame(XImage Image, double WidthPoints, double HeightPoints);
 
-    private static IEnumerable<PictureFrame> LoadFrames(string path)
-    {
-        var name = Path.GetFileName(path);
-        var bytes = File.ReadAllBytes(path);
+    private static IEnumerable<PictureFrame> LoadFrames(string path) => LoadFrames(File.ReadAllBytes(path), Path.GetFileName(path));
 
-        // ICO has no signature Magick can sniff, so the extension tells it what to expect.
+    /// <summary>
+    /// Adds one page per frame of a picture (given as bytes) to <paramref name="document"/>, sized to the picture. The XImages are added
+    /// to <paramref name="keep"/>: the caller disposes them after saving. Used for comic books, whose pages come out of an archive.
+    /// </summary>
+    internal static void AddPicturePages(PdfDocument document, byte[] bytes, string name, List<XImage> keep)
+    {
+        foreach (var frame in LoadFrames(bytes, name))
+        {
+            keep.Add(frame.Image);
+            AddPage(document, frame, "image");
+        }
+    }
+
+    private static IEnumerable<PictureFrame> LoadFrames(byte[] bytes, string name)
+    {
+
         var settings = new MagickReadSettings();
-        if (string.Equals(Path.GetExtension(path), ".ico", StringComparison.OrdinalIgnoreCase)) settings.Format = MagickFormat.Ico;
+        var ext = Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
+        if (FormatHint(ext) is { } hint) settings.Format = hint;
 
         MagickImageInfo info;
         try
@@ -149,6 +192,7 @@ internal static class ImageToPdfTools
             foreach (var frame in frames)
             {
                 frame.AutoOrient();
+                if (frame.ColorSpace == ColorSpace.RGB) frame.ColorSpace = ColorSpace.sRGB;   // linear light (Radiance HDR) would come out dark
                 if (frame.ColorSpace == ColorSpace.CMYK)
                 {
                     // Use the picture's own profile when it has one, otherwise a standard print profile, so the colours stay plausible.

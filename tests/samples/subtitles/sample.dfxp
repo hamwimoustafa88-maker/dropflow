@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/2006/10/ttaf1" xmlns:tts="http://www.w3.org/2006/10/ttaf1#style">
+  <body>
+    <div xml:lang="en" begin="10s">
+      <p begin="0s" end="1.5s">First, inside a div that starts at ten seconds</p>
+      <p begin="2s" end="4s"><span tts:fontStyle="italic">مرحبا</span> again</p>
+    </div>
+  </body>
+</tt>

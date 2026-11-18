@@ -1,35 +1,80 @@
 @import "tailwindcss";
 
-/* DropFlow identity: indigo + cyan on white. Tokens only — never raw hex in components.
-   The site is always light (owner: "white, formal and simple"), whatever the visitor's system theme. */
+/* DropFlow identity: warm paper, violet and mint (owner, 2026-11-18). Tokens only — never raw hex in components.
+   Light by default; follows the visitor's system theme (dark) with CSS only, so no script and no CSP change.
+   Every text/background pair is >= 4.5:1 in both schemes (checked by e2e quality). */
 :root {
-  --bg: #f7f8fc;
+  --bg: #f8f7f3;
   --surface: #ffffff;
-  --surface-2: #eceffa;
-  --fg: #0a0f24;
-  --muted: #4a5372;
-  --border: #dadff0;
-  --primary: #4338ca;
+  --surface-2: #f1efe9;
+  --fg: #15141c;
+  --muted: #57555f;
+  --border: #e4e1d8;
+  --primary: #5b4fd0;
+  --primary-strong: #4a3fbd;
   --on-primary: #ffffff;
-  --primary-soft: #e3e8ff;
-  --accent: #0e7490;
-  --ring: #4338ca;
-  --grid: rgb(10 15 36 / 0.06);
-  --glow-a: rgb(67 56 202 / 0.22);
-  --glow-b: rgb(14 116 144 / 0.18);
-  /* success: >= 4.5:1 as text on bg/surface, and on-ok on ok (white on #0b7a4b = 5.5:1) */
+  --primary-soft: #ecebfb;
+  /* --accent is text-safe mint; --violet / --mint are the bright decorative pair (gradients, blobs, logo). */
+  --accent: #08765a;
+  --violet: #7a6ee6;
+  --mint: #18b088;
+  --ring: #5b4fd0;
+  --grid: rgb(21 20 28 / 0.05);
+  --glow-a: rgb(122 110 230 / 0.30);
+  --glow-b: rgb(24 176 136 / 0.22);
+  --shadow: 0 30px 80px -30px rgb(74 63 189 / 0.32), 0 8px 24px -12px rgb(21 20 28 / 0.16);
+  --ease-spring: cubic-bezier(0.2, 1.4, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* success: >= 4.5:1 as text on bg/surface, and on-ok on ok */
   --ok: #0b7a4b;
   --on-ok: #ffffff;
-  /* WhatsApp contact button: white on --wa = 5.9:1, --wa as text on surface = 5.9:1 */
+  /* WhatsApp contact button: white on --wa, and --wa as text on surface, both >= 4.5:1 */
   --wa: #0a7a46;
   --wa-hover: #07603a;
   --wa-soft: #e1f5ea;
   --on-wa: #ffffff;
-  /* legal pages: callout for limits and warnings (--warn on --warn-soft = 6.4:1) */
+  /* legal pages: callout for limits and warnings */
   --warn: #7c4a03;
   --warn-soft: #fff6e0;
   --warn-border: #e9b44c;
-  color-scheme: light;
+  /* terminal blocks (/cli): always dark */
+  --term-bg: #15141c;
+  --term-fg: #f2f1f7;
+  --term-ok: #3fcf9f;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0e16;
+    --surface: #1a1924;
+    --surface-2: #232230;
+    --fg: #f2f1f7;
+    --muted: #aaa8ba;
+    --border: #2f2d3d;
+    --primary: #a59cf6;
+    --primary-strong: #b9b2fa;
+    --on-primary: #15141c;
+    --primary-soft: #2b2752;
+    --accent: #3fcf9f;
+    --violet: #8c80f0;
+    --mint: #2cc497;
+    --ring: #a59cf6;
+    --grid: rgb(255 255 255 / 0.05);
+    --glow-a: rgb(127 119 221 / 0.28);
+    --glow-b: rgb(29 158 117 / 0.20);
+    --shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+    --ok: #46c98f;
+    --on-ok: #0b0f0c;
+    --wa: #1f9d5a;
+    --wa-hover: #2bb36a;
+    --wa-soft: #12291d;
+    --on-wa: #0b0f0c;
+    --warn: #f2b54d;
+    --warn-soft: #2a2213;
+    --warn-border: #8a6420;
+    --term-bg: #08070d;
+  }
 }
 
 @theme inline {
@@ -40,10 +85,17 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-violet: var(--violet);
+  --color-mint: var(--mint);
   --color-on-primary: var(--on-primary);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
   --color-ok: var(--ok);
+  --color-on-ok: var(--on-ok);
+  --color-term-bg: var(--term-bg);
+  --color-term-fg: var(--term-fg);
+  --color-term-ok: var(--term-ok);
   --color-wa: var(--wa);
   --color-wa-hover: var(--wa-hover);
   --color-wa-soft: var(--wa-soft);
@@ -97,17 +149,64 @@ a,
     radial-gradient(34rem 20rem at 8% 0%, var(--glow-b), transparent 70%);
 }
 
+/* Two soft colour blobs (violet + mint) drifting slowly behind a section. Decorative only. */
+.blobs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.blobs::before,
+.blobs::after {
+  content: "";
+  position: absolute;
+  width: 46rem;
+  height: 46rem;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  animation: drift 26s ease-in-out infinite alternate;
+}
+.blobs::before {
+  background: var(--violet);
+  inset-block-start: -18rem;
+  inset-inline-end: -14rem;
+  opacity: 0.32;
+}
+.blobs::after {
+  background: var(--mint);
+  inset-block-end: -22rem;
+  inset-inline-start: -16rem;
+  opacity: 0.22;
+  animation-delay: -9s;
+}
+
 .text-gradient {
-  background: linear-gradient(105deg, var(--primary), var(--accent));
+  background: linear-gradient(100deg, var(--primary) 0%, var(--violet) 45%, var(--mint) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .glass {
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.shadow-soft {
+  box-shadow: var(--shadow);
+}
+
+/* Primary button: violet gradient, spring on hover. */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: var(--on-primary);
+  transition: transform 220ms var(--ease-spring), box-shadow 220ms ease;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px var(--glow-a);
 }
 
 /* ---------- Wheel ---------- */
@@ -173,6 +272,40 @@ a,
   animation: ring-fill 900ms ease-out forwards;
 }
 
+/* ---------- How it works (steps on a gradient line) ---------- */
+.step-line {
+  background: linear-gradient(var(--primary), var(--violet), var(--mint));
+  border-radius: 9999px;
+}
+.step-dot {
+  background: linear-gradient(135deg, var(--primary), var(--mint));
+  box-shadow: 0 10px 24px -10px var(--glow-a);
+}
+.step-drag {
+  animation: step-drag 3.2s var(--ease-out) infinite;
+}
+.step-key {
+  animation: step-key 3.3s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.step-check {
+  animation: step-check 2.8s var(--ease-spring) infinite;
+}
+@keyframes step-drag {
+  0% { transform: translate(-46px, 18px); opacity: 0; }
+  20% { opacity: 1; }
+  70%, 100% { transform: translate(18px, -10px); opacity: 1; }
+}
+/* Only position and border move (never the text or fill colour), so the key label keeps its contrast in every frame. */
+@keyframes step-key {
+  0%, 30%, 100% { transform: none; border-color: var(--border); }
+  8%, 22% { transform: translateY(3px); border-color: var(--primary); }
+}
+@keyframes step-check {
+  0%, 20% { transform: scale(0); }
+  40%, 100% { transform: scale(1); }
+}
+
 /* ---------- Marquee (always LTR: chips are Latin) ---------- */
 .marquee {
   display: flex;
@@ -211,6 +344,10 @@ a,
   animation-delay: var(--d, 0s);
 }
 
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-4rem, 3rem, 0) scale(1.12); }
+}
 @keyframes orbit {
   to { transform: rotate(360deg); }
 }
@@ -264,9 +401,15 @@ a,
   .playhead,
   .float,
   .pulse-ring,
-  .reveal {
+  .reveal,
+  .blobs::before,
+  .blobs::after,
+  .step-drag,
+  .step-key,
+  .step-check {
     animation: none;
   }
+  .btn-primary { transition: none; }
   .progress-ring { animation: none; stroke-dashoffset: 0; }
   .wedge, .wedge-label { transition: none; }
 }

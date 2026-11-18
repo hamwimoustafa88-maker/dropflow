@@ -69,6 +69,7 @@ public static class LinkMessages
         UrlDownloadError.TooManyRedirects => loc["link.error.redirects"],
         UrlDownloadError.TooLarge => loc.Format("link.error.tooLarge", ByteSize.Format(ex.Limit)),
         UrlDownloadError.Storage => loc.Format("link.error.storage", ex.Reason ?? ""),
+        UrlDownloadError.Blocked => loc["link.error.blocked"],
         _ => loc.Format("link.error.network", ex.Reason ?? ""),
     };
 

@@ -102,7 +102,8 @@ public class UrlDownloaderTests : IDisposable
 
     public void Dispose() => _dir.Dispose();
 
-    private UrlDownloader Downloader(long max = UrlDownloader.DefaultMaxBytes) => new(Folder, max);
+    // the scripted server listens on loopback, which the real policy refuses: these tests allow it explicitly
+    private UrlDownloader Downloader(long max = UrlDownloader.DefaultMaxBytes) => new(Folder, max, allowAddress: _ => true);
 
     private static readonly byte[] Pdf = Encoding.ASCII.GetBytes("%PDF-1.4 pretend document");
 

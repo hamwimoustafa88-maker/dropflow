@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Font conversions written from the public specifications (OpenType, W3C WOFF 1.0 / 2.0, EOT). No packages: zlib and Brotli come
+       from System.IO.Compression. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DropFlow.Engines.Fonts.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DropFlow.Core\DropFlow.Core.csproj" />
+  </ItemGroup>
+
+</Project>

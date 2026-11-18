@@ -195,7 +195,7 @@ public class FormatConverterTests
         Assert.True(c.Supports("convert:png", "heic"));
         Assert.True(c.Supports("convert:png", "svg"));
         Assert.False(c.Supports("convert:png", "png"), "same format");
-        Assert.False(c.Supports("convert:svg", "png"), "svg is input-only");
+        Assert.False(c.Supports("convert:svg", "png"), "svg output is made by the tracer (Vector.TraceTool), not by Magick");
         Assert.False(c.Supports("convert:jpg", "pdf"));
         Assert.False(c.Supports("convert:pdf", "png"), "pdf output belongs to the PDF engine");
         Assert.False(c.Supports("img.compress", "png"));

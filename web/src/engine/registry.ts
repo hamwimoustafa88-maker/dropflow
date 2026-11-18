@@ -6,6 +6,8 @@
 
 import { aiConverter } from "./converters/ai";
 import { archiveConverter } from "./converters/archive";
+import { dataConverter } from "./converters/data";
+import { fontsConverter } from "./converters/fonts";
 import { generalConverter } from "./converters/general";
 import { imagesConverter } from "./converters/images";
 import { mediaConverter } from "./converters/media";
@@ -46,5 +48,7 @@ export const registry = new Registry([
   mediaConverter,
   subtitlesConverter,
   archiveConverter,
+  dataConverter,
+  fontsConverter,
   generalConverter,
 ]);

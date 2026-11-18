@@ -7,7 +7,34 @@ namespace DropFlow.Core.App;
 /// </summary>
 public static class DataFolder
 {
-    public static string Default => Path.Combine(LocalAppData, "DropFlow Data");
+    public static string Default => Resolve(AppContext.BaseDirectory, Legacy);
+
+    /// <summary>The empty file that turns a copy of DropFlow into a portable one (data beside the program, nothing in the user profile).</summary>
+    public const string PortableMarker = "dropflow.portable";
+
+    /// <summary>
+    /// Where the data goes for the program in <paramref name="exeDir"/>: beside it when a <see cref="PortableMarker"/> file sits next to the
+    /// program or next to Velopack's Update.exe one folder up (a portable zip keeps the program in "current", which updates replace, so the
+    /// marker and the data live outside it); otherwise <c>%LOCALAPPDATA%\DropFlow Data</c>. The marker is ignored in the installed copy
+    /// (<paramref name="installedRoot"/>), because uninstalling deletes that folder and the data with it.
+    /// </summary>
+    public static string Resolve(string exeDir, string installedRoot)
+    {
+        var root = PortableRoot(exeDir);
+        if (root is not null && !string.Equals(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), Path.GetFullPath(installedRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            return Path.Combine(root, "DropFlow Data");
+        return Path.Combine(LocalAppData, "DropFlow Data");
+    }
+
+    /// <summary>The portable root (the folder holding the marker), or null for a normal copy.</summary>
+    public static string? PortableRoot(string exeDir)
+    {
+        var dir = Path.GetFullPath(exeDir);
+        if (File.Exists(Path.Combine(dir, PortableMarker))) return dir;
+        var parent = Path.GetDirectoryName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (parent is not null && File.Exists(Path.Combine(parent, PortableMarker)) && File.Exists(Path.Combine(parent, "Update.exe"))) return parent;
+        return null;
+    }
 
     /// <summary>The folder v0.1.0 used, which is also the install folder.</summary>
     public static string Legacy => Path.Combine(LocalAppData, "DropFlow");

@@ -96,8 +96,8 @@ public class WheelControlRenderTests
         var (hx, hy) = InWedge(img.Size, 6, 1);
         var (ox, oy) = InWedge(img.Size, 6, 4);
 
-        Assert.True(Near(Pixel(img, hx, hy), "#4338CA"), $"hovered wedge was {Pixel(img, hx, hy)}");
-        Assert.True(Near(Pixel(img, ox, oy), "#ECEFFA"), $"other wedge was {Pixel(img, ox, oy)}");
+        Assert.True(Near(Pixel(img, hx, hy), "#5B4FD0"), $"hovered wedge was {Pixel(img, hx, hy)}");
+        Assert.True(Near(Pixel(img, ox, oy), "#F1EFE9"), $"other wedge was {Pixel(img, ox, oy)}");
     }
 
     [Fact]
@@ -107,8 +107,8 @@ public class WheelControlRenderTests
         var (hx, hy) = InWedge(img.Size, 6, 0);
         var (ox, oy) = InWedge(img.Size, 6, 3);
 
-        Assert.True(Near(Pixel(img, hx, hy), "#8B95FB"), $"{Pixel(img, hx, hy)}");
-        Assert.True(Near(Pixel(img, ox, oy), "#182044", 10), $"{Pixel(img, ox, oy)}");
+        Assert.True(Near(Pixel(img, hx, hy), "#A59CF6"), $"{Pixel(img, hx, hy)}");
+        Assert.True(Near(Pixel(img, ox, oy), "#232230", 10), $"{Pixel(img, ox, oy)}");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class WheelControlRenderTests
         // boundary between wedge 0 (centre 0°) and wedge 1 (centre 60°) is at 30°
         var (x, y) = WheelGeometry.OnCircle(WheelControl.Outer - 20, 30);
         var px = Pixel(img, img.Size / 2.0 + x, img.Size / 2.0 + y);
-        Assert.False(Near(px, "#ECEFFA", 3), $"expected a gap (panel colour) at the boundary, got {px}");
+        Assert.False(Near(px, "#F1EFE9", 3), $"expected a gap (panel colour) at the boundary, got {px}");
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class WheelControlRenderTests
         var img = Render(w => w.SetItems(Six, mirrored: true, selected: 1), WheelTheme.Light);
         var (x, y) = InWedge(img.Size, 6, 1, mirrored: true);
         Assert.True(x < img.Size / 2.0, "wedge 1 should be on the left when mirrored");
-        Assert.True(Near(Pixel(img, x, y), "#4338CA"));
+        Assert.True(Near(Pixel(img, x, y), "#5B4FD0"));
     }
 
     [Fact]
@@ -138,15 +138,15 @@ public class WheelControlRenderTests
         // 0.5 progress: ring covers 12 o'clock to 6 o'clock clockwise, so 3 o'clock is painted and 9 o'clock is the plain track
         var right = Pixel(img, img.Size / 2.0 + r, img.Size / 2.0);
         var left = Pixel(img, img.Size / 2.0 - r, img.Size / 2.0);
-        Assert.True(Near(right, "#0E7490", 25), $"3 o'clock {right}");
-        Assert.True(Near(left, "#ECEFFA", 12), $"9 o'clock {left}");
+        Assert.True(Near(right, "#08765A", 25), $"3 o'clock {right}");
+        Assert.True(Near(left, "#F1EFE9", 12), $"9 o'clock {left}");
     }
 
     [Fact]
     public void An_empty_wheel_renders_a_ring_and_does_not_throw()
     {
         var img = Render(w => { w.SetItems([], false); w.SetCenter("Drop files", "here"); }, WheelTheme.Light, Path.Combine(VisualDir, "wheel-empty.png"));
-        Assert.True(Near(Pixel(img, img.Size / 2.0, img.Size / 2.0 - 110), "#ECEFFA", 10));
+        Assert.True(Near(Pixel(img, img.Size / 2.0, img.Size / 2.0 - 110), "#F1EFE9", 10));
     }
 
     [Fact]
@@ -226,8 +226,8 @@ public class WheelControlRenderTests
 
         var (x, y) = InWedge(plain.Size, 7, 6, mirrored);
         Assert.True(mirrored ? x > plain.Size / 2.0 : x < plain.Size / 2.0, "the last wedge sits just before the first one in reading order");
-        Assert.True(Near(Pixel(hovered, x, y), "#4338CA"), $"hovered + Add was {Pixel(hovered, x, y)}");
-        Assert.True(Near(Pixel(plain, x, y), "#ECEFFA"), $"+ Add was {Pixel(plain, x, y)}");
+        Assert.True(Near(Pixel(hovered, x, y), "#5B4FD0"), $"hovered + Add was {Pixel(hovered, x, y)}");
+        Assert.True(Near(Pixel(plain, x, y), "#F1EFE9"), $"+ Add was {Pixel(plain, x, y)}");
     }
 
     [Fact]
@@ -282,5 +282,37 @@ public class WheelControlRenderTests
         var items = new WheelItem[] { new("m", "MP4", WheelItemState.NeedsEngine), new("p", "Protect", NeedsOptions: true), new("x", "A very long operation name indeed") };
         var img = Render(w => w.SetItems(items, false, selected: 2), WheelTheme.Light, Path.Combine(VisualDir, "wheel-marks.png"));
         Assert.Contains(img.Pixels, b => b != 0);
+    }
+
+    [Fact]
+    public void Face_dots_appear_only_on_a_wheel_with_a_back_and_mark_the_face_shown()
+    {
+        var plain = Render(w => w.SetItems(Six, false), WheelTheme.Light);
+        var front = Render(w => { w.SetItems(Six, false); w.SetFace(showingBack: false, hasBack: true); }, WheelTheme.Light, Path.Combine(VisualDir, "wheel-face-front.png"));
+        var back = Render(w => { w.SetItems(Six, false); w.SetFace(showingBack: true, hasBack: true); }, WheelTheme.Light, Path.Combine(VisualDir, "wheel-face-back.png"));
+        var c = plain.Size / 2.0;
+        var y = c + (WheelControl.Inner - 8) - 11;
+
+        Assert.Equal(Pixel(plain, c - 6, y), Pixel(plain, c + 6, y));                     // no dots: same hub colour both sides
+        Assert.NotEqual(Pixel(plain, c - 6, y), Pixel(front, c - 6, y));                  // front: the first dot is filled
+        Assert.Equal(Pixel(front, c - 6, y), Pixel(back, c + 6, y));                       // back: the second dot is filled instead
+        Assert.Equal(Pixel(plain, c + 6, y), Pixel(front, c + 6, y));
+    }
+
+    [Fact]
+    public void A_flip_is_requested_only_when_there_is_a_back()
+    {
+        var count = Sta.Run(() =>
+        {
+            var w = new WheelControl();
+            var n = 0;
+            w.FlipRequested += (_, _) => n++;
+            w.SetItems(Six, false);
+            w.RequestFlip();                   // no back yet
+            w.SetFace(showingBack: false, hasBack: true);
+            w.RequestFlip();
+            return n;
+        });
+        Assert.Equal(1, count);
     }
 }

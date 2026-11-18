@@ -33,6 +33,29 @@ public sealed class RegistryCoverageTests : IDisposable
     private ToolRegistry Registry() =>
         new ToolRegistry().Register(Modules.Create(TestSupport.Engines.Locator, Dispatcher.CurrentDispatcher, _dir.Combine("web"), _ => Task.CompletedTask, _models));
 
+    /// <summary>
+    /// Every multi-step target the catalog declares (catalog "routes") is really reachable with the converters the app loads, for at least one
+    /// input of its category, and never through an archive. Engines that are not installed on this PC simply remove routes, so the check
+    /// is on the routes the engine-free converters already make possible.
+    /// </summary>
+    [Fact]
+    public void Every_declared_route_is_reachable_with_the_real_converters()
+    {
+        var registry = Registry();
+        var routes = new Core.Routing.RouteConverter(registry, Catalog, TestSupport.Engines.Locator);
+        registry.Register(routes);
+        var problems = new List<string>();
+        foreach (var (category, targets) in Catalog.Routes)
+            foreach (var target in targets)
+            {
+                var plans = Catalog.Category(category)!.Inputs.Where(i => i != target).Select(i => (i, plan: routes.Plan(i, target))).Where(p => p.plan is not null).ToList();
+                if (plans.Count == 0) problems.Add($"{category} → {target}: no route from any input");
+                foreach (var (input, plan) in plans)
+                    if (plan!.Steps.Any(s => s is "zip" or "tar" or "gz" or "tgz" or "7z")) problems.Add($"{input} → {target} goes through an archive");
+            }
+        AssertNone(problems);
+    }
+
     [Fact]
     public void Every_implemented_operation_exists_in_the_catalog()
     {
@@ -146,6 +169,31 @@ public sealed class RegistryCoverageTests : IDisposable
     {
         var wheel = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "en", new HashSet<string>());
         Assert.DoesNotContain(wheel.Tools, w => w.Operation == tool);
+    }
+
+    [Theory]
+    [InlineData("people.json", "JSONL,XML,YAML,CSV,TSV,XLSX,HTML")]
+    [InlineData("events.ndjson", "JSON,XML,YAML,CSV,TSV,XLSX,HTML")]
+    [InlineData("config.yml", "JSON,JSONL,XML,CSV,TSV,XLSX,HTML")]
+    [InlineData("feed.xml", "JSON,JSONL,YAML,CSV,TSV,XLSX,HTML")]
+    [InlineData("contacts.vcf", "JSON,JSONL,XML,YAML,CSV,TSV,XLSX,HTML")]
+    [InlineData("calendar.ics", "JSON,JSONL,XML,YAML,CSV,TSV,XLSX,HTML")]
+    public void Data_files_get_the_data_wheel_with_nothing_to_install(string file, string formats)
+    {
+        var wheel = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "en", new HashSet<string>());
+        Assert.Equal(formats.Split(','), wheel.Convert.Select(w => w.Label));
+        Assert.All(wheel.Convert, w => Assert.Equal(WedgeState.Ready, w.State));
+    }
+
+    [Theory]
+    [InlineData("contacts.csv")]
+    [InlineData("contacts.tsv")]
+    [InlineData("contacts.xlsx")]
+    public void Tables_offer_making_contacts_and_calendars(string file)
+    {
+        var wheel = new WheelBuilder(Catalog, Registry(), TestSupport.Engines.Locator).Build([file], "ar", new HashSet<string>());
+        Assert.Equal(Catalog.Tool("data.to-vcard")!.Ar, Assert.Single(wheel.Tools, w => w.Operation == "data.to-vcard").Label);
+        Assert.Single(wheel.Tools, w => w.Operation == "data.to-ical");
     }
 
     [Fact]

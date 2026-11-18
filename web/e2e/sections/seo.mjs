@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { sleep } from "../cdp.mjs";
 import { check, section } from "../helpers.mjs";
 
@@ -14,7 +15,11 @@ const SCOUTHUB_SOCIAL = [
   "https://www.threads.com/@scouthub.lab",
 ];
 const LOCALES = ["ar", "en"];
-const PATHS = ["", "/app", "/privacy", "/terms"];
+// Popular conversion pages (src/data/pairs.json): the sitemap must list all of them; the per-page checks use two samples.
+const PAIR_PATHS = JSON.parse(readFileSync(new URL("../../src/data/pairs.json", import.meta.url), "utf8")).pairs.map((p) => `/convert/${p.slug}`);
+const ALL_PATHS = ["", "/app", "/cli", "/privacy", "/terms", ...PAIR_PATHS];
+const ALL_PAGES = ALL_PATHS.flatMap((p) => LOCALES.map((l) => `/${l}${p}`));
+const PATHS = ["", "/app", "/cli", "/privacy", "/terms", "/convert/heic-to-jpg", "/convert/pdf-to-word"];
 const PAGES = PATHS.flatMap((p) => LOCALES.map((l) => `/${l}${p}`));
 // The footer line "© 2026 DropFlow. All rights reserved." is the owner's wording (2026-10-23); the software itself is still GPL, never "proprietary".
 const RIGHTS = /proprietary|برنامج مملوك/i;
@@ -30,7 +35,7 @@ export async function seo({ b, base }) {
     check("robots.txt names an absolute https sitemap.xml", /^Sitemap: https:\/\/[^\s]+\/sitemap\.xml$/m.test(r.t), r.t.replace(/\n/g, " | "));
   });
 
-  await section("seo: sitemap.xml lists all 8 pages with hreflang ar / en / x-default", async () => {
+  await section(`seo: sitemap.xml lists all ${ALL_PAGES.length} pages with hreflang ar / en / x-default`, async () => {
     const xml = await b.ev(`fetch('/sitemap.xml').then(async (r) => ({ s: r.status, type: r.headers.get('content-type'), t: await r.text() }))`);
     check("/sitemap.xml answers 200 as XML", xml.s === 200 && /xml/.test(xml.type ?? ""), `${xml.s} ${xml.type}`);
     const parsed = await b.ev(`(() => {
@@ -44,7 +49,7 @@ export async function seo({ b, base }) {
     check("sitemap.xml is well-formed XML", !parsed.error);
     const urls = parsed.urls ?? [];
     const paths = urls.map((u) => new URL(u.loc).pathname).sort();
-    check("sitemap lists exactly the 8 pages (ar/en x landing, app, privacy, terms)", JSON.stringify(paths) === JSON.stringify([...PAGES].sort()), paths.join(" "));
+    check(`sitemap lists exactly the ${ALL_PAGES.length} pages (ar/en x landing, app, cli, privacy, terms, popular conversions)`, JSON.stringify(paths) === JSON.stringify([...ALL_PAGES].sort()), paths.join(" "));
     const origins = new Set(urls.map((u) => new URL(u.loc).origin));
     check("every sitemap URL is absolute https on one origin", origins.size === 1 && [...origins][0].startsWith("https://"), [...origins].join(" "));
     const bad = urls.filter((u) => {
@@ -52,7 +57,7 @@ export async function seo({ b, base }) {
       const m = Object.fromEntries(u.alt.map(([h, href]) => [h, new URL(href).pathname]));
       return m.ar !== `/ar${path}` || m.en !== `/en${path}` || m["x-default"] !== `/ar${path}`;
     });
-    check("every sitemap URL has hreflang ar, en and x-default (-> Arabic)", urls.length === 8 && bad.length === 0, bad.map((u) => u.loc).join(" "));
+    check("every sitemap URL has hreflang ar, en and x-default (-> Arabic)", urls.length === ALL_PAGES.length && bad.length === 0, bad.map((u) => u.loc).join(" "));
   });
 
   await section("seo: every page is indexable with canonical, hreflang, Open Graph, Twitter, one h1, lang/dir", async () => {

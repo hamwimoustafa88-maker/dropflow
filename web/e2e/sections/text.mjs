@@ -16,7 +16,7 @@ export async function textTools({ b, base, out, files }) {
     await freshApp(b, base, "ar");
     await addFiles(b, [files.srt]);
     const ids = await wedgeIds(b);
-    check("srt convert wheel = VTT, TXT (no SRT->SRT, no ASS writer), then + Add", JSON.stringify(ids) === JSON.stringify(["convert:vtt", "convert:txt", "wheel.add"]), ids.join(","));
+    check("srt convert wheel = VTT, TXT, LRC, SBV (no SRT->SRT, no ASS writer), then + Add", JSON.stringify(ids) === JSON.stringify(["convert:vtt", "convert:txt", "convert:lrc", "convert:sbv", "wheel.add"]), ids.join(","));
     await clickWedge(b, "convert:vtt");
     await clickWedge(b, "convert:txt");
     const names = await waitResults(b, 2);

@@ -1,28 +1,39 @@
 // Worker-side implementation of the subtitle conversions (see subtitles.ts).
 
-import { extOf, normalizeExt, stemOf } from "../names";
-import { cuesToSrt, cuesToTxt, cuesToVtt, parseSubtitles, type SubtitleFormat } from "../lib/subtitles";
+import { extOf, stemOf } from "../names";
+import { cuesToSrt, cuesToTxt, cuesToVtt } from "../lib/subtitles";
+import { cuesToLrc, cuesToSbv, parseAnySubtitles, type AnySubtitleFormat } from "../lib/subtitle-formats";
 import { decodeText } from "../lib/text-decode";
 import { ConvertError, throwIfAborted, type Job, type ProgressFn } from "../types";
+import { canonicalSubtitleExt } from "./subtitles";
 
 const TYPES: Record<string, string> = {
   srt: "text/plain;charset=utf-8",
   vtt: "text/vtt;charset=utf-8",
   txt: "text/plain;charset=utf-8",
+  lrc: "text/plain;charset=utf-8",
+  sbv: "text/plain;charset=utf-8",
 };
 
-function hintFor(fileName: string): SubtitleFormat {
-  const ext = normalizeExt(extOf(fileName));
-  return ext === "vtt" ? "vtt" : ext === "ass" || ext === "ssa" ? "ass" : "srt";
+const KNOWN: readonly AnySubtitleFormat[] = ["srt", "vtt", "ass", "smi", "lrc", "ttml", "sub", "sbv"];
+
+function hintFor(fileName: string): AnySubtitleFormat {
+  const ext = canonicalSubtitleExt(extOf(fileName)) as AnySubtitleFormat;
+  return KNOWN.includes(ext) ? ext : "srt";
 }
 
-/** Converts the bytes of one subtitle file. Exposed for tests; run() wraps it. */
-export function convertSubtitleBytes(bytes: Uint8Array, fileName: string, target: string): { text: string; cues: number; skipped: number } {
-  const { text } = decodeText(bytes);
-  const { cues, skipped } = parseSubtitles(text, hintFor(fileName));
+/** Converts the bytes of one subtitle file. Exposed for tests; run() wraps it. The output is always UTF-8. */
+export function convertSubtitleBytes(bytes: Uint8Array, fileName: string, target: string): { text: string; cues: number; skipped: number; encoding: string } {
+  const { text, encoding } = decodeText(bytes);
+  const { cues, skipped } = parseAnySubtitles(text, hintFor(fileName));
   if (cues.length === 0) throw new ConvertError("noCues");
-  const out = target === "vtt" ? cuesToVtt(cues) : target === "txt" ? cuesToTxt(cues) : cuesToSrt(cues);
-  return { text: out, cues: cues.length, skipped };
+  const out =
+    target === "vtt" ? cuesToVtt(cues)
+    : target === "txt" ? cuesToTxt(cues)
+    : target === "lrc" ? cuesToLrc(cues)
+    : target === "sbv" ? cuesToSbv(cues)
+    : cuesToSrt(cues);
+  return { text: out, cues: cues.length, skipped, encoding };
 }
 
 export async function runSubtitles(job: Job, onProgress: ProgressFn, signal: AbortSignal): Promise<File[]> {

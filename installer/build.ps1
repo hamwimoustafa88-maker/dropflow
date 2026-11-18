@@ -31,5 +31,14 @@ Copy-Item LICENSE, THIRD-PARTY-NOTICES.md publish/app -Force
 vpk pack --packId DropFlow --packTitle DropFlow --packVersion $Version `
   --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico
 
+# The portable zip keeps its data beside the program: add the marker next to Update.exe (DataFolder.Resolve, outside "current").
+$portable = Get-ChildItem Releases -Filter "*Portable.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($portable) {
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $zip = [System.IO.Compression.ZipFile]::Open($portable.FullName, 'Update')
+  try { if (-not $zip.GetEntry('dropflow.portable')) { [void]$zip.CreateEntry('dropflow.portable') } } finally { $zip.Dispose() }
+  Write-Host "Portable zip marked: $($portable.Name)"
+}
+
 Write-Host "`nDone. Installer: Releases\DropFlow-win-Setup.exe"
 Write-Host "Unsigned builds trigger a Windows SmartScreen warning; see docs/release.md for signing."

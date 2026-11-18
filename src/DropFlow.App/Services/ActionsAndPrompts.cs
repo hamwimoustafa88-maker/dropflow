@@ -147,10 +147,17 @@ internal static class ShareService
 }
 
 /// <summary>Dialogs the runner needs, marshalled to the UI thread.</summary>
-internal sealed class UserPrompts(System.Windows.Threading.Dispatcher ui, ILocalizer loc, Func<string, Task> toast, Func<bool> offerInstalls) : IUserPrompts
+internal sealed class UserPrompts(System.Windows.Threading.Dispatcher ui, ILocalizer loc, Func<string, Task> toast, Func<bool> offerInstalls,
+    Action<string, IReadOnlyList<ToolOption>, IReadOnlyDictionary<string, object?>, string>? savePreset = null) : IUserPrompts
 {
     public Task<IReadOnlyDictionary<string, object?>?> AskOptionsAsync(string operation, string title, IReadOnlyList<ToolOption> options) =>
-        ui.InvokeAsync(() => ToolOptionsDialog.Ask(title, operation, options, loc)).Task;
+        ui.InvokeAsync(() =>
+        {
+            if (savePreset is null) return ToolOptionsDialog.Ask(title, operation, options, loc);
+            var (values, name) = ToolOptionsDialog.AskAndOfferSave(title, operation, options, loc);
+            if (values is not null && name is not null) savePreset(operation, options, values, name);
+            return values;
+        }).Task;
 
     /// <summary>
     /// By default nothing is offered for download: the user is told what the tool needs and where to install it if they want to

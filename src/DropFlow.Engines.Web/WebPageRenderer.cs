@@ -159,7 +159,10 @@ public sealed class WebPageRenderer(Dispatcher dispatcher, string userDataFolder
             print.ShouldPrintBackgrounds = options.Backgrounds;
             print.ShouldPrintHeaderAndFooter = false;
             print.Orientation = options.Landscape ? CoreWebView2PrintOrientation.Landscape : CoreWebView2PrintOrientation.Portrait;
-            (print.PageWidth, print.PageHeight) = options.Paper == "letter" ? (8.5, 11.0) : (8.27, 11.69);
+            (print.PageWidth, print.PageHeight) = options.PageWidth is { } w && options.PageHeight is { } h
+                ? (w, h)
+                : options.Paper == "letter" ? (8.5, 11.0) : (8.27, 11.69);
+            if (options.NoMargins) print.MarginTop = print.MarginBottom = print.MarginLeft = print.MarginRight = 0;
 
             ct.ThrowIfCancellationRequested();
             var printed = await core.PrintToPdfAsync(outputPath, print);

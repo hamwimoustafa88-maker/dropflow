@@ -118,6 +118,16 @@ jobs:
           vpk pack --packId DropFlow --packTitle DropFlow --packVersion ${{ steps.v.outputs.version }}
           --packDir publish/app --mainExe DropFlow.exe --icon src/DropFlow.App/Assets/dropflow.ico
 
+      - name: Mark the portable zip (data beside the program, DataFolder.Resolve)
+        shell: pwsh
+        run: |
+          $portable = Get-ChildItem Releases -Filter "*Portable.zip" | Select-Object -First 1
+          if ($portable) {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $zip = [System.IO.Compression.ZipFile]::Open($portable.FullName, 'Update')
+            try { if (-not $zip.GetEntry('dropflow.portable')) { [void]$zip.CreateEntry('dropflow.portable') } } finally { $zip.Dispose() }
+          }
+
       - name: "SignPath: upload the unsigned installer"
         id: unsigned-installer
         if: ${{ vars.SIGNPATH_ENABLED == 'true' }}

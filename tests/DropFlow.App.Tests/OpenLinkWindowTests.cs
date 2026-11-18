@@ -16,7 +16,7 @@ public class OpenLinkWindowTests
     [
         "tray.openLink", "link.title", "link.hint", "link.download", "link.privacy", "link.downloading", "link.progress",
         "link.progressUnknown", "link.cancelled", "link.invalid", "link.scheme", "link.credentials", "link.error.status",
-        "link.error.redirects", "link.error.tooLarge", "link.error.network", "link.error.storage",
+        "link.error.redirects", "link.error.tooLarge", "link.error.network", "link.error.storage", "link.error.blocked",
     ];
 
     private delegate Task<string> Download(Uri url, IProgress<DownloadProgress> progress, CancellationToken ct);

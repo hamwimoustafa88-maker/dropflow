@@ -23,6 +23,8 @@ public enum UrlDownloadError
     Network,
     /// <summary>The file could not be written to disk.</summary>
     Storage,
+    /// <summary>The address points into the user's own computer or network (only the public internet is allowed).</summary>
+    Blocked,
 }
 
 /// <summary>A download that was refused or failed. <see cref="Exception.Message"/> is English; the UI shows a translated text from <see cref="Kind"/>.</summary>
@@ -51,14 +53,17 @@ public sealed record DownloadProgress(long BytesReceived, long? TotalBytes, stri
 }
 
 /// <summary>
-/// Downloads one file from a web address the user typed or copied. A plain GET: no cookies, no credentials, no accounts, redirects
-/// followed (at most 10). The only network traffic is that request; nothing from the user's computer is ever sent.
+/// Downloads one file from a web address the user typed, copied or dragged from a browser. A plain GET: no cookies, no credentials, no
+/// accounts, redirects followed (at most 5; never from https down to http). Every connection, redirects included, goes only to a public
+/// internet address (<see cref="AddressPolicy"/>), checked after DropFlow's own DNS lookup so DNS rebinding cannot reach the local network.
+/// The saved file gets the Windows "Mark of the Web" (it came from the internet). The only network traffic is that request; nothing from the
+/// user's computer is ever sent.
 /// The bytes go to a <c>.part</c> file that is renamed when complete and deleted on failure or cancel; an existing file is never replaced.
 /// </summary>
 public sealed class UrlDownloader : IDisposable
 {
     public const long DefaultMaxBytes = 4L * 1024 * 1024 * 1024;
-    public const int MaxRedirects = 10;
+    public const int MaxRedirects = 5;
     public const int MaxUrlLength = 8192;
     public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(30);
 
@@ -68,12 +73,38 @@ public sealed class UrlDownloader : IDisposable
 
     /// <param name="folder">Where files are saved; created on demand. Defaults to <c>%USERPROFILE%\Downloads\DropFlow</c>.</param>
     /// <param name="maxBytes">Files bigger than this are refused (before downloading when the server announces the size, else mid-stream).</param>
-    public UrlDownloader(string? folder = null, long maxBytes = DefaultMaxBytes)
+    /// <param name="allowAddress">Which addresses may be connected to (default: the public internet only). Tests on a loopback server pass their own.</param>
+    /// <param name="proxy">An explicit proxy (Settings), or null for the system's.</param>
+    public UrlDownloader(string? folder = null, long maxBytes = DefaultMaxBytes, Func<IPAddress, bool>? allowAddress = null, IWebProxy? proxy = null)
     {
         _folder = folder ?? DefaultFolder;
         _maxBytes = maxBytes;
+        var allow = allowAddress ?? AddressPolicy.IsPublic;
         var handler = new SocketsHttpHandler
         {
+            Proxy = proxy,
+            UseProxy = true,
+            // Resolve the name ourselves and connect only to an address the policy accepts: one check that covers every redirect hop and
+            // makes DNS rebinding useless (the address checked is the address connected to). Through a proxy the proxy connects instead.
+            ConnectCallback = async (context, ct) =>
+            {
+                var host = context.DnsEndPoint.Host;
+                var addresses = IPAddress.TryParse(host, out var literal) ? [literal] : await Dns.GetHostAddressesAsync(host, ct).ConfigureAwait(false);
+                var usable = addresses.Where(allow).ToList();
+                if (usable.Count == 0)
+                    throw new HttpRequestException(HttpRequestError.ConnectionError, BlockedMessage, new UrlDownloadException(UrlDownloadError.Blocked, BlockedMessage));
+                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp) { NoDelay = true };
+                try
+                {
+                    await socket.ConnectAsync(usable.ToArray(), context.DnsEndPoint.Port, ct).ConfigureAwait(false);
+                    return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            },
             AllowAutoRedirect = true,
             MaxAutomaticRedirections = MaxRedirects,
             UseCookies = false,
@@ -140,6 +171,7 @@ public sealed class UrlDownloader : IDisposable
         }
         catch (HttpRequestException ex)
         {
+            if (Find<UrlDownloadException>(ex) is { Kind: UrlDownloadError.Blocked } blocked) throw blocked;
             throw Network(ex);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
@@ -191,7 +223,12 @@ public sealed class UrlDownloader : IDisposable
                 if (!completed) TryDelete(claim.PartPath);
             }
 
-            try { return Publish(claim); }
+            try
+            {
+                var saved = Publish(claim);
+                MarkOfTheWeb.Write(saved, finalUri);
+                return saved;
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 TryDelete(claim.PartPath);
@@ -293,6 +330,14 @@ public sealed class UrlDownloader : IDisposable
 
     private static UrlDownloadException Storage(Exception ex) =>
         new(UrlDownloadError.Storage, "Could not save the file: " + ex.Message, reason: ex.Message, inner: ex);
+
+    private const string BlockedMessage = "This link points into your own computer or network; DropFlow only downloads from the public internet.";
+
+    private static T? Find<T>(Exception ex) where T : Exception
+    {
+        for (Exception? e = ex; e is not null; e = e.InnerException) if (e is T t) return t;
+        return null;
+    }
 
     private static string Detail(Exception ex)
     {

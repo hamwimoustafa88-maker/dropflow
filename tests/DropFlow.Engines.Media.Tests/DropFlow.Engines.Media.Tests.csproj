@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Text fixtures written for these tests (see tests/samples/README.md) -->
+    <None Include="..\samples\subtitles\*" Link="samples\subtitles\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\DropFlow.Engines.Media\DropFlow.Engines.Media.csproj" />
     <ProjectReference Include="..\DropFlow.TestSupport\DropFlow.TestSupport.csproj" />
   </ItemGroup>

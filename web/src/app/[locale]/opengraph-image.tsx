@@ -45,18 +45,18 @@ export default async function Image({ params }: { params: Promise<{ locale: stri
           justifyContent: "center",
           alignItems: lang === "ar" ? "flex-end" : "flex-start",
           padding: 90,
-          color: "#eef1ff",
+          color: "#f2f1f7",
           fontFamily: font ? "Plex Arabic" : undefined,
-          background: "linear-gradient(135deg, #070b1c 0%, #131b44 60%, #0e4a5c 140%)",
+          background: "linear-gradient(135deg, #0f0e16 0%, #2a2160 58%, #0d5a47 140%)",
         }}
       >
-        <div style={{ display: "flex", fontSize: 40, fontWeight: 700, color: "#8b95fb" }}>DropFlow</div>
+        <div style={{ display: "flex", fontSize: 40, fontWeight: 700, color: "#a59cf6" }}>DropFlow</div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: lang === "ar" ? "flex-end" : "flex-start", marginTop: 36, fontSize: 130, fontWeight: 700, lineHeight: 1.12 }}>
           <span>{a}</span>
-          <span style={{ color: "#22d3ee" }}>{b}</span>
+          <span style={{ color: "#3fcf9f" }}>{b}</span>
           <span>{c}</span>
         </div>
-        <div style={{ display: "flex", marginTop: 18, fontSize: 34, color: "#a3acd8" }}>{visual(meta("ogTagline"), rtl)}</div>
+        <div style={{ display: "flex", marginTop: 18, fontSize: 34, color: "#b9b6cc" }}>{visual(meta("ogTagline"), rtl)}</div>
       </div>
     ),
     { ...size, ...(font ? { fonts: [{ name: "Plex Arabic", data: font, weight: 700 as const, style: "normal" as const }] } : {}) },

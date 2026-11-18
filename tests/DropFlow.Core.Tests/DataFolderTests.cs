@@ -52,3 +52,34 @@ public class DataFolderTests : IDisposable
         Assert.Empty(DataFolder.MigrateOnce(Combine("missing"), target));
     }
 }
+
+public class PortableModeTests : IDisposable
+{
+    private readonly string _root = Directory.CreateTempSubdirectory("dropflow-portable-").FullName;
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [Fact]
+    public void A_marker_beside_the_program_keeps_the_data_beside_it()
+    {
+        File.WriteAllText(Path.Combine(_root, DataFolder.PortableMarker), "");
+        Assert.Equal(Path.Combine(_root, "DropFlow Data"), DataFolder.Resolve(_root, @"C:\nowhere-installed"));
+    }
+
+    [Fact]
+    public void A_portable_zip_keeps_the_marker_and_data_outside_the_current_folder_that_updates_replace()
+    {
+        var current = Directory.CreateDirectory(Path.Combine(_root, "current")).FullName;
+        File.WriteAllText(Path.Combine(_root, "Update.exe"), "");
+        File.WriteAllText(Path.Combine(_root, DataFolder.PortableMarker), "");
+        Assert.Equal(Path.Combine(_root, "DropFlow Data"), DataFolder.Resolve(current, @"C:\nowhere-installed"));
+    }
+
+    [Fact]
+    public void Without_a_marker_or_in_the_installed_copy_the_data_goes_to_the_user_profile()
+    {
+        Assert.EndsWith("DropFlow Data", DataFolder.Resolve(_root, @"C:\nowhere-installed"));
+        Assert.DoesNotContain(_root, DataFolder.Resolve(_root, @"C:\nowhere-installed"));
+        File.WriteAllText(Path.Combine(_root, DataFolder.PortableMarker), "");
+        Assert.DoesNotContain(_root, DataFolder.Resolve(_root, _root));   // the installed folder is deleted on uninstall: never there
+    }
+}

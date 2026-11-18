@@ -74,6 +74,24 @@ Repository: https://github.com/hamwimoustafa88-maker/dropflow · this file: http
   https://developer.chrome.com/docs/lighthouse/overview .
 - **C1 PDF/A:** Ghostscript https://ghostscript.com/ (AGPL, external process) · validator veraPDF https://verapdf.org/ .
 
+## E. Feature round 2026-11-18 (postponed on purpose)
+- **E1 macOS, Linux and Android** do not have this round's features yet (wheel back face, arrange window, progress ring, presets UI, Home window,
+  browser drag, output rules…). The shared Core pieces (routes, presets, data/image/subtitle formats) already run there; the UI does not.
+- **E2 SVG → vector PDF in the CLI:** done in the app through the browser engine (WebView2 / headless Chrome, no new package; Svg.Skia was not added
+  because it depends on MS-PL Svg.Custom). The CLI has no browser engine, so there SVG → PDF stays a picture; to resume, pass
+  `ChromiumHtmlPdfRenderer` to `PdfModule.Create` in `src/DropFlow.Cli/Program.cs` when Chrome/Edge is found.
+- **E3 DWG/DXF and e-mail (EML/MSG/MHTML):** the owner declined ACadSharp and MimeKit; MSG would also need an MPL-1.1 dependency.
+- **E4 Fonts and e-books:** merged. Still left out: CFF → TrueType outlines, writing MOBI/AZW3, web WOFF2 (the browser has no Brotli encoder).
+- **E5 3D models, geospatial (GPX/KML/GeoJSON/Shapefile), G-code, Gerber, HWP/OFD, game formats:** not in this round (niche for the audience).
+- **E6 An online preset gallery** needs a server (an outside party); presets are shared as local files instead. **AI upscaling** needs a model download
+  and owner approval. **Windows 11 top-level menu** needs a signed sparse MSIX and a native DLL.
+- **E7 Smaller pieces left out:** "ask at drop time" size estimate, "subfolder when a job makes many files", Retry for tools that need a password asks again,
+  thumbnails only for formats Windows decodes (PNG/JPG/GIF/BMP/TIFF/ICO, WebP/HEIC with their Windows extensions), two-way phone sharing.
+- **E8 Real-input checks to do by hand:** see the "Built, NOT verified" list in status.md (Tab/mouse wheel during a real drag, a browser drag from each browser,
+  the Home drop zone, the progress ring, Open with, clipboard results, the portable zip, What's new after an update).
+- **E9 Website deploy timing:** the landing page's numbers come from the catalog (now 1252 conversions); deploy it together with the next release, so the site
+  never promises what the released app cannot do (done: deployed with v0.3.0).
+
 ## D. Known limits worth remembering
 - Redaction by words uses the text layer only (scans need regions); rasterized pages lose selectable text, links and form fields.
 - PDF crop keeps cropped-away content in the file; redact is the privacy tool.

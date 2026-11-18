@@ -4,7 +4,8 @@ namespace DropFlow.Engines.Images;
 
 /// <summary>
 /// Image conversions and tools built on Magick.NET (in-process, no external engine). Implements <c>convert:*</c> plus
-/// img.compress, img.metadata, img.strip-gps, img.crop, img.resize, img.edit, img.rotate (JPEG: lossless), img.annotate, img.background, img.redact, img.collage.
+/// img.compress, img.metadata, img.strip-gps, img.crop, img.resize, img.edit, img.rotate (JPEG: lossless), img.annotate, img.background, img.redact, img.collage,
+/// img.trace and convert:svg/svgz (raster tracing, own code in Vector/Tracing; SVG to/from SVGZ).
 /// (img.to-pdf → PDF engine; img.qr/img.icons → archive/utility engine; img.ocr/remove-bg/redact-auto → AI engine.)
 /// </summary>
 public static class ImagesModule
@@ -30,5 +31,7 @@ public static class ImagesModule
         new BackgroundTool(),
         new RedactTool(),
         new CollageTool(),
+        new Vector.TraceTool(),
+        new Vector.SvgzConverter(),
     ];
 }

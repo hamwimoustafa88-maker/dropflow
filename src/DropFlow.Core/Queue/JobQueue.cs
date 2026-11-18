@@ -79,6 +79,9 @@ public sealed class JobQueue(ToolRegistry registry, ToolCatalog catalog, int max
     /// <summary>Raised once when every job in a batch has finished.</summary>
     public event Action<BatchHandle, ConversionResult>? BatchCompleted;
 
+    /// <summary>Settings → Output (name pattern, conflicts, dates), applied to every successful result. Null = names as the converters make them.</summary>
+    public Func<Output.OutputRules>? Rules { get; set; }
+
     public IReadOnlyList<BatchHandle> Batches
     {
         get { lock (_gate) return _batches.ToList(); }
@@ -157,6 +160,14 @@ public sealed class JobQueue(ToolRegistry registry, ToolCatalog catalog, int max
         handle.State = state;
         handle.Progress = 1;
         handle.Result = result;
+        if (result.Success && Rules?.Invoke() is { IsDefault: false } rules)
+        {
+            try { result = result with { Outputs = Output.OutputFinalizer.Apply(rules, handle.Job.Inputs, result.Outputs, DateTime.Now) }; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* the result keeps its own name */ }
+            handle.Result = result;
+        }
+        // a file converted from something downloaded is just as untrusted: carry the Mark of the Web over
+        if (result.Success) Sources.MarkOfTheWeb.Propagate(handle.Job.Inputs, result.Outputs);
         handle.Complete(result);
         Changed?.Invoke(batch);
     }

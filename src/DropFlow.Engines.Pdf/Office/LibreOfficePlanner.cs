@@ -1,3 +1,5 @@
+using DropFlow.Engines.Pdf.Books;
+
 namespace DropFlow.Engines.Pdf.Office;
 
 /// <summary>What DropFlow does before LibreOffice sees the file.</summary>
@@ -10,7 +12,7 @@ public enum LoPre
     MarkdownToHtml,
     /// <summary>CSV, TSV and JSON are turned into a workbook first.</summary>
     TabularToXlsx,
-    /// <summary>LibreOffice cannot open EPUB: the chapters are joined into one HTML file with its pictures in a folder.</summary>
+    /// <summary>LibreOffice cannot open e-books (EPUB, FB2, MOBI/AZW3, HTMLZ, TXTZ): the chapters are joined into one HTML file with its pictures in a folder.</summary>
     EpubToHtml,
 }
 
@@ -46,7 +48,7 @@ public static class LibreOfficePlanner
     private static readonly string[] CalcInputs = ["xlsx", "xls", "ods", "numbers"];
     private static readonly string[] TabularInputs = ["csv", "tsv", "json"];
 
-    public static readonly string[] AllInputs = [.. WriterInputs, "md", "epub", .. ImpressInputs, .. CalcInputs, .. TabularInputs];
+    public static readonly string[] AllInputs = [.. WriterInputs, "md", .. BookFormats.Inputs, .. ImpressInputs, .. CalcInputs, .. TabularInputs];
     public static readonly string[] AllTargets = ["docx", "pdf", "txt", "md", "html", "epub", "odt", "rtf", "png", "jpg", "odp", "pptx", "xlsx", "ods", "csv", "tsv", "json"];
 
     /// <summary>Every (input, target) pair LibreOffice is used for when no browser engine is available (the CLI).</summary>
@@ -66,7 +68,7 @@ public static class LibreOfficePlanner
         if (input == target || ManagedPairs.Handles(input, target)) return null;
         if (browserRenders && BrowserDocumentTools.Handles(input, target)) return null;
 
-        if (WriterInputs.Contains(input) || input is "md" or "epub") return WriterPlan(input, target);
+        if (WriterInputs.Contains(input) || input == "md" || BookFormats.IsBook(input)) return WriterPlan(input, target);
         if (ImpressInputs.Contains(input)) return ImpressPlan(target);
         if (CalcInputs.Contains(input) || TabularInputs.Contains(input)) return CalcPlan(input, target);
         return null;
@@ -74,12 +76,12 @@ public static class LibreOfficePlanner
 
     private static LibreOfficePlan? WriterPlan(string input, string target)
     {
-        var pre = input switch { "md" => LoPre.MarkdownToHtml, "epub" => LoPre.EpubToHtml, "txt" => LoPre.TextToUtf8, _ => LoPre.None };
+        var pre = BookFormats.IsBook(input) ? LoPre.EpubToHtml : input switch { "md" => LoPre.MarkdownToHtml, "txt" => LoPre.TextToUtf8, _ => LoPre.None };
         // HTML (and the HTML made from Markdown / EPUB) is opened as a Writer document, not Writer/Web, so every Writer export filter applies.
-        var inFilter = input is "html" or "md" or "epub" ? "HTML (StarWriter)" : null;
+        var inFilter = input is "html" or "md" || BookFormats.IsBook(input) ? "HTML (StarWriter)" : null;
 
-        // The catalog offers EPUB books only these outputs through LibreOffice (txt, md and html are done in-process).
-        if (input == "epub" && target is not ("pdf" or "docx" or "odt" or "rtf")) return null;
+        // E-books get only these outputs through LibreOffice (txt, md, html and the e-book formats are done in-process).
+        if (BookFormats.IsBook(input) && target is not ("pdf" or "docx" or "odt" or "rtf")) return null;
 
         return target switch
         {
@@ -129,7 +131,7 @@ internal static class ManagedPairs
         ("md", ["docx", "html", "txt"]),
         ("docx", ["txt", "md", "html"]),
         ("html", ["md", "txt"]),
-        ("epub", ["html", "md", "txt"]),
+        .. BookFormats.Inputs.Select(input => (input, BookTools.Targets.Where(t => t != input).ToArray())),
     ];
 
     private static readonly string[] Tabular = ["csv", "tsv", "xlsx", "json"];

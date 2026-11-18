@@ -50,10 +50,10 @@ export interface ActionState {
 }
 
 /**
- * Convert targets the browser adds to a catalog category. They are web-only extras, not desktop formats: a picture
- * becomes text through OCR ("TXT" on the Convert wheel, as the owner asked).
+ * Convert targets the browser adds to a catalog category: a picture becomes text through OCR ("TXT" on the Convert wheel, as
+ * the owner asked), and a CSV/TSV table becomes JSON Lines or XML through the data converter.
  */
-export const WEB_EXTRA_OUTPUTS: Readonly<Record<string, readonly string[]>> = { image: ["txt"] };
+export const WEB_EXTRA_OUTPUTS: Readonly<Record<string, readonly string[]>> = { image: ["txt"], spreadsheet: ["jsonl", "xml"] };
 
 /** Catalog `multi` tools that are still useful with a single file (the desktop builder hides every multi tool then). */
 const MULTI_SINGLE_OK: ReadonlySet<string> = new Set(["arc.zip"]);

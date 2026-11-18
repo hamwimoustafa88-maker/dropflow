@@ -12,9 +12,12 @@ internal static class ImageIo
     {
         try
         {
+            // The file name's extension tells Magick the format where the bytes do not (Targa, SVGZ, camera RAW inside a TIFF structure).
             var settings = new MagickReadSettings();
-            if (string.Equals(Path.GetExtension(path), ".svg", StringComparison.OrdinalIgnoreCase)) settings.Density = new Density(200);
+            var ext = Path.GetExtension(path);
+            if (ext.Equals(".svg", StringComparison.OrdinalIgnoreCase) || ext.Equals(".svgz", StringComparison.OrdinalIgnoreCase)) settings.Density = new Density(200);
             var image = new MagickImage(path, settings);
+            if (image.ColorSpace == ColorSpace.RGB) image.ColorSpace = ColorSpace.sRGB;   // linear light (Radiance HDR)
             image.AutoOrient();
             image.Depth = 8;
             return image;

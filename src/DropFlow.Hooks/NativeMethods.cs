@@ -8,6 +8,11 @@ internal static class NativeMethods
     internal const int WH_MOUSE_LL = 14;
 
     internal const int WM_MOUSEMOVE = 0x0200;
+    internal const int WM_MOUSEWHEEL = 0x020A;
+    internal const int VK_CONTROL = 0x11;
+    internal const int VK_MENU = 0x12;
+    internal const int VK_LWIN = 0x5B;
+    internal const int VK_RWIN = 0x5C;
     internal const int WM_LBUTTONDOWN = 0x0201;
     internal const int WM_LBUTTONUP = 0x0202;
     internal const int WM_KEYDOWN = 0x0100;

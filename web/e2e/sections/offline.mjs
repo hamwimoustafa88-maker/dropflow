@@ -28,7 +28,7 @@ export async function offline({ b, base, out, files }) {
   await section("PWA: manifest, service worker registered on /app only, versioned precache", async () => {
     await freshApp(b, base, "en");
     const mf = await b.ev(`fetch(document.querySelector('link[rel=manifest]').href).then(r => r.json())`);
-    check("manifest: name, standalone, theme colours from the tokens, 192/512/maskable icons", mf.name === "DropFlow" && mf.display === "standalone" && mf.theme_color === "#070b1c" && mf.icons.some((i) => i.sizes === "192x192") && mf.icons.some((i) => i.sizes === "512x512") && mf.icons.some((i) => i.purpose === "maskable"), JSON.stringify(mf).slice(0, 120));
+    check("manifest: name, standalone, theme colours from the tokens, 192/512/maskable icons", mf.name === "DropFlow" && mf.display === "standalone" && mf.theme_color === "#15141c" && mf.icons.some((i) => i.sizes === "192x192") && mf.icons.some((i) => i.sizes === "512x512") && mf.icons.some((i) => i.purpose === "maskable"), JSON.stringify(mf).slice(0, 120));
     const ar = await b.ev(`fetch('/manifest.webmanifest').then(r => r.json())`);
     check("Arabic manifest is RTL with an /ar/app start_url", ar.dir === "rtl" && ar.lang === "ar" && ar.start_url.startsWith("/ar/app"));
     for (const icon of mf.icons.filter((i) => i.type === "image/png")) {

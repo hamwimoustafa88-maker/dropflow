@@ -69,7 +69,9 @@ const SECURITY_HEADERS = [
 // keeps the plain policy. With hashes present they REPLACE 'unsafe-inline' in script-src: only Next's own inline scripts of
 // that exact build may run (styles keep 'unsafe-inline': Next and the components set inline styles).
 const LOCALES = ["ar", "en"];
-const HASHED_PAGES = ["", "/privacy", "/terms"];
+const PAIRS_FILE = [typeof __dirname !== "undefined" ? join(__dirname, "src", "data", "pairs.json") : "", join(process.cwd(), "src", "data", "pairs.json"), join(process.cwd(), "web", "src", "data", "pairs.json")].find((f) => f && existsSync(f));
+const PAIR_PAGES: string[] = PAIRS_FILE ? (JSON.parse(readFileSync(PAIRS_FILE, "utf8")).pairs as { slug: string }[]).map((p) => `/convert/${p.slug}`) : [];
+const HASHED_PAGES = ["", "/privacy", "/terms", "/cli", ...PAIR_PAGES];
 // Looked up next to this file first: a build tool may evaluate the config with another working directory (Vercel did).
 const HASH_FILE = [
   typeof __dirname !== "undefined" ? join(__dirname, "csp-hashes.json") : "",

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { operatingSystems } from "./downloads";
+import { PAIRS } from "./pairs";
 import { GPL_URL, RELEASES_URL, REPO_URL, SCOUTHUB_SOCIAL, SCOUTHUB_URL, SITE_URL } from "./site";
 
 // Search metadata shared by every page: canonical + hreflang (ar, en, x-default -> Arabic), Open Graph and Twitter card.
 // Next merges metadata shallowly, so each page passes its own title/description and gets the whole set back.
 
 /** Every indexable page, as the path after the locale ("" = landing). The sitemap lists each one in every locale. */
-export const PAGES = ["", "/app", "/privacy", "/terms"] as const;
-export type PagePath = (typeof PAGES)[number];
+export const PAGES: readonly string[] = ["", "/app", "/cli", "/privacy", "/terms", ...PAIRS.map((p) => `/convert/${p.slug}`)];
+export type PagePath = string;
 
 const OG_LOCALE: Record<string, string> = { ar: "ar_AR", en: "en_US" };
 

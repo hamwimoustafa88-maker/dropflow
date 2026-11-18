@@ -79,9 +79,11 @@ internal static class ConversionArgs
     /// Any audio-bearing file to an audio format: first audio stream only, tags kept. Cover art is carried over (as an attached
     /// picture) when both formats can hold it; the caller retries without it if FFmpeg refuses.
     /// </summary>
-    public static BuiltCommand Audio(string input, string output, string outputExtension, MediaInfo? source, FfmpegEncoders encoders, int? bitrateKbps, bool includeCoverArt, AudioQuality quality = AudioQuality.Standard, string? audioFilter = null, int? sampleRate = null)
+    /// <param name="maxSeconds">Keep only the first this many seconds (the iPhone ringtone limit).</param>
+    /// <param name="alac">m4a only: Apple Lossless instead of AAC.</param>
+    public static BuiltCommand Audio(string input, string output, string outputExtension, MediaInfo? source, FfmpegEncoders encoders, int? bitrateKbps, bool includeCoverArt, AudioQuality quality = AudioQuality.Standard, string? audioFilter = null, int? sampleRate = null, int? maxSeconds = null, bool alac = false)
     {
-        var encoding = AudioFormats.Encode(outputExtension, bitrateKbps, quality, source, encoders);
+        var encoding = AudioFormats.Encode(outputExtension, bitrateKbps, quality, source, encoders, alac);
         if (!encoding.Ok) return BuiltCommand.Fail(encoding.Error!);
 
         var args = FfmpegCommand.Global();
@@ -95,8 +97,42 @@ internal static class ConversionArgs
         // -ar rather than an aresample filter: the output option lets FFmpeg negotiate the channel layout itself. A filter placed after
         // loudnorm fails on files with a guessed layout ("Cannot select channel layout for the link between filters").
         if (sampleRate is > 0) args.AddRange(["-ar", sampleRate.Value.ToString()]);
+        if (maxSeconds is > 0) args.AddRange(["-t", maxSeconds.Value.ToString()]);
         args.Add(output);
         return new BuiltCommand(args, encoding.Warnings);
+    }
+
+    /// <summary>
+    /// An endlessly looping animation without sound: animated WebP (libwebp, only when the build has it) or APNG (FFmpeg's own
+    /// encoder). At most <paramref name="fps"/> frames per second (never more than the source has) and <paramref name="maxWidth"/> pixels
+    /// wide, like the GIF output.
+    /// </summary>
+    public static BuiltCommand Animation(string input, string output, string outputExtension, MediaInfo? source, FfmpegEncoders encoders, double fps = 15, int maxWidth = 480)
+    {
+        var sourceFps = source?.Video?.FrameRate;
+        var rate = sourceFps is > 0 && sourceFps < fps ? sourceFps.Value : fps;
+        var filter = $"fps={rate.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)},scale='min({maxWidth},iw)':-1:flags=lanczos";
+
+        var args = FfmpegCommand.Global();
+        args.AddRange(["-i", input, "-map", source?.Video is { Index: >= 0 } v ? $"0:{v.Index}" : "0:v:0", "-an", "-sn", "-dn", "-vf", filter]);
+        switch (outputExtension)
+        {
+            case "webp":
+                var encoder = encoders.Has("libwebp_anim") ? "libwebp_anim" : encoders.Has("libwebp") ? "libwebp" : null;
+                if (encoder is null)
+                    return BuiltCommand.Fail("This FFmpeg build has no WebP encoder (libwebp). Choose GIF or APNG, or install a full FFmpeg build.");
+                args.AddRange(["-c:v", encoder, "-lossless", "0", "-quality", "75", "-compression_level", "4", "-loop", "0", "-f", "webp"]);
+                break;
+
+            case "apng":
+                args.AddRange(["-c:v", "apng", "-pix_fmt", "rgb24", "-plays", "0", "-f", "apng"]);
+                break;
+
+            default:
+                return BuiltCommand.Fail($"'.{outputExtension}' is not an animation output.");
+        }
+        args.Add(output);
+        return new BuiltCommand(args, []);
     }
 
     /// <summary>

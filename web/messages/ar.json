@@ -28,7 +28,8 @@
   "nav": {
     "features": "المزايا",
     "formats": "الصيغ",
-    "developers": "للمبرمجين"
+    "developers": "للمبرمجين",
+    "how": "طريقة العمل"
   },
   "hero": {
     "badge": "محلي 100%",
@@ -180,7 +181,8 @@
       "security": "سياسة الأمان",
       "signing": "سياسة توقيع الكود",
       "license": "الرخصة (GPL-3.0)"
-    }
+    },
+    "cli": "سطر الأوامر"
   },
   "faq": {
     "title": "أسئلة شائعة",
@@ -270,7 +272,8 @@
       "open": "افتح العجلة",
       "empty": "لا شيء هنا",
       "picker": "العجلات",
-      "center": "{count, plural, one {ملف واحد} two {ملفان} few {# ملفات} many {# ملفاً} other {# ملف}}"
+      "center": "{count, plural, one {ملف واحد} two {ملفان} few {# ملفات} many {# ملفاً} other {# ملف}}",
+      "pageHint": "{page}/{total} · ‏PgDn أو عجلة الفأرة للمزيد"
     },
     "more": "المزيد",
     "files": {
@@ -391,7 +394,15 @@
       "invalidColor": "لون غير صالح: {value}",
       "nothingToDo": "لا يوجد ما يتغيّر",
       "needTwoImages": "اختر صورتين أو أكثر",
-      "invalidPattern": "نمط غير صالح: {value}"
+      "invalidPattern": "نمط غير صالح: {value}",
+      "dataInvalid": "ملف {format} غير صالح",
+      "dataInvalidLine": "ملف {format} غير صالح (السطر {line})",
+      "notTable": "ليس جدولاً",
+      "noContacts": "لا توجد جهات اتصال",
+      "noEvents": "لا توجد مواعيد",
+      "fontCollection": "مجموعات الخطوط غير مدعومة",
+      "notAFont": "هذا ليس ملف خط",
+      "fontOutlines": "تحويل منحنيات الخط يحتاج تطبيق ويندوز"
     },
     "sr": {
       "wheelPage": "الصفحة {page} من {total}"
@@ -432,7 +443,9 @@
       "img_qr": "قراءة QR",
       "img_ocr": "نص (OCR)",
       "img_remove_bg": "إزالة الخلفية",
-      "gen_rename": "إعادة تسمية"
+      "gen_rename": "إعادة تسمية",
+      "data_to_vcard": "إنشاء جهات اتصال",
+      "data_to_ical": "إنشاء تقويم"
     },
     "opt": {
       "quality": "الجودة",
@@ -898,5 +911,91 @@
     "title": "تواصل معنا",
     "whatsapp": "واتساب",
     "aria": "واتساب: تواصل مع الفريق (يفتح في تبويب جديد)"
+  },
+  "steps": {
+    "title": "طريقة العمل",
+    "drag": {
+      "title": "اسحب ملفاً",
+      "text": "من أي مجلد."
+    },
+    "key": {
+      "title": "اضغط مفتاحاً",
+      "text": "Shift للتحويل. Ctrl للأدوات. Alt للإجراءات."
+    },
+    "pick": {
+      "title": "أفلت على خيار",
+      "text": "تظهر العجلة عند المؤشر."
+    },
+    "done": {
+      "title": "تم",
+      "text": "يُحفظ بجانب الأصل."
+    }
+  },
+  "glance": {
+    "title": "باختصار",
+    "price": "السعر",
+    "priceValue": "مجاني",
+    "license": "الرخصة",
+    "version": "الإصدار",
+    "platforms": "المنصات",
+    "offline": "دون إنترنت",
+    "offlineValue": "100% على جهازك",
+    "conversions": "التحويلات",
+    "languages": "اللغات",
+    "languagesValue": "العربية · English",
+    "updates": "التحديثات",
+    "updatesValue": "تلقائية"
+  },
+  "news": {
+    "title": "الجديد في",
+    "flip": {
+      "title": "عجلة بوجهين",
+      "text": "اضغط Tab للمزيد."
+    },
+    "routes": {
+      "title": "تحويل بخطوات",
+      "text": "من CSV إلى PNG بإفلات واحد."
+    },
+    "presets": {
+      "title": "إعدادات جاهزة",
+      "text": "واتساب، ديسكورد، بريد. أو إعدادك."
+    },
+    "browser": {
+      "title": "من المتصفح",
+      "text": "اسحب صورة أو رابطاً."
+    },
+    "formats": {
+      "title": "صيغ جديدة",
+      "text": "RAW، خطوط، كتب، YAML."
+    },
+    "home": {
+      "title": "نافذة رئيسية",
+      "text": "آخر النتائج. أعد أو تراجع."
+    }
+  },
+  "pairs": {
+    "badge": "مجاني · دون إنترنت · دون رفع",
+    "titleA": "تحويل",
+    "titleB": "إلى",
+    "title": "تحويل {from} إلى {to}",
+    "short": "{from} إلى {to}",
+    "lead": "على جهازك. لا شيء يُرفع.",
+    "step1": "اسحب ملف {from}",
+    "step2": "اضغط Shift",
+    "step3": "أفلت على {to}",
+    "tryWeb": "حوّل في المتصفح",
+    "related": "تحويلات قريبة",
+    "popular": "تحويلات شائعة",
+    "metaTitle": "تحويل {from} إلى {to} مجاناً ودون إنترنت · DropFlow",
+    "metaDescription": "حوّل {from} إلى {to} على جهازك مع DropFlow: مجاني ومفتوح المصدر، ولا شيء يُرفع.",
+    "metaDescriptionWeb": "حوّل {from} إلى {to} مجاناً في المتصفح أو على جهازك مع DropFlow. لا شيء يُرفع."
+  },
+  "cli": {
+    "title": "في سطر الأوامر",
+    "lead": "المحركات نفسها، في السكربتات.",
+    "exitCodes": "رموز الخروج",
+    "note": "النتائج بجانب كل ملف. الأصل لا يتغير أبداً.",
+    "metaTitle": "سطر الأوامر · DropFlow",
+    "metaDescription": "أمر dropflow: حوّل الملفات وشغّل الأدوات من السكربتات دون إنترنت. أمثلة ورموز الخروج."
   }
 }

@@ -18,6 +18,16 @@ public class ImageInputsTests
     [InlineData("bmp")]
     [InlineData("gif")]
     [InlineData("ico")]
+    [InlineData("psd")]
+    [InlineData("jxl")]
+    [InlineData("jp2")]
+    [InlineData("tga")]
+    [InlineData("qoi")]
+    [InlineData("dds")]
+    [InlineData("pcx")]
+    [InlineData("exr")]
+    [InlineData("hdr")]
+    [InlineData("fits")]
     public void Claimed_formats_round_trip(string ext)
     {
         using var dir = new TempDir();
@@ -82,5 +92,16 @@ public class ImageInputsTests
         var path = dir.WriteText("broken.png", "this is not a png");
         Assert.Throws<ImageToolException>(() => ImageIo.LoadUpright(path));
         Assert.Throws<ImageToolException>(() => ImageIo.LoadUpright(dir.Combine("missing.png")));
+    }
+
+    [Fact]
+    public void Camera_raw_and_dicom_files_load_with_their_real_size()
+    {
+        using var dir = new TempDir();
+        using (var dng = ImageIo.LoadUpright(PictureSamples.Dng(dir.Combine("photo.dng"), 48, 32))) Assert.Equal((48u, 32u), (dng.Width, dng.Height));
+        using (var dcm = ImageIo.LoadUpright(PictureSamples.Dicom(dir.Combine("scan.dcm"), 40, 30))) Assert.Equal((40u, 30u), (dcm.Width, dcm.Height));
+        Assert.Contains("dng", ImageInputs.Supported);
+        Assert.Contains("cr2", ImageInputs.Supported);
+        Assert.Contains("dcm", ImageInputs.Supported);
     }
 }

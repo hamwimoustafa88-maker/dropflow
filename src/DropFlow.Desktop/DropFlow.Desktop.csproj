@@ -13,7 +13,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>dropflow-desktop</AssemblyName>
     <RootNamespace>DropFlow.Desktop</RootNamespace>
-    <Version>0.1.2</Version>
+    <Version>0.3.0</Version>
     <ApplicationIcon />
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
     <!-- Avalonia's compiled bindings are not used (the UI is built in code), so no XAML compiler step is needed. -->
@@ -35,6 +35,8 @@
     <ProjectReference Include="..\DropFlow.Engines.Media\DropFlow.Engines.Media.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Archive\DropFlow.Engines.Archive.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Data\DropFlow.Engines.Data.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Fonts\DropFlow.Engines.Fonts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

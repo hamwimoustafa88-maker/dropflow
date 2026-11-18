@@ -11,7 +11,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\dropflow.ico</ApplicationIcon>
     <StartupObject>DropFlow.App.Program</StartupObject>
-    <Version>0.1.2</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,11 +24,13 @@
     <ProjectReference Include="..\DropFlow.Engines.Images\DropFlow.Engines.Images.csproj" />
     <ProjectReference Include="..\DropFlow.AI\DropFlow.AI.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Archive\DropFlow.Engines.Archive.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Fonts\DropFlow.Engines.Fonts.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Media\DropFlow.Engines.Media.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Pdf\DropFlow.Engines.Pdf.csproj" />
     <ProjectReference Include="..\DropFlow.Engines.Web\DropFlow.Engines.Web.csproj" />
     <ProjectReference Include="..\DropFlow.Hooks\DropFlow.Hooks.csproj" />
     <ProjectReference Include="..\DropFlow.Overlay\DropFlow.Overlay.csproj" />
+    <ProjectReference Include="..\DropFlow.Engines.Data\DropFlow.Engines.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

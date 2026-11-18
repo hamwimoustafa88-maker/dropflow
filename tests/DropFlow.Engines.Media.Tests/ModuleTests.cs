@@ -116,8 +116,10 @@ public class ModuleTests
         }
         foreach (var tool in Ids.Where(i => i.StartsWith("aud.", StringComparison.Ordinal)))
         {
+            // Read-only sources (amr, ape, dsf, ac3, m4r ...) are conversion inputs only: a tool writes the input's own format back,
+            // which FFmpeg cannot encode for most of them.
             foreach (var ext in Catalog.Category("audio")!.Inputs)
-                Assert.True(Converters.Any(c => c.Supports(tool, ext)), $"{tool} .{ext}");
+                Assert.True(Converters.Any(c => c.Supports(tool, ext)) != DropFlow.Engines.Media.Ffmpeg.AudioFormats.ReadOnlyInputs.Contains(ext), $"{tool} .{ext}");
             var alsoVideo = Catalog.Tool(tool)?.AlsoIn?.Contains("video") == true;
             Assert.Equal(alsoVideo, Converters.Any(c => c.Supports(tool, "mp4")));
         }

@@ -5,7 +5,8 @@ namespace DropFlow.Engines.Media.Subtitles;
 
 /// <summary>
 /// Bytes to text for subtitle files in the wild: UTF-8 with or without BOM, UTF-16/32 with BOM (and BOM-less UTF-16 by
-/// byte pattern), and legacy Arabic/Western code pages when the bytes are not valid UTF-8.
+/// byte pattern), and legacy code pages when the bytes are not valid UTF-8: windows-1256 when the text reads as Arabic,
+/// windows-1252 when it reads as Western European, otherwise the system's ANSI code page (the user's culture).
 /// </summary>
 public static class SubtitleDecoder
 {
@@ -14,7 +15,13 @@ public static class SubtitleDecoder
     static SubtitleDecoder() => TextEncoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
     /// <summary>Decodes <paramref name="bytes"/>; <paramref name="encodingName"/> reports what was used (for logs).</summary>
-    public static string Decode(byte[] bytes, out string encodingName)
+    public static string Decode(byte[] bytes, out string encodingName) => Decode(bytes, out encodingName, SystemCodePage());
+
+    /// <summary>
+    /// As <see cref="Decode(byte[], out string)"/>, with the code page used when neither the Arabic nor the Western guess fits
+    /// (tests pass one; the app uses the ANSI code page of the current culture).
+    /// </summary>
+    public static string Decode(byte[] bytes, out string encodingName, int systemCodePage)
     {
         if (bytes.Length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0 && bytes[3] == 0)
         {
@@ -54,7 +61,7 @@ public static class SubtitleDecoder
         }
         catch (DecoderFallbackException)
         {
-            return DecodeLegacy(bytes, out encodingName);
+            return DecodeLegacy(bytes, out encodingName, systemCodePage);
         }
     }
 
@@ -74,10 +81,11 @@ public static class SubtitleDecoder
     }
 
     /// <summary>
-    /// Picks windows-1256 (Arabic) when most high bytes decode to Arabic letters, otherwise windows-1252. Arabic and English
-    /// are DropFlow's audience; other legacy code pages are not guessed.
+    /// Picks windows-1256 (Arabic) when most high bytes decode to Arabic letters, windows-1252 when they decode to Latin letters
+    /// that stand alone between ASCII ("très", "garçon"), and otherwise the system code page: a run of high bytes is how double-byte
+    /// legacy encodings (Korean, Chinese, Japanese) look, and only the user's own code page can read those.
     /// </summary>
-    private static string DecodeLegacy(byte[] bytes, out string name)
+    private static string DecodeLegacy(byte[] bytes, out string name, int systemCodePage)
     {
         var arabic = TextEncoding.GetEncoding(1256).GetString(bytes);
         var high = arabic.Count(c => c > 0x7F);
@@ -87,8 +95,53 @@ public static class SubtitleDecoder
             name = "windows-1256";
             return arabic;
         }
-        name = "windows-1252";
-        return TextEncoding.GetEncoding(1252).GetString(bytes);
+
+        var western = TextEncoding.GetEncoding(1252).GetString(bytes);
+        if (LooksWestern(bytes, western) || systemCodePage is 0 or 1252 or 1256 or 65001 or 20127)
+        {
+            name = "windows-1252";
+            return western;
+        }
+
+        try
+        {
+            var encoding = TextEncoding.GetEncoding(systemCodePage, EncoderFallback.ReplacementFallback, DecoderFallback.ReplacementFallback);
+            name = "cp" + systemCodePage.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return encoding.GetString(bytes);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
+        {
+            name = "windows-1252";
+            return western;
+        }
+    }
+
+    /// <summary>Most high bytes are Latin letters or typographic punctuation, and few of them sit next to another high byte.</summary>
+    private static bool LooksWestern(byte[] bytes, string decoded1252)
+    {
+        int high = 0, plausible = 0, paired = 0;
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            if (bytes[i] < 0x80) continue;
+            high++;
+            var c = decoded1252[i];
+            if (char.IsLetter(c) || c is '’' or '‘' or '“' or '”' or '–' or '—' or '…' or '«' or '»' or '°' or '€' or '£' or '·' or '¿' or '¡' or ' ') plausible++;
+            if (i + 1 < bytes.Length && bytes[i + 1] >= 0x80) paired++;
+        }
+        return high > 0 && plausible >= high * 0.8 && paired <= high * 0.3;
+    }
+
+    /// <summary>The ANSI code page of the current culture (1252 for English, 1256 for Arabic, 949 for Korean...); 0 when unknown.</summary>
+    private static int SystemCodePage()
+    {
+        try
+        {
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ANSICodePage;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException)
+        {
+            return 0;
+        }
     }
 
     /// <summary>BOM-less UTF-16 shows up as a zero byte in every other position of mostly-ASCII text.</summary>

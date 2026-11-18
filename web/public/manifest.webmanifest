@@ -9,8 +9,8 @@
   "scope": "/ar/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#070b1c",
-  "theme_color": "#070b1c",
+  "background_color": "#15141c",
+  "theme_color": "#15141c",
   "categories": ["utilities", "productivity"],
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

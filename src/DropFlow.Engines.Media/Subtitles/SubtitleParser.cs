@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace DropFlow.Engines.Media.Subtitles;
 
 /// <summary>
-/// Reads SRT, WebVTT and ASS/SSA text. Lenient about the things real files get wrong (missing indexes, missing blank lines
+/// Reads SRT, WebVTT and ASS/SSA text (and, in <c>SubtitleParser.Formats.cs</c>, SAMI, LRC, TTML/DFXP, MicroDVD and SBV). Lenient about the things real files get wrong (missing indexes, missing blank lines
 /// between cues, <c>.</c> vs <c>,</c> decimals, one- to nine-digit fractions, optional hours, unordered ASS events, BOM characters)
 /// and strict about the one thing it cannot work around: a file with no cues throws <see cref="SubtitleFormatException"/>.
 /// </summary>
@@ -17,6 +17,10 @@ public static partial class SubtitleParser
 
     // ------------------------------------------------------------------ entry points
 
+    /// <summary>The formats tried, in this order, when the content does not match the extension.</summary>
+    private static readonly SubtitleFormat[] Fallbacks =
+        [SubtitleFormat.Srt, SubtitleFormat.Vtt, SubtitleFormat.Ass, SubtitleFormat.Sbv, SubtitleFormat.Ttml, SubtitleFormat.Smi, SubtitleFormat.Lrc, SubtitleFormat.MicroDvd];
+
     /// <summary>Parses text whose format is known from the file extension. If it has no cues, the other formats are tried before giving up.</summary>
     public static SubtitleDocument Parse(string text, SubtitleFormat format)
     {
@@ -26,31 +30,52 @@ public static partial class SubtitleParser
         var newLine = SubtitleDecoder.DetectNewLine(text);
         var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
-        var order = new[] { format }.Concat(new[] { SubtitleFormat.Srt, SubtitleFormat.Vtt, SubtitleFormat.Ass }.Where(f => f != format && f != SubtitleFormat.Txt));
+        var order = new[] { format }.Concat(Fallbacks.Where(f => f != format && f != SubtitleFormat.Txt));
+        string? detail = null;
         foreach (var candidate in order)
         {
             var doc = candidate switch
             {
                 SubtitleFormat.Vtt => ParseVtt(normalized, newLine),
                 SubtitleFormat.Ass => ParseAss(normalized, newLine),
+                SubtitleFormat.Smi => ParseSami(normalized, newLine),
+                SubtitleFormat.Lrc => ParseLrc(normalized, newLine),
+                SubtitleFormat.Ttml => ParseTtml(normalized, newLine),
+                SubtitleFormat.MicroDvd => ParseMicroDvd(normalized, newLine),
+                SubtitleFormat.Sbv => ParseSbv(normalized, newLine),
                 _ => ParseSrt(normalized, newLine),
             };
-            if (doc.Cues.Count == 0) continue;
+            if (doc.Cues.Count == 0)
+            {
+                if (candidate == format && doc.Warnings.Count > 0) detail = doc.Warnings[0];
+                continue;
+            }
             if (candidate == format) return doc;
             return doc with
             {
                 SourceFormat = candidate,
-                Warnings = [.. doc.Warnings, $"The file is named like {format.ToString().ToUpperInvariant()} but its content is {candidate.ToString().ToUpperInvariant()}; it was read as {candidate.ToString().ToUpperInvariant()}."],
+                Warnings = [.. doc.Warnings, $"The file is named like {Label(format)} but its content is {Label(candidate)}; it was read as {Label(candidate)}."],
             };
         }
 
+        var example = format is SubtitleFormat.Srt or SubtitleFormat.Vtt or SubtitleFormat.Txt ? " (no time ranges such as 00:00:01,000 --> 00:00:02,500)" : "";
         throw new SubtitleFormatException(
-            $"No subtitles were found. The file does not look like a valid {format.ToString().ToUpperInvariant()} subtitle file (no time ranges such as 00:00:01,000 --> 00:00:02,500).");
+            $"No subtitles were found. The file does not look like a valid {Label(format)} subtitle file{example}." + (detail is null ? "" : " " + detail));
     }
+
+    /// <summary>Short name of a format for messages ("SRT", "SAMI", "MicroDVD").</summary>
+    public static string Label(SubtitleFormat format) => format switch
+    {
+        SubtitleFormat.Smi => "SAMI",
+        SubtitleFormat.MicroDvd => "MicroDVD",
+        _ => format.ToString().ToUpperInvariant(),
+    };
 
     public static SubtitleDocument ParseBytes(byte[] bytes, SubtitleFormat format)
     {
         if (bytes.Length == 0) throw new SubtitleFormatException("The subtitle file is empty.");
+        if (bytes.Length >= 4 && bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 1 && bytes[3] == 0xBA)
+            throw new SubtitleFormatException("This is a VobSub (.sub/.idx) file: its subtitles are pictures, not text, so they cannot be converted to a text format.");
         if (SubtitleDecoder.LooksBinary(bytes)) throw new SubtitleFormatException("The file is binary data, not a text subtitle file.");
         var text = SubtitleDecoder.Decode(bytes, out _);
         return Parse(text, format);
@@ -62,6 +87,11 @@ public static partial class SubtitleParser
         "vtt" => SubtitleFormat.Vtt,
         "ass" or "ssa" => SubtitleFormat.Ass,
         "txt" => SubtitleFormat.Txt,
+        "smi" or "sami" => SubtitleFormat.Smi,
+        "lrc" => SubtitleFormat.Lrc,
+        "ttml" or "dfxp" => SubtitleFormat.Ttml,
+        "sub" => SubtitleFormat.MicroDvd,
+        "sbv" => SubtitleFormat.Sbv,
         _ => null,
     };
 

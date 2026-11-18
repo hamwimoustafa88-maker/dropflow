@@ -14,8 +14,8 @@ const noop = () => {};
 const signal = () => new AbortController().signal;
 
 describe("subtitlesConverter manifest", () => {
-  it("only offers srt, vtt and txt targets (no ass, no self-conversion)", () => {
-    expect(subtitlesConverter.operations).toEqual(["convert:srt", "convert:vtt", "convert:txt"]);
+  it("only offers srt, vtt, txt, lrc and sbv targets (no ass, no self-conversion)", () => {
+    expect(subtitlesConverter.operations).toEqual(["convert:srt", "convert:vtt", "convert:txt", "convert:lrc", "convert:sbv"]);
     for (const op of subtitlesConverter.operations) {
       expect(subtitlesConverter.options(op)).toEqual([]);
       expect(subtitlesConverter.suffix(op)).toBe("converted");

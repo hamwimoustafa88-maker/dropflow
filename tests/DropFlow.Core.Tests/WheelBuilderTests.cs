@@ -307,3 +307,69 @@ public class WheelBuilderTests
     public void Format_labels_are_uppercase_with_special_cases(string ext, string label) =>
         Assert.Equal(label, WheelBuilder.FormatLabel(ext));
 }
+
+public class WheelLayoutTests
+{
+    private static readonly ToolCatalog Catalog = ToolCatalog.LoadEmbedded();
+    private static readonly string[] Actions = ["act.copy", "act.move", "act.copy-path"];
+
+    private static WheelBuilder Builder() => new(Catalog, new ToolRegistry().Register(new FakeConverter(
+        ["convert:png", "convert:jpg", "convert:webp", "convert:gif"],
+        supports: (op, ext) => Catalog.CategoryForExtension(ext) == "image" && Operation.TargetOf(op) != ext)), new FakeEngines());
+
+    private static string[] Ids(IEnumerable<Wedge> w) => w.Select(x => x.Id).ToArray();
+
+    [Fact]
+    public void Without_a_layout_the_wheel_is_exactly_as_before()
+    {
+        var b = Builder();
+        var plain = b.Build([@"C:\a.bmp"], "en", Actions, WheelPins.None);
+        var none = b.Build([@"C:\a.bmp"], "en", Actions, WheelPins.None, WheelLayouts.None);
+        Assert.Equal(Ids(plain.Convert), Ids(none.Convert));
+    }
+
+    [Fact]
+    public void The_users_order_wins_and_hidden_items_move_to_the_add_list()
+    {
+        var layouts = WheelLayouts.None.With(WheelKind.Convert, "image", new WheelLayout(["convert:webp", "convert:png"], ["convert:jpg"]));
+        var set = Builder().Build([@"C:\a.bmp"], "en", Actions, WheelPins.None, layouts);
+
+        Assert.Equal(["convert:webp", "convert:png", "convert:gif", Wedge.AddId], Ids(set.Convert));   // gif: not listed, keeps its place after
+        Assert.Contains(set.AddableFor(WheelKind.Convert), w => w.Id == "convert:jpg");
+    }
+
+    [Fact]
+    public void Layouts_survive_a_save_and_hand_edited_junk_is_dropped()
+    {
+        using var dir = new TempDir();
+        var store = new SettingsStore(System.IO.Path.Combine(dir.Path, "s.json"));
+        var layouts = WheelLayouts.None.With(WheelKind.Tools, "pdf", new WheelLayout(["pdf.merge", "pdf.split"], ["pdf.sign"]));
+        store.Save(new AppSettings { Layouts = layouts });
+        Assert.Equal(["pdf.merge", "pdf.split"], store.Load().Layouts.For(WheelKind.Tools, "pdf").Order);
+
+        var odd = new SettingsStore(dir.File("odd.json",
+            """{ "Layouts": { "nope": { "pdf": { "Order": ["x"] } }, "Tools": { "pdf": { "Order": ["a", "a", "", null], "Hidden": null }, "": null } } }""")).Load();
+        Assert.Equal(["a"], odd.Layouts.For(WheelKind.Tools, "pdf").Order);
+        Assert.Empty(odd.Layouts.For(WheelKind.Tools, "pdf").Hidden);
+        Assert.True(new SettingsStore(dir.File("null.json", """{ "Layouts": null }""")).Load().Layouts.For(WheelKind.Tools, "pdf").IsDefault);
+    }
+
+    [Fact]
+    public void The_editor_moves_hides_and_shows_items()
+    {
+        var items = Builder().ArrangeableFor(WheelKind.Convert, "image", "en", Actions, WheelPins.None);
+        Assert.Equal(["convert:jpg", "convert:png", "convert:webp", "convert:gif"], Ids(items)); // the union over every image input, catalog order
+
+        var l = WheelLayoutEditor.Move(items, WheelLayout.Default, "convert:webp", -2);
+        Assert.Equal(["convert:webp", "convert:jpg", "convert:png", "convert:gif"], Ids(WheelLayoutEditor.View(items, l).Visible));
+
+        l = WheelLayoutEditor.ToggleHidden(items, l, "convert:png");
+        Assert.Equal(["convert:png"], Ids(WheelLayoutEditor.View(items, l).Hidden));
+        Assert.DoesNotContain("convert:png", Ids(WheelLayoutEditor.View(items, l).Visible));
+
+        l = WheelLayoutEditor.ToggleHidden(items, l, "convert:png");
+        Assert.Equal("convert:png", Ids(WheelLayoutEditor.View(items, l).Visible)[^1]);           // shown again at the end
+        Assert.Same(l, WheelLayoutEditor.Move(items, l, "unknown", 1));
+        Assert.Equal("convert:webp", Ids(WheelLayoutEditor.View(items, WheelLayoutEditor.Move(items, l, "convert:webp", -5)).Visible)[0]);
+    }
+}

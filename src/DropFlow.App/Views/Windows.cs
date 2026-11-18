@@ -127,7 +127,16 @@ internal sealed record SettingsContext(
     IReadOnlyList<string> RecipeNames,
     Action<IReadOnlyList<WatchRule>> SaveRules,
     IReadOnlyList<ModelItem> Models,
-    IReadOnlyList<PinnedRow>? Pins = null);
+    IReadOnlyList<PinnedRow>? Pins = null,
+    Action? OpenWheelEditor = null,
+    PresetsContext? Presets = null);
+
+/// <summary>The user's presets for Settings: list, delete, export to a file, import from a file.</summary>
+internal sealed record PresetsContext(
+    Func<IReadOnlyList<(string Name, string Label)>> List,
+    Action<string> Delete,
+    Func<string> Export,
+    Func<string, (int Added, IReadOnlyList<string> Rejected)> Import);
 
 /// <summary>One item the user added to a wheel with "+ Add", as Settings lists it. <paramref name="Remove"/> takes it off at once.</summary>
 internal sealed record PinnedRow(string Label, string Detail, Action Remove);
@@ -194,6 +203,17 @@ internal sealed class SettingsWindow : Window
         }
         root.Children.Add(ui.Card(keysPanel));
 
+        // appearance: accent colour, wheel size / opacity / labels, slices on the front, animations, flip gestures
+        root.Children.Add(ui.SectionTitle(ui.Loc["settings.appearance"]));
+        root.Children.Add(ui.Card(BuildAppearance(current)));
+
+        // the user's presets (saved from the options dialog), shared as local files
+        if (ctx.Presets is { } presets)
+        {
+            root.Children.Add(ui.SectionTitle(ui.Loc["settings.presets"]));
+            root.Children.Add(ui.Card(BuildPresets(presets)));
+        }
+
         // items added to the wheels with "+ Add"
         root.Children.Add(ui.SectionTitle(ui.Loc["settings.pins"]));
         _pins = [.. ctx.Pins ?? []];
@@ -207,6 +227,12 @@ internal sealed class SettingsWindow : Window
         _checkUpdates = new CheckBox { Content = ui.Loc["settings.checkUpdates"], IsChecked = current.CheckForUpdates, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) };
         _hotkey.Text = current.GlobalHotkey;
         _clipboardHotkey.Text = current.ClipboardHotkey;
+        _excluded.Text = string.Join(", ", current.ExcludedApps);
+        _proxy.Text = current.Proxy;
+        _namePattern.Text = current.Output.NamePattern ?? "";
+        System.Windows.Automation.AutomationProperties.SetName(_namePattern, ui.Loc["settings.namePattern"]);
+        System.Windows.Automation.AutomationProperties.SetName(_excluded, ui.Loc["settings.excluded"]);
+        System.Windows.Automation.AutomationProperties.SetName(_proxy, ui.Loc["settings.proxy"]);
         var sys = new StackPanel
         {
             Children =
@@ -214,6 +240,12 @@ internal sealed class SettingsWindow : Window
                 _startup, _menu, _offerInstalls, _checkUpdates,
                 ui.Text(ui.Loc["settings.hotkey"], 12, muted: true), _hotkey,
                 ui.Text(ui.Loc["settings.clipboardHotkey"], 12, muted: true), _clipboardHotkey,
+                (_clipboardResults = new CheckBox { Content = ui.Loc["settings.clipboardResults"], IsChecked = current.ClipboardResults, Foreground = ui.Theme.Text, Margin = new Thickness(0, 6, 0, 8) }),
+                ui.Text(ui.Loc["settings.namePattern"], 12, muted: true), _namePattern,
+                (_overwrite = new CheckBox { Content = ui.Loc["settings.overwrite"], IsChecked = current.Output.Conflict == Core.Output.NameConflict.Overwrite, Foreground = ui.Theme.Text, Margin = new Thickness(0, 4, 0, 4) }),
+                (_keepDates = new CheckBox { Content = ui.Loc["settings.keepDates"], IsChecked = current.Output.KeepDates, Foreground = ui.Theme.Text, Margin = new Thickness(0, 0, 0, 8) }),
+                ui.Text(ui.Loc["settings.excluded"], 12, muted: true), _excluded,
+                ui.Text(ui.Loc["settings.proxy"], 12, muted: true), _proxy,
             },
         };
         root.Children.Add(ui.Card(sys));
@@ -262,6 +294,157 @@ internal sealed class SettingsWindow : Window
         root.Children.Add(ui.Text($"{ui.Loc.Format("settings.version", ctx.Version)} · {ui.Loc["settings.license"]}", 11, muted: true));
 
         Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private string? _accent;
+    private CheckBox _clipboardResults = null!;
+    private CheckBox _overwrite = null!;
+    private CheckBox _keepDates = null!;
+    private readonly TextBox _namePattern = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5), FlowDirection = FlowDirection.LeftToRight };
+    private readonly TextBox _excluded = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5) };
+    private readonly TextBox _proxy = new() { MinHeight = 32, Padding = new Thickness(6, 5, 6, 5), FlowDirection = FlowDirection.LeftToRight };
+    private readonly Slider _wheelScale = new() { Minimum = 0.8, Maximum = 1.4, SmallChange = 0.05, LargeChange = 0.1, IsSnapToTickEnabled = true, TickFrequency = 0.05 };
+    private readonly Slider _wheelOpacity = new() { Minimum = 0.6, Maximum = 1, SmallChange = 0.05, LargeChange = 0.1, IsSnapToTickEnabled = true, TickFrequency = 0.05 };
+    private readonly Slider _labelScale = new() { Minimum = 0.85, Maximum = 1.3, SmallChange = 0.05, LargeChange = 0.1, IsSnapToTickEnabled = true, TickFrequency = 0.05 };
+    private readonly Slider _frontMax = new() { Minimum = Core.Wheel.WheelFaces.MinFrontMax, Maximum = Core.Wheel.WheelFaces.MaxFrontMax, SmallChange = 1, LargeChange = 2, IsSnapToTickEnabled = true, TickFrequency = 1 };
+    private readonly ComboBox _motion = new() { MinHeight = 30 };
+    private CheckBox _flipGestures = null!;
+    private readonly WrapPanel _swatches = new() { Margin = new Thickness(0, 4, 0, 8) };
+
+    /// <summary>Accent swatches (with names for screen readers), sliders with their value as text, the animation choice and the flip switch.</summary>
+    private StackPanel BuildAppearance(AppSettings current)
+    {
+        var ui = _ui;
+        _accent = current.Accent;
+        RebuildSwatches();
+
+        StackPanel SliderRow(string labelKey, Slider slider, double value, Func<double, string> format)
+        {
+            slider.Value = value;
+            var shown = ui.Text(format(value), 12, muted: true, wrap: false);
+            slider.ValueChanged += (_, e) => shown.Text = format(e.NewValue);
+            System.Windows.Automation.AutomationProperties.SetName(slider, ui.Loc[labelKey]);
+            DockPanel.SetDock(shown, Dock.Right);
+            shown.MinWidth = 44;
+            shown.TextAlignment = TextAlignment.Right;
+            return new StackPanel
+            {
+                Margin = new Thickness(0, 2, 0, 6),
+                Children = { ui.Text(ui.Loc[labelKey], 13), new DockPanel { Children = { shown, slider } } },
+            };
+        }
+
+        foreach (var (tag, key) in new[] { (MotionSetting.Auto, "settings.motion.auto"), (MotionSetting.Reduce, "settings.motion.reduce"), (MotionSetting.Full, "settings.motion.full") })
+            _motion.Items.Add(new ComboBoxItem { Content = ui.Loc[key], Tag = tag });
+        _motion.SelectedItem = _motion.Items.OfType<ComboBoxItem>().First(i => (MotionSetting)i.Tag == current.Motion);
+        System.Windows.Automation.AutomationProperties.SetName(_motion, ui.Loc["settings.motion"]);
+        _flipGestures = new CheckBox { Content = ui.Loc["settings.flipGestures"], IsChecked = current.WheelFlipGestures, Foreground = ui.Theme.Text, Margin = new Thickness(0, 6, 0, 2) };
+
+        var pct = (double v) => $"{Math.Round(v * 100):0}%";
+        var arrange = ui.Secondary(ui.Loc["settings.arrange"]);
+        arrange.HorizontalAlignment = HorizontalAlignment.Left;
+        arrange.Margin = new Thickness(0, 0, 0, 10);
+        arrange.Click += (_, _) => _ctx.OpenWheelEditor?.Invoke();
+        arrange.Visibility = _ctx.OpenWheelEditor is null ? Visibility.Collapsed : Visibility.Visible;
+        return new StackPanel
+        {
+            Children =
+            {
+                arrange,
+                ui.Text(ui.Loc["settings.accent"], 13),
+                _swatches,
+                SliderRow("settings.wheelScale", _wheelScale, current.WheelScale, pct),
+                SliderRow("settings.wheelOpacity", _wheelOpacity, current.WheelOpacity, pct),
+                SliderRow("settings.labelScale", _labelScale, current.LabelScale, pct),
+                SliderRow("settings.frontMax", _frontMax, current.WheelFrontMax, v => ((int)v).ToString(System.Globalization.CultureInfo.CurrentCulture)),
+                ui.Text(ui.Loc["settings.motion"], 13),
+                _motion,
+                _flipGestures,
+                ui.Text(ui.Loc["settings.flipGestures.hint"], 11, muted: true),
+            },
+        };
+    }
+
+    private void RebuildSwatches()
+    {
+        _swatches.Children.Clear();
+        var options = new List<(string? Hex, string Name)> { (null, _ui.Loc["settings.accent.default"]) };
+        options.AddRange(DropFlow.Overlay.WheelTheme.AccentSwatches.Skip(1).Select((h, i) => ((string?)h, _ui.Loc.Format("settings.accent.n", i + 2))));
+        foreach (var (hex, name) in options)
+        {
+            var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex ?? DropFlow.Overlay.WheelTheme.AccentSwatches[0]);
+            var selected = string.Equals(hex, _accent, StringComparison.OrdinalIgnoreCase);
+            var b = new Button
+            {
+                Width = 30, Height = 30, Margin = new Thickness(0, 0, 8, 6),
+                Background = new System.Windows.Media.SolidColorBrush(color),
+                BorderBrush = selected ? _ui.Theme.Text : System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(selected ? 3 : 0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = name,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(b, selected ? $"{name} ✓" : name);
+            b.Click += (_, _) => { _accent = hex; RebuildSwatches(); };
+            _swatches.Children.Add(b);
+        }
+    }
+
+    private readonly StackPanel _presetList = new();
+    private readonly TextBlock _presetMessage = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 6, 0, 0) };
+
+    private StackPanel BuildPresets(PresetsContext presets)
+    {
+        var ui = _ui;
+        _presetMessage.Foreground = ui.Theme.TextMuted;
+        var export = ui.Secondary(ui.Loc["settings.presets.export"]);
+        export.Click += (_, _) =>
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog { FileName = "my.dropflow-presets.json", Filter = "DropFlow presets|*.dropflow-presets.json;*.json" };
+            if (dialog.ShowDialog(this) != true) return;
+            File.WriteAllText(dialog.FileName, presets.Export());
+            _presetMessage.Text = ui.Loc["settings.presets.exported"];
+        };
+        var import = ui.Secondary(ui.Loc["settings.presets.import"]);
+        import.Margin = new Thickness(8, 0, 0, 0);
+        import.Click += (_, _) =>
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "DropFlow presets|*.dropflow-presets.json;*.json" };
+            if (dialog.ShowDialog(this) != true) return;
+            if (new FileInfo(dialog.FileName).Length > Core.Automation.PresetBook.MaxFileBytes) { _presetMessage.Text = ui.Loc["settings.presets.tooLarge"]; return; }
+            var (added, rejected) = presets.Import(File.ReadAllText(dialog.FileName));
+            _presetMessage.Text = ui.Loc.Format("settings.presets.imported", added) + (rejected.Count > 0 ? Environment.NewLine + string.Join(Environment.NewLine, rejected) : "");
+            RebuildPresets(presets);
+        };
+        RebuildPresets(presets);
+        return new StackPanel
+        {
+            Children =
+            {
+                ui.Text(ui.Loc["settings.presets.hint"], 12, muted: true),
+                _presetList,
+                new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0), Children = { export, import } },
+                _presetMessage,
+            },
+        };
+    }
+
+    private void RebuildPresets(PresetsContext presets)
+    {
+        _presetList.Children.Clear();
+        var list = presets.List();
+        if (list.Count == 0) { _presetList.Children.Add(_ui.Text(_ui.Loc["settings.presets.empty"], 12, muted: true)); return; }
+        foreach (var (name, label) in list)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var remove = _ui.Secondary(_ui.Loc["settings.pins.remove"]);
+            remove.MinWidth = 70;
+            remove.Click += (_, _) => { presets.Delete(name); RebuildPresets(presets); };
+            System.Windows.Automation.AutomationProperties.SetName(remove, _ui.Loc["settings.pins.remove"] + " " + label);
+            DockPanel.SetDock(remove, Dock.Right);
+            row.Children.Add(remove);
+            row.Children.Add(_ui.Text(label, 13, wrap: false));
+            _presetList.Children.Add(row);
+        }
     }
 
     private string RecipeLabel(string name)
@@ -403,7 +586,19 @@ internal sealed class SettingsWindow : Window
 
     private void Save()
     {
-        var updated = _ctx.Current with
+        if (!Core.Output.OutputRules.IsValidPattern(_namePattern.Text))
+        {
+            _message.Foreground = System.Windows.Media.Brushes.IndianRed;
+            _message.Text = _ui.Loc["settings.namePattern.invalid"];
+            return;
+        }
+        if (!Core.Settings.ProxySetting.IsValid(_proxy.Text))
+        {
+            _message.Foreground = System.Windows.Media.Brushes.IndianRed;
+            _message.Text = _ui.Loc["settings.proxy.invalid"];
+            return;
+        }
+        var updated = (_ctx.Current with
         {
             Language = (string)((ComboBoxItem)_language.SelectedItem).Tag,
             Keys = new WheelKeys
@@ -416,7 +611,19 @@ internal sealed class SettingsWindow : Window
             ClipboardHotkey = _clipboardHotkey.Text.Trim(),
             OfferEngineInstalls = _offerInstalls.IsChecked == true,
             CheckForUpdates = _checkUpdates.IsChecked == true,
-        };
+            Accent = _accent,
+            WheelScale = Math.Round(_wheelScale.Value, 2),
+            WheelOpacity = Math.Round(_wheelOpacity.Value, 2),
+            LabelScale = Math.Round(_labelScale.Value, 2),
+            WheelFrontMax = (int)_frontMax.Value,
+            Motion = (MotionSetting)((ComboBoxItem)_motion.SelectedItem).Tag,
+            WheelFlipGestures = _flipGestures.IsChecked == true,
+            ExcludedApps = _excluded.Text.Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(DropFlow.App.Services.ForegroundApp.Normalize).ToList(),
+            Proxy = _proxy.Text.Trim(),
+            ClipboardResults = _clipboardResults.IsChecked == true,
+            Output = new Core.Output.OutputRules(string.IsNullOrWhiteSpace(_namePattern.Text) ? null : _namePattern.Text.Trim(),
+                _overwrite.IsChecked == true ? Core.Output.NameConflict.Overwrite : Core.Output.NameConflict.Rename, _keepDates.IsChecked == true),
+        }).Normalized();
         var errors = _ctx.Apply(updated, _startup.IsChecked == true, _menu.IsChecked == true);
         _message.Foreground = errors.Count == 0 ? _ui.Theme.Highlight : System.Windows.Media.Brushes.IndianRed;
         _message.Text = errors.Count == 0

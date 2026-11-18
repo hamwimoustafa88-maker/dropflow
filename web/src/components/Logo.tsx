@@ -11,7 +11,7 @@ export function LogoMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
       {segments.map((d, i) => (
-        <path key={i} d={d} fill={i === 0 ? "var(--accent)" : "var(--primary)"} opacity={i === 0 ? 1 : 0.9} />
+        <path key={i} d={d} fill={i === 0 ? "var(--mint)" : i % 2 ? "var(--violet)" : "var(--primary)"} />
       ))}
       <path d="M24 17c3 3.6 4.5 5.8 4.5 7.8a4.5 4.5 0 0 1-9 0c0-2 1.5-4.2 4.5-7.8Z" fill="var(--bg)" />
     </svg>

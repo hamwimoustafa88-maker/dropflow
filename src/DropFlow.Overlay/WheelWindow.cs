@@ -51,6 +51,7 @@ public sealed class WheelWindow : Window
         Wheel.Cancelled += (_, _) => DropCancelled?.Invoke(this, EventArgs.Empty);
         Wheel.ItemInvoked += (_, e) => ItemClicked?.Invoke(this, e.Index);
         Wheel.ItemContextRequested += (_, e) => ItemContextRequested?.Invoke(this, e.Index);
+        Wheel.FlipRequested += (_, _) => FlipRequested?.Invoke(this, EventArgs.Empty);
         AddList.Picked += (_, id) => AddItemPicked?.Invoke(this, id);
         AddList.Back += (_, _) => AddListBack?.Invoke(this, EventArgs.Empty);
         Deactivated += (_, _) =>
@@ -61,6 +62,22 @@ public sealed class WheelWindow : Window
     }
 
     public WheelControl Wheel { get; }
+
+    /// <summary>
+    /// Size factor of the whole wheel (Settings, 0.8-1.4). The content is scaled with a layout transform, so hit-testing (which uses
+    /// positions relative to the wheel control) is unchanged.
+    /// </summary>
+    public double Scale
+    {
+        get => _scale;
+        set
+        {
+            _scale = Math.Clamp(value, 0.8, 1.4);
+            _root.LayoutTransform = Math.Abs(_scale - 1) < 0.001 ? Transform.Identity : new ScaleTransform(_scale, _scale);
+            Width = Height = SizeDips * _scale;
+        }
+    }
+    private double _scale = 1;
 
     /// <summary>The "+ Add" list, shown in the wheel's place.</summary>
     public AddListPanel AddList { get; }
@@ -89,6 +106,9 @@ public sealed class WheelWindow : Window
 
     /// <summary>Right-click, the Menu key, Shift+F10 or Delete on a wedge (interactive mode).</summary>
     public event EventHandler<int>? ItemContextRequested;
+
+    /// <summary>Tab, PageUp/PageDown or the mouse wheel asked to turn the wheel over.</summary>
+    public event EventHandler? FlipRequested;
 
     /// <summary>A row of the "+ Add" list was chosen (its id).</summary>
     public event EventHandler<string>? AddItemPicked;
@@ -175,7 +195,8 @@ public sealed class WheelWindow : Window
         IsInteractive = interactive;
         WindowNative.SetClickThrough(_hwnd, false);
         WindowNative.SetNoActivate(_hwnd, !interactive);
-        var (x, y, size, dpi) = WindowNative.ShowTopmostCentered(_hwnd, point, SizeDips);
+        var (x, y, size, dpi) = WindowNative.ShowTopmostCentered(_hwnd, point, SizeDips * _scale);
+        ScreenBounds = (x, y, size);
         IsWheelVisible = true;
         Wheel.PlayOpenAnimation();
         Shown?.Invoke(this, EventArgs.Empty);
@@ -194,11 +215,18 @@ public sealed class WheelWindow : Window
     /// <summary>Busy mode: the wheel only shows progress and lets clicks pass through to whatever is underneath.</summary>
     public void EnterBusyMode() => WindowNative.SetClickThrough(_hwnd, true);
 
+    /// <summary>Where the wheel window is on screen, in physical pixels (valid while it is shown).</summary>
+    public (int X, int Y, int Size) ScreenBounds { get; private set; }
+
+    /// <summary>The wheel left the screen (dismissed, dropped on, or cancelled).</summary>
+    public event EventHandler? Hidden;
+
     public void HideWheel()
     {
         if (!_prepared || !IsWheelVisible) return;
         WindowNative.HideNoActivate(_hwnd);
         IsWheelVisible = false;
+        Hidden?.Invoke(this, EventArgs.Empty);
         IsInteractive = false;
         AddList.Visibility = Visibility.Collapsed;
         Wheel.Visibility = Visibility.Visible;
@@ -207,10 +235,52 @@ public sealed class WheelWindow : Window
     }
 
     // OLE asks for the drop effect on every DragOver; None shows the "not allowed" cursor, which tells the user the spot is dead.
-    private static bool HasFiles(DragEventArgs e) => e.Data.GetDataPresent(DataFormats.FileDrop);
+    private static bool HasFiles(DragEventArgs e) => e.Data.GetDataPresent(DataFormats.FileDrop) || _link is not null;
+
+    // A picture, link or download dragged out of a web browser: the wheel works on a placeholder named after the link; the host downloads
+    // the real file only after a slice is picked (and only from the public internet).
+    private static Uri? _link;
+    private static readonly Dictionary<string, Uri> Links = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The web address behind a placeholder path the wheel received from a browser drag, or null for a real file.</summary>
+    public static Uri? LinkFor(string path) => Links.GetValueOrDefault(path);
+
+    private static string? ReadText(IDataObject data, string format)
+    {
+        try
+        {
+            if (!data.GetDataPresent(format)) return null;
+            return data.GetData(format) switch
+            {
+                string text => text,
+                MemoryStream ms when format is "UniformResourceLocatorW" or "text/x-moz-url" => System.Text.Encoding.Unicode.GetString(ms.ToArray()).TrimEnd('\0'),
+                MemoryStream ms => System.Text.Encoding.UTF8.GetString(ms.ToArray()).TrimEnd('\0'),
+                _ => null,
+            };
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or OutOfMemoryException or InvalidOperationException) { return null; }
+    }
+
+    private static Uri? ReadLink(IDataObject data) => Core.Sources.DropFormats.LinkFrom(
+        html: ReadText(data, DataFormats.Html), uriList: ReadText(data, "text/uri-list"), mozUrl: ReadText(data, "text/x-moz-url"),
+        urlW: ReadText(data, "UniformResourceLocatorW"), text: ReadText(data, DataFormats.UnicodeText));
 
     private void OnDragEnter(object sender, DragEventArgs e)
     {
+        _link = e.Data.GetDataPresent(DataFormats.FileDrop) ? null : ReadLink(e.Data);
+        if (_link is { } link && !IsAddListVisible)
+        {
+            var placeholder = Path.Combine(Path.GetTempPath(), "DropFlow", "links", Core.Sources.DropFormats.PlaceholderName(link));
+            Links[placeholder] = link;
+            if (!_files.SequenceEqual([placeholder]))
+            {
+                _files = [placeholder];
+                FilesEntered?.Invoke(this, _files);
+            }
+            e.Effects = e.AllowedEffects.HasFlag(DragDropEffects.Copy) ? DragDropEffects.Copy : DragDropEffects.Link;
+            e.Handled = true;
+            return;
+        }
         if (!HasFiles(e) || IsAddListVisible) // the "+ Add" list is not a drop target
         {
             e.Effects = DragDropEffects.None;
@@ -231,7 +301,9 @@ public sealed class WheelWindow : Window
     private void OnDragOver(object sender, DragEventArgs e)
     {
         var idx = IsAddListVisible ? -1 : Wheel.SetPointer(e.GetPosition(Wheel));
-        e.Effects = HasFiles(e) && idx >= 0 ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Effects = HasFiles(e) && idx >= 0
+            ? (_link is not null && !e.AllowedEffects.HasFlag(DragDropEffects.Copy) ? DragDropEffects.Link : DragDropEffects.Copy)
+            : DragDropEffects.None;
         e.Handled = true;
     }
 

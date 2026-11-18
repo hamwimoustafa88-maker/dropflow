@@ -22,7 +22,10 @@ public sealed class ToolOptionsDialog : Window
     private readonly Dictionary<string, Func<string?>> _readers = [];
     private readonly Dictionary<string, TextBlock> _errors = [];
 
-    public ToolOptionsDialog(string title, string operation, IReadOnlyList<ToolOption> options, ILocalizer loc, WheelTheme? theme = null)
+    private CheckBox? _save;
+    private TextBox? _saveName;
+
+    public ToolOptionsDialog(string title, string operation, IReadOnlyList<ToolOption> options, ILocalizer loc, WheelTheme? theme = null, bool offerSave = false)
     {
         _operation = operation;
         _options = options;
@@ -44,6 +47,7 @@ public sealed class ToolOptionsDialog : Window
 
         var panel = new StackPanel { Margin = new Thickness(22, 18, 22, 18) };
         foreach (var option in options) panel.Children.Add(BuildField(option));
+        if (offerSave) panel.Children.Add(BuildSave(title));
         panel.Children.Add(BuildButtons());
         Content = panel;
 
@@ -56,6 +60,27 @@ public sealed class ToolOptionsDialog : Window
 
     /// <summary>The validated values after the user pressed Run; null when cancelled.</summary>
     public IReadOnlyDictionary<string, object?>? Result { get; private set; }
+
+    /// <summary>The name to save these options under as a preset (null = not saved). Passwords and folders are never saved.</summary>
+    public string? SavePresetName { get; private set; }
+
+    /// <summary>Like <see cref="Ask"/>, with a "Save as a preset" box; returns the values and the preset name (null when not ticked).</summary>
+    public static (IReadOnlyDictionary<string, object?>? Values, string? PresetName) AskAndOfferSave(string title, string operation, IReadOnlyList<ToolOption> options, ILocalizer loc)
+    {
+        var dialog = new ToolOptionsDialog(title, operation, options, loc, offerSave: true);
+        return dialog.ShowDialog() == true ? (dialog.Result, dialog.SavePresetName) : (null, null);
+    }
+
+    private UIElement BuildSave(string title)
+    {
+        _save = new CheckBox { Content = _loc["dialog.savePreset"], Foreground = _theme.Text, Margin = new Thickness(0, 4, 0, 6) };
+        _saveName = new TextBox { Text = title, MinHeight = 30, Padding = new Thickness(6, 4, 6, 4), Visibility = Visibility.Collapsed, MaxLength = 60 };
+        System.Windows.Automation.AutomationProperties.SetName(_saveName, _loc["dialog.savePreset.name"]);
+        var note = new TextBlock { Text = _loc["dialog.savePreset.note"], Foreground = _theme.TextMuted, FontSize = 11, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed, Margin = new Thickness(0, 4, 0, 0) };
+        _save.Checked += (_, _) => { _saveName.Visibility = note.Visibility = Visibility.Visible; _saveName.Focus(); _saveName.SelectAll(); };
+        _save.Unchecked += (_, _) => _saveName.Visibility = note.Visibility = Visibility.Collapsed;
+        return new StackPanel { Margin = new Thickness(0, 0, 0, 10), Children = { _save, _saveName, note } };
+    }
 
     /// <summary>Shows the dialog and returns the chosen values, or null when the user cancelled.</summary>
     public static IReadOnlyDictionary<string, object?>? Ask(string title, string operation, IReadOnlyList<ToolOption> options, ILocalizer loc)
@@ -203,6 +228,7 @@ public sealed class ToolOptionsDialog : Window
         }
         if (errors.Count > 0) return false;
         Result = values;
+        SavePresetName = _save?.IsChecked == true && !string.IsNullOrWhiteSpace(_saveName?.Text) ? _saveName!.Text.Trim() : null;
         return true;
     }
 

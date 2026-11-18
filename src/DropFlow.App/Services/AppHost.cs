@@ -50,6 +50,8 @@ internal static class Modules
             new EncoderTool(openEncoder),
             .. Engines.Pdf.PdfModule.Create(engines, renderer),
             .. Engines.Archive.ArchiveModule.Create(engines),
+            .. Engines.Data.DataModule.Create(engines),
+            .. Engines.Fonts.FontsModule.Create(engines),
             .. AI.AiModule.Create(engines, models),
         ];
     }
@@ -78,6 +80,16 @@ internal sealed class WheelPresenter(WheelWindow window, ILocalizer loc) : IWhee
         window.Wheel.SetItems(items, loc.IsRightToLeft);
         var hint = fileCount == 0 ? loc["wheel.drop"] : fileCount == 1 ? loc["wheel.file"] : loc.Format("wheel.files", fileCount);
         window.Wheel.SetCenter(items.Count == 0 && fileCount > 0 ? loc["wheel.nothing"] : loc["wheel." + Key(kind)], items.Count == 0 && fileCount > 0 ? "" : hint);
+    }
+
+    /// <summary>Face dots under the hub; turning over to the other face plays the flip.</summary>
+    public void ShowFace(WheelFace face, bool hasBack)
+    {
+        var back = face == WheelFace.Back;
+        var turned = window.Wheel.HasBack && hasBack && back != window.Wheel.ShowingBack;
+        window.Wheel.SetFace(back, hasBack);
+        if (turned) window.Wheel.PlayFlipAnimation();
+        if (hasBack) window.Wheel.SetCenter(window.Wheel.CenterText, loc[back ? "wheel.face.back" : "wheel.face.front"]);
     }
 
     public void ShowAddList(WheelKind kind, IReadOnlyList<Wedge> addable)
@@ -134,7 +146,6 @@ internal sealed class AppHost : IDisposable
     private WheelWindow? _wheel;
     private FloatingShelfWindow? _shelfWindow;
     private SettingsWindow? _settingsWindow;
-    private HistoryWindow? _historyWindow;
     private OpenLinkWindow? _linkWindow;
     private WelcomeWindow? _welcomeWindow;
     private UrlDownloader? _links;
@@ -161,11 +172,14 @@ internal sealed class AppHost : IDisposable
         Installer = new EngineInstaller(Engines);
         Models = new ModelManager(Paths.ModelsDir);
         Registry = new ToolRegistry().Register(Modules.Create(Engines, ui, Path.Combine(Paths.DataDir, "webview"), OpenEncoder, Models));
-        Queue = new JobQueue(Registry, Catalog, Settings.MaxConcurrency);
+        Registry.Register(new Core.Routing.RouteConverter(Registry, Catalog, Engines)); // chains (EPUB → PDF → PNG); after the direct converters
+        _recipeStore = new RecipeStore(Path.Combine(Paths.DataDir, "recipes.json"));
+        Registry.Register(new Core.Routing.PresetConverter(Registry, Catalog, Presets)); // "WhatsApp video", the user's saved options; last
+        Core.Routing.RouteConverter.SweepLeftovers();
+        Queue = new JobQueue(Registry, Catalog, Settings.MaxConcurrency) { Rules = () => Settings.Output };
         History = new HistoryStore(Paths.HistoryFile);
         _watchStore = new WatchStore(Path.Combine(Paths.DataDir, "watch.json"));
-        _recipeStore = new RecipeStore(Path.Combine(Paths.DataDir, "recipes.json"));
-        Kit = new UiKit(WheelTheme.FromSystem(), Loc);
+        Kit = new UiKit(WheelTheme.FromSystem().With(Settings.Accent), Loc);
         _modelDownloads = new ModelDownloadService(ui, Kit, Models);
         _redact = new RedactDetection(Models, Engines);
         Disposer = new RecycleBinDisposer();
@@ -189,7 +203,20 @@ internal sealed class AppHost : IDisposable
 
     public WheelSession Session { get; private set; } = null!;
     public WheelPresenter Presenter { get; private set; } = null!;
-    private WheelBuilder Builder => _builder ??= new WheelBuilder(Catalog, Registry, Engines);
+    private WheelBuilder Builder => _builder ??= new WheelBuilder(Catalog, Registry, Engines) { Presets = Presets };
+
+    private (DateTime Stamp, IReadOnlyList<Recipe> List)? _presetCache;
+
+    /// <summary>Built-in presets and the user's (recipes.json), re-read only when that file changes: the wheel asks often.</summary>
+    private IReadOnlyList<Recipe> Presets()
+    {
+        var file = Path.Combine(Paths.DataDir, "recipes.json");
+        var stamp = File.Exists(file) ? File.GetLastWriteTimeUtc(file) : DateTime.MinValue;
+        if (_presetCache is { } c && c.Stamp == stamp) return c.List;
+        var list = BuiltInRecipes.All.Concat(_recipeStore.Load()).Where(r => r.OnWheel).ToList();
+        _presetCache = (stamp, list);
+        return list;
+    }
     private WheelBuilder? _builder;
 
     public static string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
@@ -200,6 +227,7 @@ internal sealed class AppHost : IDisposable
     public void Start()
     {
         _wheel = new WheelWindow();
+        ApplyAppearance();
         _wheel.Prepare();
         Presenter = new WheelPresenter(_wheel, Loc);
 
@@ -216,9 +244,21 @@ internal sealed class AppHost : IDisposable
         _wheel.ItemClicked += (_, index) => _ = Session.OnItemDroppedAsync(_wheel.Files.Count > 0 ? _wheel.Files : Session.Files, index);
         _wheel.DropCancelled += (_, _) => Session.Dismiss();
         _wheel.ItemContextRequested += (_, index) => Presenter.OnItemContext(index);
+        _wheel.FlipRequested += (_, _) => Session.Flip();
         _wheel.AddItemPicked += (_, id) => _ = Session.OnAddPickedAsync(id);
         _wheel.AddListBack += (_, _) => Session.CloseAddList();
-        _wheel.Shown += (_, _) => _welcomeWindow?.MarkWheelOpened();
+        _wheel.Shown += (_, _) =>
+        {
+            _welcomeWindow?.MarkWheelOpened();
+            // During a drag the wheel window has no focus: arm the hook so Tab and the mouse wheel over it turn it over.
+            if (!_wheel.IsInteractive && _hook is { } hook)
+            {
+                var (x, y, size) = _wheel.ScreenBounds;
+                hook.Gestures.Enabled = Settings.WheelFlipGestures;
+                hook.Gestures.Arm(new ScreenRect(x, y, size, size));
+            }
+        };
+        _wheel.Hidden += (_, _) => _hook?.Gestures.Disarm();
 
         Queue.Changed += batch => _ui.BeginInvoke(() => OnBatchChanged(batch));
         Queue.BatchCompleted += (batch, result) => _ui.BeginInvoke(() => OnBatchCompleted(batch, result));
@@ -232,12 +272,23 @@ internal sealed class AppHost : IDisposable
         if (Settings.CheckForUpdates)
             _ = Task.Delay(TimeSpan.FromSeconds(45)).ContinueWith(_ => _ui.InvokeAsync(() => CheckForUpdatesAsync(interactive: false)), TaskScheduler.Default);
 
-        if (Settings.ShowFirstRunTips)
+        var firstRun = Settings.ShowFirstRunTips;
+        if (firstRun)
         {
             // the guide replaces the old 8-second tip; the toast stays as the fallback when the window cannot open
             if (!ShowWelcome()) ShowToast(Loc["firstrun.title"], Loc["firstrun.text"], null, [], TimeSpan.FromSeconds(8));
             Update(Settings with { ShowFirstRunTips = false });
         }
+        // after an update, once: what changed (a first install records the version without showing it)
+        if (WhatsNew.ShouldShow(Version, Settings.WhatsNewSeen, firstRun)) ShowWhatsNew();
+        if (Settings.WhatsNewSeen != Version) Update(Settings with { WhatsNewSeen = Version });
+    }
+
+    private void ShowWhatsNew()
+    {
+        var window = new WhatsNewWindow(Kit, Version, WhatsNew.Slides(Loc));
+        window.Show();
+        window.Activate();
     }
 
     private void StartHooks()
@@ -256,6 +307,7 @@ internal sealed class AppHost : IDisposable
         try
         {
             _hook = new LowLevelInputHook(_detector);
+            _hook.FlipRequested += () => _ui.BeginInvoke(() => Session.Flip()); // hook thread: only post
             _hook.Start();
             FileLog.Info("input hooks installed");
         }
@@ -289,6 +341,8 @@ internal sealed class AppHost : IDisposable
     private void OnKeyTappedFromHook(ModifierKey key, ScreenPoint p) =>
         _ui.BeginInvoke(() =>
         {
+            // Settings → never open the wheel in these apps (a game, a drawing program that uses Shift+drag itself)
+            if (!Session.IsVisible && Settings.ExcludedApps.Count > 0 && ForegroundApp.IsExcluded(ForegroundApp.Name(), Settings.ExcludedApps)) return;
             Session.OnKeyTapped(ToTrigger(key), p.X, p.Y);
             ApplyExplorerSelectionWhenReady();
         });
@@ -344,13 +398,44 @@ internal sealed class AppHost : IDisposable
         {
             try
             {
+                // A picture or link dragged from a browser: the wheel worked on a placeholder; fetch the real file now that a slice was picked.
+                if (selection.Files.Any(f => WheelWindow.LinkFor(f) is not null))
+                {
+                    var real = new List<string>();
+                    foreach (var f in selection.Files)
+                    {
+                        if (WheelWindow.LinkFor(f) is not { } link) { real.Add(f); continue; }
+                        ShowToast(Loc["browser.downloading"], UrlDownloader.ForLog(link), null, [], null);
+                        try { real.Add(await DownloadLinkAsync(link, new Progress<DownloadProgress>(p => ShowToast(Loc["browser.downloading"], p.FileName, p.Fraction, [], null)), CancellationToken.None)); }
+                        catch (UrlDownloadException ex)
+                        {
+                            ShowToast(ex.Describe(Loc), null, null, [], TimeSpan.FromSeconds(8));
+                            return;
+                        }
+                    }
+                    _toast?.Hide();
+                    selection = selection with { Files = real };
+                }
+
                 if (selection.Wedge.Wheel == WheelKind.Actions) // an action pinned to another wheel is still an action
                 {
                     await CreateActions().ExecuteAsync(selection.Wedge.Id, selection.Files);
                     return;
                 }
+                var anchor = _wheel?.ScreenBounds;
+                var started = DateTime.UtcNow;
                 var batch = await new OperationRunnerFactory(this).Create().RunAsync(selection);
-                if (batch is not null) _tracked.Add(batch);
+                if (batch is not null)
+                {
+                    _tracked.Add(batch);
+                    // The wheel folds into a progress ring where it was, unless a dialog came first (then the toast is enough).
+                    if (anchor is { } b && b.Size > 0 && DateTime.UtcNow - started < TimeSpan.FromSeconds(1.5) && _rings.Count < 3 && !batch.IsFinished)
+                    {
+                        var ring = new ProgressRingWindow(_wheel!.Wheel.Theme);
+                        ring.ShowAt(new PixelPoint(b.X + b.Size / 2, b.Y + b.Size / 2));
+                        _rings[batch] = (ring, DateTime.UtcNow);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -404,7 +489,7 @@ internal sealed class AppHost : IDisposable
             host.Registry, host.Queue, host.Engines,
             new EngineInstallService(host._ui, host.Kit, host.Installer, host.Engines),
             new UserPrompts(host._ui, host.Loc, msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; },
-                () => host.Settings.OfferEngineInstalls),
+                () => host.Settings.OfferEngineInstalls, host.SaveUserPreset),
             EngineInfo.ApproxSizeMb,
             op => host.Catalog.Tool(op)?.Name(host.Loc.Language) ?? op,
             // Dedicated editors (images, then timelines/boxes for media) instead of the generic form.
@@ -414,8 +499,19 @@ internal sealed class AppHost : IDisposable
                     msg => { host.ShowToast(msg, null, null, [], TimeSpan.FromSeconds(8)); return Task.CompletedTask; })));
     }
 
+    /// <summary>Progress rings shown where the wheel was (at most three at once).</summary>
+    private readonly Dictionary<BatchHandle, (ProgressRingWindow Ring, DateTime Shown)> _rings = [];
+
+    /// <summary>While a ring shows a job, the "Working…" toast waits this long (Cancel stays reachable on long jobs).</summary>
+    private static readonly TimeSpan RingOnly = TimeSpan.FromSeconds(4);
+
     private void OnBatchChanged(BatchHandle batch)
     {
+        if (_rings.TryGetValue(batch, out var ring) && !batch.IsFinished)
+        {
+            ring.Ring.SetProgress(batch.Progress > 0 ? batch.Progress : null);
+            if (DateTime.UtcNow - ring.Shown < RingOnly) return;
+        }
         if (!_tracked.Contains(batch) || batch.IsFinished) return;
         if (_lastToast.TryGetValue(batch, out var last) && DateTime.UtcNow - last < TimeSpan.FromMilliseconds(120)) return;
         _lastToast[batch] = DateTime.UtcNow;
@@ -428,6 +524,8 @@ internal sealed class AppHost : IDisposable
 
     private void OnBatchCompleted(BatchHandle batch, ConversionResult result)
     {
+        if (_rings.Remove(batch, out var ring)) ring.Ring.Finish(result.Success);
+        if (result.Success && Settings.ClipboardResults && batch.Job.Inputs.Count > 0 && batch.Job.Inputs.All(_fromClipboard.Contains)) PutOnClipboard(result.Outputs);
         if (!_tracked.Remove(batch)) return;
         _lastToast.Remove(batch);
 
@@ -440,12 +538,13 @@ internal sealed class AppHost : IDisposable
         }
         _modelRetries.Remove(batch);
 
-        var entry = History.Add(batch.Job.Operation, batch.Job.Inputs, result);
+        var specs = batch.Job.Inputs.Count > 0 ? Registry.Find(batch.Job.Operation, ToolCatalog.ExtensionOf(batch.Job.Inputs[0]))?.OptionsFor(batch.Job.Operation) ?? [] : [];
+        var entry = History.Add(batch.Job.Operation, batch.Job.Inputs, result, HistoryEntry.SafeOptions(specs, batch.Job.Options));
 
         if (!result.Success && result.Outputs.Count == 0)
         {
             FileLog.Error($"{batch.Job.Operation} failed: {result.Error}");
-            ShowToast(Loc.Format("result.failed", result.Error ?? ""), null, null, [], TimeSpan.FromSeconds(10));
+            ShowToast(Loc.Format("result.failed", NoteText.Localize(result.Error, Loc) ?? ""), null, null, [], TimeSpan.FromSeconds(10));
             return;
         }
 
@@ -457,7 +556,7 @@ internal sealed class AppHost : IDisposable
         }
         var title = result.Success
             ? Loc.Format("result.done", Loc.Format("result.files", Math.Max(1, result.Outputs.Count)))
-            : Loc.Format("result.failed", result.Error ?? "");
+            : Loc.Format("result.failed", NoteText.Localize(result.Error, Loc) ?? "");
         ShowToast(title, NoteText.Localize(result.Note, Loc) ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
     }
 
@@ -552,7 +651,7 @@ internal sealed class AppHost : IDisposable
             [.. Models.Catalog.Select(m => new ModelItem(
                 m.Id, m.DisplayName, m.SizeBytes, () => Models.IsInstalled(m.Id),
                 () => _modelDownloads.EnsureAsync(m.Id, m.DisplayName), () => Models.Delete(m.Id)))],
-            PinnedRows()));
+            PinnedRows(), ShowWheelEditor, PresetRows()));
         _settingsWindow.Show();
         _settingsWindow.Activate();
     }
@@ -588,12 +687,34 @@ internal sealed class AppHost : IDisposable
         }
     }
 
+    private HomeWindow? _homeWindow;
+
+    /// <summary>The main window: drop zone, collected files, recent conversions (tray → Open DropFlow, double-click, History).</summary>
     private void ShowHistory()
     {
-        if (_historyWindow is { IsVisible: true }) { _historyWindow.Activate(); return; }
-        _historyWindow = new HistoryWindow(Kit, History, Disposer);
-        _historyWindow.Show();
-        _historyWindow.Activate();
+        if (_homeWindow is { IsVisible: true }) { _homeWindow.Activate(); return; }
+        _homeWindow = new HomeWindow(Kit, new HomeContext(History, Disposer, files => OpenWheelFor(files, null), Retry,
+            op => op.StartsWith(Recipe.PresetPrefix, StringComparison.Ordinal) ? Presets().FirstOrDefault(p => p.PresetOperation == op)?.DisplayName(Loc.Language) ?? op
+                : Operation.IsConvert(op) ? Loc.Format("home.convertedTo", Operation.TargetOf(op).ToUpperInvariant()) : Catalog.Tool(op)?.Name(Loc.Language) ?? op));
+        _homeWindow.Show();
+        _homeWindow.Activate();
+    }
+
+    /// <summary>
+    /// Runs a past conversion again on the same files with the options it used. A tool that needed a password (never stored) goes through
+    /// its options dialog again instead.
+    /// </summary>
+    private void Retry(HistoryEntry entry)
+    {
+        var converter = Registry.Find(entry.Operation, ToolCatalog.ExtensionOf(entry.Inputs[0]));
+        if (converter is null) { ShowToast(Loc["home.retry.unavailable"], null, null, [], TimeSpan.FromSeconds(6)); return; }
+        if (HistoryEntry.NeededSecret(converter.OptionsFor(entry.Operation)))
+        {
+            var wedge = new Wedge(entry.Operation, WheelKind.Tools, Catalog.Tool(entry.Operation)?.Name(Loc.Language) ?? entry.Operation, entry.Operation);
+            _ = OnSelectedAsync(new WheelSelection(WheelKind.Tools, wedge, entry.Inputs));
+            return;
+        }
+        _tracked.Add(Queue.Enqueue(new ConversionJob(entry.Inputs, entry.Operation, entry.Options)));
     }
 
     private void ShowShelf()
@@ -652,11 +773,49 @@ internal sealed class AppHost : IDisposable
         }
 
         // Pins change outside this form (the wheel, the list in the same window): keep the current ones, not the form's snapshot.
-        Update(s with { PinnedItems = Settings.PinnedItems });
+        Update(s with { PinnedItems = Settings.PinnedItems, Layouts = Settings.Layouts });
         return RegisterHotkey() ? [] : ["hotkey.invalid"];
     }
 
     /// <summary>The Settings rows for items added to the wheels (Convert, Tools, Actions; oldest first within a wheel).</summary>
+    private WheelEditorWindow? _wheelEditor;
+
+    /// <summary>Settings → Arrange the wheels.</summary>
+    public void ShowWheelEditor()
+    {
+        if (_wheelEditor is { IsVisible: true }) { _wheelEditor.Activate(); return; }
+        var categories = Catalog.Categories.Select(c => (c.Id, CategoryName(c.Id))).Append((WheelBuilder.OtherCategory, Loc["settings.pins.other"])).ToList();
+        _wheelEditor = new WheelEditorWindow(Kit, new WheelEditorContext(
+            categories,
+            (kind, category) => Builder.ArrangeableFor(kind, category, Loc.Language, ActionService.SupportedIds, Settings.PinnedItems),
+            () => Settings.Layouts,
+            layouts => Update(Settings with { Layouts = layouts }),
+            Settings.WheelFrontMax));
+        _wheelEditor.Show();
+        _wheelEditor.Activate();
+    }
+
+    /// <summary>"Save as a preset" in the options dialog: the options become a slice on the Tools wheel (passwords and folders are left out).</summary>
+    private void SaveUserPreset(string operation, IReadOnlyList<ToolOption> options, IReadOnlyDictionary<string, object?> values, string label)
+    {
+        var mine = _recipeStore.Load();
+        var preset = PresetBook.FromOptions(operation, options, values, label, Catalog, mine);
+        _recipeStore.Save([.. mine, preset]);
+        ShowToast(Loc.Format("preset.saved", label), null, null, [], TimeSpan.FromSeconds(5));
+    }
+
+    private PresetsContext PresetRows() => new(
+        () => [.. _recipeStore.Load().Where(r => r.OnWheel).Select(r => (r.Name, r.DisplayName(Loc.Language)))],
+        name => _recipeStore.Save(_recipeStore.Load().Where(r => r.Name != name)),
+        () => PresetBook.Export(_recipeStore.Load()),
+        json =>
+        {
+            var mine = _recipeStore.Load();
+            var result = PresetBook.Import(json, Catalog, Registry, mine);
+            if (result.Presets.Count > 0) _recipeStore.Save([.. mine, .. result.Presets]);
+            return (result.Presets.Count, result.Rejected);
+        });
+
     private IReadOnlyList<PinnedRow> PinnedRows() =>
         [.. Settings.PinnedItems.All.Select(p => new PinnedRow(
             Builder.LabelOf(p.Id, Loc.Language),
@@ -668,8 +827,27 @@ internal sealed class AppHost : IDisposable
 
     private void Update(AppSettings s)
     {
+        var before = (Settings.Accent, Settings.WheelOpacity, Settings.WheelScale, Settings.LabelScale, Settings.Motion);
+        if (s.Proxy != Settings.Proxy) { _links?.Dispose(); _links = null; } // the next download uses the new proxy
         Settings = s;
         SettingsStore.Save(s);
+        if (before != (s.Accent, s.WheelOpacity, s.WheelScale, s.LabelScale, s.Motion)) ApplyAppearance();
+    }
+
+    /// <summary>Accent colour, wheel opacity and size, label size and animations from Settings (windows opened later use the accent too).</summary>
+    private void ApplyAppearance()
+    {
+        var motion = Settings.Motion;
+        WheelControl.Animate = () => motion switch
+        {
+            MotionSetting.Reduce => false,
+            MotionSetting.Full => true,
+            _ => SystemParameters.ClientAreaAnimation,
+        };
+        if (_wheel is null) return;
+        _wheel.Wheel.Theme = WheelTheme.FromSystem().With(Settings.Accent, Settings.WheelOpacity);
+        _wheel.Wheel.LabelScale = Settings.LabelScale;
+        _wheel.Scale = Settings.WheelScale;
     }
 
     private bool RegisterHotkey()
@@ -708,12 +886,53 @@ internal sealed class AppHost : IDisposable
             files = [];
         }
         if (files.Count == 0) ShowToast(Loc["clipboard.empty"], null, null, [], TimeSpan.FromSeconds(4));
-        else OpenWheelFor(files, WheelKind.Convert);
+        else
+        {
+            foreach (var f in files) _fromClipboard.Add(f);
+            OpenWheelFor(files, WheelKind.Convert);
+        }
+    }
+
+    /// <summary>Files exported from the clipboard (Ctrl+Alt+V): with Settings → "Put results back on the clipboard", their results go there.</summary>
+    private readonly HashSet<string> _fromClipboard = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>One picture → the picture itself (and the file); one text file → its text (and the file); anything else → the files.</summary>
+    private void PutOnClipboard(IReadOnlyList<string> outputs)
+    {
+        var files = outputs.Where(File.Exists).ToList();
+        if (files.Count == 0) return;
+        var data = new DataObject();
+        var list = new System.Collections.Specialized.StringCollection();
+        list.AddRange([.. files]);
+        data.SetFileDropList(list);
+        var ext = Path.GetExtension(files[0]).ToLowerInvariant();
+        try
+        {
+            if (files.Count == 1 && ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".tif" or ".tiff")
+            {
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.UriSource = new Uri(files[0]);
+                image.EndInit();
+                data.SetImage(image);
+            }
+            else if (files.Count == 1 && ext is ".txt" or ".md" or ".srt" or ".vtt" or ".csv" or ".json" && new FileInfo(files[0]).Length < 4 * 1024 * 1024)
+            {
+                data.SetText(File.ReadAllText(files[0]));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or UnauthorizedAccessException) { FileLog.Error("clipboard result", ex); }
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try { Clipboard.SetDataObject(data, copy: true); ShowToast(Loc["clipboard.results"], null, null, [], TimeSpan.FromSeconds(4)); return; }
+            catch (System.Runtime.InteropServices.COMException) { Thread.Sleep(80); } // another program holds the clipboard
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------------ open from link
 
-    private UrlDownloader Links => _links ??= new UrlDownloader();
+    private UrlDownloader Links => _links ??= new UrlDownloader(proxy: ProxySetting.Create(Settings.Proxy));
 
     /// <summary>Downloads a web address into the Downloads\DropFlow folder. Logs the address without its query string.</summary>
     private async Task<string> DownloadLinkAsync(Uri url, IProgress<DownloadProgress> progress, CancellationToken cancellationToken)
@@ -841,12 +1060,35 @@ internal sealed class AppHost : IDisposable
             if (_tray is not null) _tray.ToolTipText = Settings.Paused ? Loc["tray.paused"] : Loc["tray.tooltip"];
         };
         MenuItem Item(string key, Action run) { var i = new MenuItem { Header = Loc[key] }; i.Click += (_, _) => run(); return i; }
+        menu.Items.Add(Item("tray.home", ShowHistory));
         menu.Items.Add(pause);
+        var pauseHour = new MenuItem { Header = Loc["tray.pauseHour"] };
+        pauseHour.Click += (_, _) =>
+        {
+            if (Settings.Paused) return;
+            Update(Settings with { Paused = true });
+            StopHooks();
+            pause.Header = Loc["tray.resume"];
+            if (_tray is not null) _tray.ToolTipText = Loc["tray.paused"];
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(1) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (!Settings.Paused) return;
+                Update(Settings with { Paused = false });
+                StartHooks();
+                pause.Header = Loc["tray.pause"];
+                if (_tray is not null) _tray.ToolTipText = Loc["tray.tooltip"];
+            };
+            timer.Start();
+        };
+        menu.Items.Add(pauseHour);
         menu.Items.Add(Item("tray.openLink", ShowOpenLink));
         menu.Items.Add(Item("tray.shelf", ToggleShelf));
         menu.Items.Add(Item("tray.history", ShowHistory));
         menu.Items.Add(Item("tray.settings", ShowSettings));
         menu.Items.Add(Item("tray.welcome", () => ShowWelcome()));
+        menu.Items.Add(Item("tray.whatsnew", ShowWhatsNew));
         menu.Items.Add(Item("tray.update", () => _ = CheckForUpdatesAsync(interactive: true)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("tray.quit", () => Application.Current.Shutdown()));
@@ -858,7 +1100,7 @@ internal sealed class AppHost : IDisposable
             ContextMenu = menu,
             MenuActivation = PopupActivationMode.LeftOrRightClick,
         };
-        _tray.TrayMouseDoubleClick += (_, _) => ShowSettings();
+        _tray.TrayMouseDoubleClick += (_, _) => ShowHistory();
         _tray.ForceCreate(enablesEfficiencyMode: false);
     }
 

@@ -124,7 +124,7 @@ public class CliEndToEndTests
     }
 
     [Fact]
-    public async Task Missing_files_and_unsupported_operations_exit_with_code_two_and_explain()
+    public async Task Missing_files_are_usage_errors_and_unsupported_operations_mean_nothing_to_convert()
     {
         var (code1, _, err1) = await Run("convert", @"C:\definitely\missing.png", "--to", "jpg");
         Assert.Equal(2, code1);
@@ -133,11 +133,44 @@ public class CliEndToEndTests
         using var dir = new TempDir();
         var txt = dir.WriteText("a.txt", "x");
         var (code2, _, err2) = await Run("run", "img.crop", txt);
-        Assert.Equal(2, code2);
+        Assert.Equal(3, code2);                       // documented: 3 = nothing DropFlow can convert
         Assert.Contains("cannot run", err2);
 
         var (code3, _, _) = await Run("convert", "a.png");
         Assert.Equal(2, code3);
+    }
+
+    [Fact]
+    public async Task Formats_lists_the_targets_each_input_really_converts_to()
+    {
+        var (code, stdout, _) = await Run("formats", "--json");
+
+        Assert.Equal(0, code);
+        using var doc = JsonDocument.Parse(stdout);
+        var png = doc.RootElement.EnumerateArray().Single(e => e.GetProperty("input").GetString() == "png");
+        var targets = png.GetProperty("targets").EnumerateArray().Select(t => t.GetString()).ToList();
+        Assert.Contains("jpg", targets);
+        Assert.Contains("webp", targets);
+        Assert.DoesNotContain("png", targets);       // never a format to itself
+        Assert.DoesNotContain(doc.RootElement.EnumerateArray(), e => e.GetProperty("input").GetString() == "mp4"); // no media module loaded
+    }
+
+    [Fact]
+    public async Task Events_mode_streams_one_json_object_per_line_and_ends_with_a_summary()
+    {
+        using var dir = new TempDir();
+        var png = Samples.Png(dir.Combine("a.png"));
+
+        var (code, stdout, _) = await Run("convert", png, "--to", "jpg", "--events");
+
+        Assert.Equal(0, code);
+        var events = stdout.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(l => JsonDocument.Parse(l).RootElement).ToList();
+        Assert.Equal("start", events[0].GetProperty("event").GetString());
+        Assert.Contains(events, e => e.GetProperty("event").GetString() == "output" && File.Exists(e.GetProperty("path").GetString()));
+        var last = events[^1];
+        Assert.Equal("summary", last.GetProperty("event").GetString());
+        Assert.True(last.GetProperty("success").GetBoolean());
+        Assert.Equal(0, last.GetProperty("exitCode").GetInt32());
     }
 
     [Fact]
@@ -180,5 +213,36 @@ public class CliEndToEndTests
 
         Assert.True(r.Success, r.StdErr);
         Assert.True(File.Exists(Path.Combine(dir.Path, "نموذج (converted).jpg")));
+    }
+
+    [Fact]
+    public async Task Watch_converts_files_that_land_in_the_folder_until_stopped()
+    {
+        using var dir = new TempDir();
+        var registry = new ToolRegistry().Register(ImagesModule.Create(new NoEngines()));
+        var o = new StringWriter();
+        var e = new StringWriter();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var runner = new CliRunner(registry, ToolCatalog.LoadEmbedded(), new NoEngines(), [], new Delete(), o, e, "9.9.9", watchPoll: TimeSpan.FromMilliseconds(100));
+        var run = runner.RunAsync(["watch", dir.Path, "--to", "jpg"], cts.Token);
+
+        await Task.Delay(500);
+        Samples.Png(dir.Combine("new.png"));
+        var expected = Path.Combine(dir.Path, "DropFlow", "new (converted).jpg");
+        for (var i = 0; i < 200 && !File.Exists(expected); i++) await Task.Delay(100);
+        cts.Cancel();
+        var code = await run;
+
+        Assert.True(File.Exists(expected), e.ToString());
+        Assert.Equal(0, code);                                  // stopping a watch is a normal end
+        Assert.Contains(expected, o.ToString());
+    }
+
+    [Fact]
+    public async Task Watch_refuses_a_missing_folder()
+    {
+        var (code, _, err) = await Run("watch", Path.Combine(Path.GetTempPath(), "dropflow-missing-" + Guid.NewGuid().ToString("N")), "--to", "jpg");
+        Assert.Equal(2, code);
+        Assert.Contains("not found", err);
     }
 }

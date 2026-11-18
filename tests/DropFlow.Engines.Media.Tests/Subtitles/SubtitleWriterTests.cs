@@ -200,14 +200,14 @@ public class SubtitleConverterTests
     }
 
     [Fact]
-    public void Supported_matrix_is_exactly_three_inputs_by_four_outputs_minus_identity()
+    public void Supported_matrix_is_the_inputs_by_six_outputs_minus_identity()
     {
         var pairs = from op in _converter.Operations
                     from ext in new[] { "srt", "vtt", "ass", "txt", "mp3", "png" }
                     where _converter.Supports(op, ext)
                     select (op, ext);
-        Assert.Equal(9, pairs.Count()); // srt->vtt,ass,txt  vtt->srt,ass,txt  ass->srt,vtt,txt
-        Assert.Equal(4, _converter.Operations.Count);
+        Assert.Equal(15, pairs.Count()); // srt, vtt and ass each to the five other outputs of srt vtt ass txt lrc sbv
+        Assert.Equal(6, _converter.Operations.Count);
         Assert.Equal(EngineId.None, _converter.EngineFor("convert:srt"));
         Assert.Empty(((IConverter)_converter).OptionsFor("convert:srt"));
     }

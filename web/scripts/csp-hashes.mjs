@@ -17,7 +17,9 @@ import { prerenderedHtml } from "./prerendered-html.mjs";
 
 export const HASH_FILE = join(process.cwd(), "csp-hashes.json");
 const DIST_DIR = join(process.cwd(), process.env.NEXT_DIST_DIR ?? ".next");
-const ROUTES = ["ar", "en"].flatMap((l) => [`/${l}`, `/${l}/privacy`, `/${l}/terms`, `/${l}/app`]);
+// Every static page: landing, legal, command line, the popular conversion pages (src/data/pairs.json) and the web app.
+const PAIR_PAGES = JSON.parse(readFileSync(join(process.cwd(), "src", "data", "pairs.json"), "utf8")).pairs.map((p) => `/convert/${p.slug}`);
+const ROUTES = ["ar", "en"].flatMap((l) => [`/${l}`, `/${l}/privacy`, `/${l}/terms`, `/${l}/cli`, ...PAIR_PAGES.map((p) => `/${l}${p}`), `/${l}/app`]);
 const REQUIRE = process.env.CSP_REQUIRE_HASHES === "1" || process.env.VERCEL === "1";
 
 /** Hashes of the executable inline scripts of one prerendered page (JSON-LD data blocks are not scripts to CSP). */

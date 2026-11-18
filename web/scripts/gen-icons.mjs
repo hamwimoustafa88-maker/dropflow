@@ -16,7 +16,7 @@ const art = svg.replace(/^[\s\S]*?<rect[^>]*\/>/, "").replace(/<\/svg>\s*$/, "")
 const page = (size, kind) => {
   if (kind === "any") return `<body style="margin:0;background:transparent">${svg.replace("<svg ", `<svg width="${size}" height="${size}" `)}</body>`;
   // maskable / apple: full-bleed background, artwork scaled into the 80% safe zone
-  return `<body style="margin:0;background:#070b1c"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${size}"><rect width="48" height="48" fill="#070b1c"/><g transform="translate(4.8 4.8) scale(0.8)">${art}</g></svg></body>`;
+  return `<body style="margin:0;background:#15141c"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${size}"><rect width="48" height="48" fill="#15141c"/><g transform="translate(4.8 4.8) scale(0.8)">${art}</g></svg></body>`;
 };
 
 const port = 9800 + Math.floor(Math.random() * 150);

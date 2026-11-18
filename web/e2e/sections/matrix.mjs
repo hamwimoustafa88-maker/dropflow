@@ -200,6 +200,7 @@ function expectedRefusal(op, sample, error) {
   if (op === "img.qr" && !sample.meta.qr && ERR("noQrFound").test(e)) return "no QR code in this picture";
   if ((op === "img.ocr" || op === "convert:txt") && sample.kind === "image" && !sample.meta.words && (ERR("noTextFound").test(e) || ERR("noText").test(e))) return "no text in this picture";
   if (ERR("noAudio").test(e) && sample.meta.audio === false) return "the video has no audio track";
+  if (op === "data.to-ical" && ERR("noEvents").test(e)) return "this table has no dates, so it holds no events";
   return null;
 }
 
@@ -528,6 +529,26 @@ async function judge(op, sample, outputs, ctx) {
     if (t === "txt" && /-->|<b>|\{\\/.test(text)) return fail("TXT still has timings or tags");
     if (/<b>|\{\\b1\}/.test(text) && t === "srt" && sample.name.endsWith(".ass")) return fail("ASS override tags leaked into SRT");
     return pass(`${m.cues} cues, Arabic kept${t !== "txt" ? ", timings kept" : ""}`);
+  }
+
+  // ---------- data formats: the output parses, Arabic is kept, CSV/TSV carry the UTF-8 byte order mark
+  if ((sample.kind === "data" || sample.kind === "spreadsheet") && (op.startsWith("convert:") || op.startsWith("data."))) {
+    const t = op === "data.to-vcard" ? "vcf" : op === "data.to-ical" ? "ics" : op.slice(8);
+    if (outExt !== t) return fail(`name ${o.name} has the wrong extension`);
+    const bom = o.bytes[0] === 0xef && o.bytes[1] === 0xbb && o.bytes[2] === 0xbf;
+    const text = o.bytes.toString("utf8").slice(bom ? 1 : 0);
+    if ((t === "csv" || t === "tsv") && !bom) return fail("no UTF-8 byte order mark (Excel would garble Arabic)");
+    try {
+      if (t === "json") JSON.parse(text);
+      if (t === "jsonl") text.trim().split("\n").forEach((line) => JSON.parse(line));
+    } catch (e) {
+      return fail(`${t} does not parse: ${e.message}`);
+    }
+    if (t === "xml" && !text.startsWith("<?xml")) return fail("no XML declaration");
+    if (t === "vcf" && !text.startsWith("BEGIN:VCARD\r\nVERSION:3.0\r\n")) return fail("not a vCard 3.0 file");
+    const missing = (m.words ?? []).filter((w) => !text.includes(w));
+    if (missing.length) return fail(`missing ${JSON.stringify(missing)} in ${JSON.stringify(text.slice(0, 100))}`);
+    return pass(`${t} parses, Arabic kept`);
   }
 
   // ---------- archives

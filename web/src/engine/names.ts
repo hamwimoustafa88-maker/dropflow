@@ -25,6 +25,8 @@ const ALIASES: Record<string, string> = {
   aifc: "aiff",
   oga: "ogg",
   mpeg4: "mp4",
+  yml: "yaml",
+  ndjson: "jsonl",
 };
 
 /** Canonical form of an extension (lower-case, no dot): jpeg -> jpg, tif -> tiff, aif -> aiff... */

@@ -4,17 +4,20 @@ using DropFlow.Core.Output;
 namespace DropFlow.Engines.Media.Subtitles;
 
 /// <summary>
-/// Subtitle conversion: <c>convert:srt</c>, <c>convert:vtt</c>, <c>convert:ass</c> and <c>convert:txt</c> from SRT, WebVTT and ASS files.
+/// Subtitle conversion: <c>convert:srt</c>, <c>convert:vtt</c>, <c>convert:ass</c>, <c>convert:txt</c>, <c>convert:lrc</c> and <c>convert:sbv</c>
+/// from SRT, WebVTT, ASS/SSA, SAMI (.smi), LRC, TTML/DFXP, MicroDVD (.sub) and YouTube SBV files. The input's character encoding is
+/// detected (<see cref="SubtitleDecoder"/>).
 /// Pure C#, no engine. Timing is preserved to the millisecond (ASS to the centisecond, its own precision); styling that only one
-/// format can express is dropped (see <see cref="SubtitleCue"/>). Output is UTF-8 (with a BOM for SRT/ASS/TXT, without for VTT).
+/// format can express is dropped (see <see cref="SubtitleCue"/>). Output is always UTF-8 (with a BOM for SRT/ASS/TXT/LRC, without for
+/// VTT/SBV).
 /// No options: the converter runs immediately. Input files larger than 20 MB are refused (a subtitle file that size is not a subtitle file).
 /// </summary>
 public sealed class SubtitleConverter : IConverter
 {
     internal const long MaxBytes = 20 * 1024 * 1024;
 
-    private static readonly string[] Inputs = ["srt", "vtt", "ass"];
-    private static readonly string[] Outputs = ["srt", "vtt", "ass", "txt"];
+    private static readonly string[] Inputs = ["srt", "vtt", "ass", "ssa", "smi", "sami", "lrc", "ttml", "dfxp", "sub", "sbv"];
+    private static readonly string[] Outputs = ["srt", "vtt", "ass", "txt", "lrc", "sbv"];
 
     private readonly OutputPathResolver _paths = new();
 

@@ -1,0 +1,87 @@
+{
+  "note": "Commands of the dropflow CLI shown on /cli. Kept in sync with src/DropFlow.Core/Cli/Cli.cs by tests/DropFlow.Core.Tests (CliDocsTests).",
+  "commands": [
+    {
+      "verb": "convert",
+      "example": "dropflow convert photo.heic --to jpg --events",
+      "en": "Convert files to another format.",
+      "ar": "حوّل الملفات إلى صيغة أخرى."
+    },
+    {
+      "verb": "run",
+      "example": "dropflow run pdf.compress report.pdf --opt level=extreme",
+      "en": "Run a tool with its options.",
+      "ar": "شغّل أداة مع خياراتها."
+    },
+    {
+      "verb": "list",
+      "example": "dropflow list --category image",
+      "en": "List conversions and tools.",
+      "ar": "اعرض التحويلات والأدوات."
+    },
+    {
+      "verb": "formats",
+      "example": "dropflow formats --json",
+      "en": "Every input format and what it converts to.",
+      "ar": "كل صيغة إدخال وما تتحول إليه."
+    },
+    {
+      "verb": "watch",
+      "example": "dropflow watch Inbox --to pdf",
+      "en": "Convert every file that lands in a folder.",
+      "ar": "حوّل كل ملف يصل إلى مجلد."
+    },
+    {
+      "verb": "recipe",
+      "example": "dropflow recipe run web-photo *.jpg",
+      "en": "Run a saved chain of steps.",
+      "ar": "شغّل سلسلة خطوات محفوظة."
+    },
+    {
+      "verb": "engines",
+      "example": "dropflow engines",
+      "en": "Show the built-in engines.",
+      "ar": "اعرض المحرّكات المدمجة."
+    },
+    {
+      "verb": "doctor",
+      "example": "dropflow doctor --json",
+      "en": "Check the setup.",
+      "ar": "افحص الإعداد."
+    },
+    {
+      "verb": "models",
+      "example": "dropflow models download ggml-base --yes",
+      "en": "Manage AI models (only with --yes).",
+      "ar": "أدر نماذج الذكاء الاصطناعي (فقط مع ‎--yes)."
+    },
+    {
+      "verb": "version",
+      "example": "dropflow version",
+      "en": "Print the version.",
+      "ar": "اطبع الإصدار."
+    }
+  ],
+  "exitCodes": [
+    {
+      "code": 0,
+      "en": "Success",
+      "ar": "نجح"
+    },
+    {
+      "code": 1,
+      "en": "A job failed, or a needed engine is missing",
+      "ar": "فشلت مهمة، أو ينقص محرّك"
+    },
+    {
+      "code": 2,
+      "en": "Usage error: bad arguments or a missing file",
+      "ar": "خطأ في الاستخدام: وسائط خاطئة أو ملف غير موجود"
+    },
+    {
+      "code": 3,
+      "en": "Nothing to convert: no tool for these files",
+      "ar": "لا شيء للتحويل: لا أداة لهذه الملفات"
+    }
+  ]
+}

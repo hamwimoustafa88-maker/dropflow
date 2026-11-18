@@ -168,4 +168,26 @@ public class DocumentRenderingTests(WebHostFixture host) : IClassFixture<WebHost
             Assert.Equal(EngineId.LibreOffice, owner.EngineFor($"convert:{target}"));
         }
     }
+    [WebViewFact]
+    public async Task Svg_becomes_a_vector_pdf_of_the_drawings_size_with_real_text()
+    {
+        var input = _dir.WriteText("logo.svg", """
+            <svg xmlns="http://www.w3.org/2000/svg" width="480" height="240" viewBox="0 0 480 240">
+              <rect x="10" y="10" width="460" height="220" rx="24" fill="#5b4fd0"/>
+              <circle cx="120" cy="120" r="60" fill="#18b088"/>
+              <text x="200" y="135" font-family="Arial" font-size="40" fill="#fff">DropFlow 2026</text>
+            </svg>
+            """);
+
+        var result = await Convert(Converters(), "convert:pdf", input);
+
+        Assert.True(result.Success, result.Error);
+        using var doc = PdfDocument.Open(Assert.Single(result.Outputs));
+        var page = Assert.Single(doc.GetPages());
+        Assert.InRange(page.Width, 358, 362);      // 480 px = 360 pt
+        Assert.InRange(page.Height, 178, 182);     // 240 px = 180 pt
+        Assert.Contains("DropFlow 2026", page.Text);   // text stays text
+        Assert.Empty(page.GetImages());              // shapes stay shapes: no picture of the drawing
+        Assert.NotEmpty(page.ExperimentalAccess.Paths);
+    }
 }

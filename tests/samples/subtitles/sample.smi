@@ -1,0 +1,23 @@
+<SAMI>
+<HEAD>
+<TITLE>DropFlow sample</TITLE>
+<STYLE TYPE="text/css">
+<!--
+P { font-family: Arial; text-align: center; }
+.ENUSCC { Name: English; lang: en-US; }
+.ARSACC { Name: Arabic; lang: ar-SA; }
+-->
+</STYLE>
+</HEAD>
+<BODY>
+<SYNC Start=1000><P Class=ENUSCC>Hello <i>world</i><br>second
+  line
+<SYNC Start=1000><P Class=ARSACC>مرحبا بالعالم
+<SYNC Start=3500><P Class=ENUSCC>&nbsp;
+<SYNC Start=3500><P Class=ARSACC>&nbsp;
+<SYNC Start="4000"><P Class=ENUSCC><font color="#ffff00">Fish &amp; chips</font>
+<SYNC Start="4000"><P Class=ARSACC>سمك وبطاطا
+<SYNC Start=6000><P Class=ENUSCC>&nbsp;
+<SYNC Start=6000><P Class=ARSACC>&nbsp;
+</BODY>
+</SAMI>

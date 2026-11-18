@@ -1,0 +1,155 @@
+{
+  "note": "Popular conversion pages (/[locale]/convert/<slug>). Read by src/lib/pairs.ts, next.config.ts and scripts/csp-hashes.mjs; checked by src/lib/__tests__/pairs.test.ts.",
+  "pairs": [
+    {
+      "slug": "heic-to-jpg",
+      "from": "heic",
+      "to": "jpg",
+      "web": true
+    },
+    {
+      "slug": "heic-to-png",
+      "from": "heic",
+      "to": "png",
+      "web": true
+    },
+    {
+      "slug": "png-to-jpg",
+      "from": "png",
+      "to": "jpg",
+      "web": true
+    },
+    {
+      "slug": "jpg-to-png",
+      "from": "jpg",
+      "to": "png",
+      "web": true
+    },
+    {
+      "slug": "png-to-webp",
+      "from": "png",
+      "to": "webp",
+      "web": true
+    },
+    {
+      "slug": "jpg-to-webp",
+      "from": "jpg",
+      "to": "webp",
+      "web": true
+    },
+    {
+      "slug": "webp-to-jpg",
+      "from": "webp",
+      "to": "jpg",
+      "web": true
+    },
+    {
+      "slug": "jpg-to-pdf",
+      "from": "jpg",
+      "to": "pdf",
+      "web": true
+    },
+    {
+      "slug": "png-to-pdf",
+      "from": "png",
+      "to": "pdf",
+      "web": true
+    },
+    {
+      "slug": "pdf-to-jpg",
+      "from": "pdf",
+      "to": "jpg",
+      "web": true
+    },
+    {
+      "slug": "pdf-to-png",
+      "from": "pdf",
+      "to": "png",
+      "web": true
+    },
+    {
+      "slug": "pdf-to-text",
+      "from": "pdf",
+      "to": "txt",
+      "web": true
+    },
+    {
+      "slug": "pdf-to-word",
+      "from": "pdf",
+      "to": "docx",
+      "web": false
+    },
+    {
+      "slug": "pdf-to-excel",
+      "from": "pdf",
+      "to": "xlsx",
+      "web": false
+    },
+    {
+      "slug": "word-to-pdf",
+      "from": "docx",
+      "to": "pdf",
+      "web": false
+    },
+    {
+      "slug": "excel-to-pdf",
+      "from": "xlsx",
+      "to": "pdf",
+      "web": false
+    },
+    {
+      "slug": "powerpoint-to-pdf",
+      "from": "pptx",
+      "to": "pdf",
+      "web": false
+    },
+    {
+      "slug": "epub-to-pdf",
+      "from": "epub",
+      "to": "pdf",
+      "web": false
+    },
+    {
+      "slug": "mp4-to-mp3",
+      "from": "mp4",
+      "to": "mp3",
+      "web": true
+    },
+    {
+      "slug": "mp4-to-gif",
+      "from": "mp4",
+      "to": "gif",
+      "web": true
+    },
+    {
+      "slug": "mov-to-mp4",
+      "from": "mov",
+      "to": "mp4",
+      "web": true
+    },
+    {
+      "slug": "wav-to-mp3",
+      "from": "wav",
+      "to": "mp3",
+      "web": true
+    },
+    {
+      "slug": "m4a-to-mp3",
+      "from": "m4a",
+      "to": "mp3",
+      "web": true
+    },
+    {
+      "slug": "srt-to-vtt",
+      "from": "srt",
+      "to": "vtt",
+      "web": true
+    },
+    {
+      "slug": "vtt-to-srt",
+      "from": "vtt",
+      "to": "srt",
+      "web": true
+    }
+  ]
+}

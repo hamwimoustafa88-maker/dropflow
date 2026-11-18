@@ -94,9 +94,16 @@ describe("wheel builder with the real registry", () => {
     expect(ops(video.tools)).toEqual(expect.arrayContaining(["vid.trim", "vid.mute", "vid.snapshot", "vid.speed", "vid.compress"]));
   });
 
-  it("subtitles: srt converts to vtt/txt only", () => {
+  it("subtitles: srt converts to vtt/txt/lrc/sbv only (no ass on the web)", () => {
     const w = buildWheels([f("sub.srt")], registry, NO_ACTIONS);
-    expect(ops(w.convert)).toEqual(["convert:vtt", "convert:txt"]);
+    expect(ops(w.convert)).toEqual(["convert:vtt", "convert:txt", "convert:lrc", "convert:sbv"]);
+  });
+
+  it("subtitles: the formats DropFlow only reads get the same wheel", () => {
+    for (const name of ["a.smi", "a.ttml", "a.dfxp", "a.sub"]) {
+      const w = buildWheels([f(name)], registry, NO_ACTIONS);
+      expect(ops(w.convert)).toEqual(["convert:srt", "convert:vtt", "convert:txt", "convert:lrc", "convert:sbv"]);
+    }
   });
 
   it("archives: zip offers extract and no converts", () => {

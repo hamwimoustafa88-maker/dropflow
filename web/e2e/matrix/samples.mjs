@@ -357,8 +357,11 @@ export async function makeMatrixSamples(b, dir) {
   add("note-arabic.txt", Buffer.from(`${AR.hello}\n${AR.line}\n`, "utf8"), "document", {});
   add("readme.md", Buffer.from(`# Title\n\n- one\n- ${AR.hello}\n`, "utf8"), "document", {});
   add("page.html", Buffer.from(`<!doctype html><title>t</title><p dir="rtl">${AR.hello}</p>`, "utf8"), "document", {});
-  add("data.csv", Buffer.from(`name,city\nعلي,بيروت\nSam,Paris\n`, "utf8"), "spreadsheet", {});
-  add("data.json", Buffer.from(JSON.stringify({ a: 1, b: AR.hello }), "utf8"), "spreadsheet", {});
+  // ---- data formats (JSON, CSV, vCard, iCalendar: the data converter, docs/data-formats.md)
+  add("data.csv", Buffer.from(`name,city\nعلي,بيروت\nSam,Paris\n`, "utf8"), "spreadsheet", { words: ["علي", "بيروت"] });
+  add("data.json", Buffer.from(JSON.stringify({ a: 1, b: AR.hello }), "utf8"), "data", { words: [AR.hello] });
+  add("contacts.vcf", Buffer.from("BEGIN:VCARD\r\nVERSION:3.0\r\nFN:علي حسن\r\nTEL;TYPE=CELL:+961 3 123 456\r\nEND:VCARD\r\n", "utf8"), "data", { words: ["علي حسن"] });
+  add("events.ics", Buffer.from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:20261118T100000Z\r\nSUMMARY:اجتماع\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n", "utf8"), "data", { words: ["اجتماع"] });
 
   return { samples, skipped };
 }

@@ -27,12 +27,12 @@ internal sealed record EpubBook(string Title, string? Author, string Language, s
 /// </summary>
 internal static class EpubReader
 {
-    private const long MaxImageBytes = 8 * 1024 * 1024;
+    internal const long MaxImageBytes = 8 * 1024 * 1024;
 
-    private static readonly string[] RemovedElements =
+    internal static readonly string[] RemovedElements =
         ["script", "style", "link", "meta", "iframe", "object", "embed", "form", "input", "button", "select", "textarea", "base", "template", "noscript", "audio", "video", "canvas"];
 
-    private static readonly HashSet<string> KeptAttributes = new(StringComparer.OrdinalIgnoreCase)
+    internal static readonly HashSet<string> KeptAttributes = new(StringComparer.OrdinalIgnoreCase)
         { "id", "dir", "lang", "href", "src", "alt", "title", "colspan", "rowspan", "start", "type" };
 
     public static EpubBook Read(string path, EpubImages images, string? imageFolder = null)
@@ -89,7 +89,7 @@ internal static class EpubReader
             return new EpubBook(
                 string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(path) : title,
                 string.IsNullOrEmpty(author) ? null : author,
-                string.IsNullOrEmpty(language) ? "en" : language,
+                string.IsNullOrEmpty(language) ? Books.BookLanguage.Detect(body.ToString()) : language,
                 body.ToString());
         }
         catch (InvalidDataException ex)
@@ -106,8 +106,10 @@ internal static class EpubReader
     public static string ToHtmlDocument(EpubBook book)
     {
         var language = book.Language.Split('-')[0].ToLowerInvariant();
+        // An Arabic (or Hebrew, Persian, Urdu...) book reads right to left as a whole; other books let each paragraph decide.
+        var direction = Books.BookLanguage.IsRtl(language) ? "rtl" : "auto";
         var sb = new StringBuilder();
-        sb.Append("<!DOCTYPE html>\n<html lang=\"").Append(WebUtility.HtmlEncode(language)).Append("\" dir=\"auto\">\n<head>\n<meta charset=\"utf-8\">\n");
+        sb.Append("<!DOCTYPE html>\n<html lang=\"").Append(WebUtility.HtmlEncode(language)).Append("\" dir=\"").Append(direction).Append("\">\n<head>\n<meta charset=\"utf-8\">\n");
         sb.Append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
         if (book.Author is not null) sb.Append("<meta name=\"author\" content=\"").Append(WebUtility.HtmlEncode(book.Author)).Append("\">\n");
         sb.Append("<title>").Append(WebUtility.HtmlEncode(book.Title)).Append("</title>\n<style>\n");

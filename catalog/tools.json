@@ -2,15 +2,18 @@
   "version": 1,
   "notes": "Single source of truth for DropFlow tools. Read by the desktop app, the web app and the landing page. Run `node catalog/build.mjs` to validate and regenerate docs/feature-catalog.md. 'tg' = the Tangerine tool this covers (see docs/reference/tangerine-features.md). 'phase' = roadmap phase in docs/plan.md.",
   "categories": [
-    { "id": "image",       "en": "Images",       "ar": "الصور",        "phase": 1, "inputs": ["jpg","png","webp","heic","tiff","avif","bmp","gif","svg","ico"], "outputs": ["jpg","png","webp","heic","tiff","avif","bmp","gif","ico","pdf"], "lateOutputs": { "pdf": 2 }, "engine": "magick", "platforms": ["windows","web"] },
-    { "id": "audio",       "en": "Audio",        "ar": "الصوت",        "phase": 1, "inputs": ["mp3","m4a","wav","flac","ogg","opus","aiff","wma","aac"], "outputs": ["mp3","m4a","wav","flac","ogg","opus","aiff","wma","aac"], "engine": "ffmpeg", "platforms": ["windows","web"] },
-    { "id": "video",       "en": "Video",        "ar": "الفيديو",      "phase": 1, "inputs": ["mp4","mov","mkv","webm","avi","wmv","gif","flv","m4v"], "outputs": ["mp4","mkv","webm","avi","wmv","gif","mov","mp3","m4a","wav"], "engine": "ffmpeg", "platforms": ["windows","web"] },
-    { "id": "pdf",         "en": "PDF",          "ar": "PDF",          "phase": 2, "inputs": ["pdf"], "outputs": ["docx","pptx","xlsx","jpg","png","epub","txt","md","html","pdfa"], "engine": "libreoffice", "platforms": ["windows","web"] },
+    { "id": "image",       "en": "Images",       "ar": "الصور",        "phase": 1, "inputs": ["jpg","png","webp","heic","tiff","avif","bmp","gif","svg","ico","svgz","psd","jxl","jp2","tga","qoi","dds","pcx","exr","hdr","dcm","fits","dng","cr2","cr3","nef","arw","orf","rw2","raf"], "outputs": ["jpg","png","webp","heic","tiff","avif","bmp","gif","ico","pdf","svg","svgz","jxl","jp2","psd","tga","qoi"], "lateOutputs": { "pdf": 2 }, "engine": "magick", "platforms": ["windows","web"] },
+    { "id": "audio",       "en": "Audio",        "ar": "الصوت",        "phase": 1, "inputs": ["mp3","m4a","wav","flac","ogg","opus","aiff","wma","aac","amr","ape","wv","tta","dsf","dff","ac3","dts","mka","caf","m4r"], "outputs": ["mp3","m4a","wav","flac","ogg","opus","aiff","wma","aac","m4r","ac3"], "engine": "ffmpeg", "platforms": ["windows","web"] },
+    { "id": "video",       "en": "Video",        "ar": "الفيديو",      "phase": 1, "inputs": ["mp4","mov","mkv","webm","avi","wmv","gif","flv","m4v","ts","m2ts","mts","3gp","ogv","vob","mpg","mpeg","dat"], "outputs": ["mp4","mkv","webm","avi","wmv","gif","mov","webp","apng","mp3","m4a","wav"], "engine": "ffmpeg", "platforms": ["windows","web"] },
+    { "id": "pdf",         "en": "PDF",          "ar": "PDF",          "phase": 2, "inputs": ["pdf"], "outputs": ["docx","pptx","xlsx","jpg","png","epub","txt","md","html","pdfa","cbz"], "engine": "libreoffice", "platforms": ["windows","web"] },
     { "id": "document",    "en": "Documents",    "ar": "المستندات",    "phase": 2, "inputs": ["docx","doc","odt","rtf","md","txt","html","pages"], "outputs": ["docx","pdf","txt","md","html","epub","odt","rtf","png","jpg"], "engine": "libreoffice", "platforms": ["windows"] },
     { "id": "slides",      "en": "Slides",       "ar": "العروض",       "phase": 2, "inputs": ["pptx","ppt","odp","key"], "outputs": ["pdf","jpg","png","odp","pptx"], "engine": "libreoffice", "platforms": ["windows"] },
-    { "id": "spreadsheet", "en": "Spreadsheets", "ar": "الجداول",      "phase": 2, "inputs": ["xlsx","xls","ods","csv","tsv","numbers","json"], "outputs": ["xlsx","ods","csv","tsv","pdf","json","html"], "engine": "libreoffice", "platforms": ["windows"] },
-    { "id": "epub",        "en": "EPUB",         "ar": "كتب EPUB",     "phase": 2, "inputs": ["epub"], "outputs": ["pdf","docx","odt","txt","md","html","rtf"], "engine": "libreoffice", "platforms": ["windows"] },
-    { "id": "subtitle",    "en": "Subtitles",    "ar": "الترجمات",     "phase": 3, "inputs": ["srt","vtt","ass"], "outputs": ["srt","vtt","ass","txt"], "engine": "dotnet", "platforms": ["windows","web"] },
+    { "id": "data",        "en": "Data",         "ar": "البيانات",     "phase": 4, "inputs": ["json","jsonl","xml","yaml","vcf","ics"], "outputs": ["json","jsonl","xml","yaml","csv","tsv","xlsx","html"], "engine": "dotnet", "platforms": ["windows","web"] },
+    { "id": "spreadsheet", "en": "Spreadsheets", "ar": "الجداول",      "phase": 2, "inputs": ["xlsx","xls","ods","csv","tsv","numbers"], "outputs": ["xlsx","ods","csv","tsv","pdf","json","html"], "engine": "libreoffice", "platforms": ["windows"] },
+    { "id": "epub",        "en": "E-books",      "ar": "الكتب الإلكترونية", "phase": 2, "inputs": ["epub","fb2","mobi","azw3","htmlz","txtz"], "outputs": ["pdf","docx","odt","txt","md","html","rtf","epub","fb2","htmlz","txtz"], "engine": "libreoffice", "platforms": ["windows"] },
+    { "id": "comic",       "en": "Comics",       "ar": "القصص المصوّرة", "phase": 2, "inputs": ["cbz","cbr","cb7"], "outputs": ["pdf","epub","cbz"], "engine": "dotnet", "platforms": ["windows"] },
+    { "id": "font",        "en": "Fonts",        "ar": "الخطوط",       "phase": 4, "inputs": ["ttf","otf","woff","woff2"], "outputs": ["ttf","otf","woff","woff2","eot"], "engine": "dotnet", "platforms": ["windows","web"] },
+    { "id": "subtitle",    "en": "Subtitles",    "ar": "الترجمات",     "phase": 3, "inputs": ["srt","vtt","ass","smi","lrc","ttml","dfxp","sub","sbv"], "outputs": ["srt","vtt","ass","txt","lrc","sbv"], "engine": "dotnet", "platforms": ["windows","web"] },
     { "id": "archive",     "en": "Archives",     "ar": "الأرشيف",      "phase": 4, "inputs": ["zip","tar","gz","tgz","rar","7z"], "outputs": ["zip","tar","gz","7z"], "engine": "7zip", "platforms": ["windows","web"] }
   ],
   "tools": [
@@ -32,6 +35,7 @@
     { "id": "img.remove-bg",  "cat": "image", "wheel": "tools", "en": "Remove background",      "ar": "إزالة الخلفية",               "engine": "onnx",        "platforms": ["windows", "web"], "phase": 5 },
     { "id": "img.ocr",        "cat": "image", "wheel": "tools", "en": "Extract text (OCR)",     "ar": "استخراج النص (OCR)",          "engine": "ocr",         "platforms": ["windows", "web"], "phase": 5 },
     { "id": "img.translate",  "cat": "image", "wheel": "tools", "en": "Translate text in the picture", "ar": "ترجمة النص داخل الصورة", "engine": "onnx",    "platforms": ["windows"], "phase": 5 },
+    { "id": "img.trace",      "cat": "image", "wheel": "tools", "en": "Trace to SVG (vector)",  "ar": "تحويل إلى رسم متجه SVG",      "engine": "dotnet",      "platforms": ["windows"], "phase": 4 },
 
     { "id": "vid.compress",   "cat": "video", "wheel": "tools", "en": "Compress videos",        "ar": "ضغط الفيديو",                 "engine": "ffmpeg", "platforms": ["windows","web"], "phase": 3, "tg": "video:COMPRESS" },
     { "id": "vid.metadata",   "cat": "video", "wheel": "tools", "en": "Edit metadata",          "ar": "تعديل البيانات الوصفية",      "engine": "ffmpeg", "platforms": ["windows"], "phase": 3, "tg": "video:METADATA" },
@@ -82,12 +86,16 @@
     { "id": "pdf.translate",  "cat": "pdf", "wheel": "tools", "en": "Translate PDF text",       "ar": "ترجمة نص PDF",                "engine": "onnx",        "platforms": ["windows"], "phase": 5 },
     { "id": "txt.translate",  "cat": "subtitle", "alsoIn": ["document"], "wheel": "tools", "en": "Translate (English / Arabic)", "ar": "ترجمة (إنجليزي / عربي)", "engine": "onnx", "platforms": ["windows"], "phase": 5 },
 
+    { "id": "data.to-vcard",  "cat": "data", "alsoIn": ["spreadsheet"], "wheel": "tools", "en": "Make contacts (vCard)", "ar": "إنشاء جهات اتصال (vCard)", "engine": "dotnet", "platforms": ["windows","web"], "phase": 4 },
+    { "id": "data.to-ical",   "cat": "data", "alsoIn": ["spreadsheet"], "wheel": "tools", "en": "Make a calendar (iCalendar)", "ar": "إنشاء تقويم (iCalendar)", "engine": "dotnet", "platforms": ["windows","web"], "phase": 4 },
+
     { "id": "arc.extract",    "cat": "archive", "wheel": "tools", "en": "Extract archives",     "ar": "فك الأرشيف",                  "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "tg": "archive:EXTRACT" },
     { "id": "arc.zip",        "cat": "general", "wheel": "tools", "en": "Compress to ZIP",      "ar": "ضغط إلى ZIP",                 "engine": "dotnet", "platforms": ["windows","web"], "phase": 4, "multi": true, "minFiles": 1 },
 
     { "id": "gen.rename",     "cat": "general", "wheel": "tools", "en": "Batch rename",         "ar": "إعادة تسمية جماعية",          "engine": "dotnet", "platforms": ["windows", "web"], "phase": 4, "multi": true },
     { "id": "gen.hash",       "cat": "general", "wheel": "tools", "en": "File hash (MD5, SHA-256)","ar": "بصمة الملف (MD5, SHA-256)","engine": "dotnet", "platforms": ["windows","web"], "phase": 4 },
-    { "id": "gen.base64",     "cat": "general", "wheel": "tools", "en": "Base64 encode or decode","ar": "ترميز Base64",              "engine": "dotnet", "platforms": ["windows","web"], "phase": 4 }
+    { "id": "gen.base64",     "cat": "general", "wheel": "tools", "en": "Base64 encode or decode","ar": "ترميز Base64",              "engine": "dotnet", "platforms": ["windows","web"], "phase": 4 },
+    { "id": "doc.remove-macros", "cat": "general", "wheel": "tools", "en": "Remove macros",          "ar": "إزالة الماكرو", "engine": "dotnet", "platforms": ["windows"], "phase": 2 }
   ],
   "actions": [
     { "id": "act.share",      "en": "Share",     "ar": "مشاركة",       "engine": "shell", "platforms": ["windows"], "phase": 1, "tg": "actions:AIRDROP" },
@@ -97,5 +105,13 @@
     { "id": "act.copy-path",  "en": "Copy Path", "ar": "نسخ المسار",   "engine": "shell", "platforms": ["windows"], "phase": 1, "tg": "actions:COPY PATH" },
     { "id": "act.terminal",   "en": "Terminal",  "ar": "الطرفية",      "engine": "shell", "platforms": ["windows"], "phase": 1, "tg": "actions:TERMINAL" },
     { "id": "act.send-phone", "en": "Send to phone (QR)", "ar": "إرسال للهاتف (QR)", "engine": "dotnet", "platforms": ["windows"], "phase": 7 }
-  ]
+  ],
+  "routes": {
+    "_doc": "Targets offered on a category's Convert wheel that no converter writes directly: DropFlow chains 2-3 conversions (shortest path, see src/DropFlow.Core/Routing). Checked by catalog/build.mjs and RouteTests.",
+    "image": ["docx"],
+    "document": ["pptx"],
+    "slides": ["docx", "txt", "md"],
+    "spreadsheet": ["docx", "png", "jpg"],
+    "epub": ["png", "jpg"]
+  }
 }

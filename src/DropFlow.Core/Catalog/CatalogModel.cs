@@ -51,15 +51,18 @@ public sealed record CatalogTool(
 /// <summary>The parsed catalog/tools.json. Immutable after load.</summary>
 public sealed class ToolCatalog
 {
-    // Which category wins when an extension appears in several (e.g. "gif" is both an image and a video input).
+    // Which category wins when an extension appears in several (e.g. "gif" is both an image and a video input). "data" comes before
+    // "spreadsheet" so a JSON file gets the data wheel (YAML, XML, JSON Lines...) while CSV and TSV stay spreadsheets.
     private static readonly string[] Priority =
-        ["image", "audio", "video", "pdf", "document", "slides", "spreadsheet", "epub", "subtitle", "archive"];
+        ["image", "audio", "video", "pdf", "document", "slides", "data", "spreadsheet", "epub", "comic", "subtitle", "archive", "font"];
 
     private readonly Dictionary<string, CatalogCategory> _categories;
     private readonly Dictionary<string, string> _extensionToCategory = new(StringComparer.OrdinalIgnoreCase);
 
-    public ToolCatalog(IEnumerable<CatalogCategory> categories, IEnumerable<CatalogTool> tools, IEnumerable<CatalogTool> actions)
+    public ToolCatalog(IEnumerable<CatalogCategory> categories, IEnumerable<CatalogTool> tools, IEnumerable<CatalogTool> actions,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? routes = null)
     {
+        Routes = routes ?? new Dictionary<string, IReadOnlyList<string>>();
         Categories = categories.ToList();
         Tools = tools.ToList();
         Actions = actions.ToList();
@@ -76,6 +79,12 @@ public sealed class ToolCatalog
     public IReadOnlyList<CatalogTool> Tools { get; }
     public IReadOnlyList<CatalogTool> Actions { get; }
 
+    /// <summary>Per input category, targets DropFlow reaches by chaining conversions (catalog "routes"; see Routing.RoutePlanner).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> Routes { get; }
+
+    /// <summary>The routed targets of a category (empty when none).</summary>
+    public IReadOnlyList<string> RoutedTargets(string categoryId) => Routes.GetValueOrDefault(categoryId) ?? [];
+
     public CatalogCategory? Category(string id) => _categories.GetValueOrDefault(id);
 
     public CatalogTool? Tool(string id) => Tools.FirstOrDefault(t => t.Id == id) ?? Actions.FirstOrDefault(t => t.Id == id);
@@ -86,9 +95,11 @@ public sealed class ToolCatalog
         ["jpeg"] = "jpg", ["jpe"] = "jpg", ["jfif"] = "jpg",
         ["tif"] = "tiff",
         ["heif"] = "heic",
+        ["fit"] = "fits", ["fts"] = "fits", ["dicom"] = "dcm",
         ["aif"] = "aiff", ["oga"] = "ogg",
         ["htm"] = "html", ["markdown"] = "md", ["text"] = "txt",
         ["tar.gz"] = "tgz",
+        ["yml"] = "yaml", ["ndjson"] = "jsonl",
     };
 
     /// <summary>Canonical lower-case extension without the dot ("JPEG" and ".jpe" become "jpg").</summary>
@@ -114,12 +125,17 @@ public sealed class ToolCatalog
     private sealed record Raw(
         List<CatalogCategory> Categories,
         List<CatalogTool> Tools,
-        List<CatalogTool> Actions);
+        List<CatalogTool> Actions,
+        Dictionary<string, JsonElement>? Routes = null);
 
     public static ToolCatalog Parse(string json)
     {
         var raw = JsonSerializer.Deserialize<Raw>(json, Json) ?? throw new InvalidDataException("Empty catalog");
-        return new ToolCatalog(raw.Categories, raw.Tools, raw.Actions);
+        // "routes": { "epub": ["png", "jpg"], "_doc": "…" } — keys starting with "_" are comments
+        var routes = (raw.Routes ?? [])
+            .Where(p => !p.Key.StartsWith('_') && p.Value.ValueKind == JsonValueKind.Array)
+            .ToDictionary(p => p.Key, p => (IReadOnlyList<string>)p.Value.EnumerateArray().Select(e => Normalize(e.GetString() ?? "")).Where(e => e.Length > 0).ToList());
+        return new ToolCatalog(raw.Categories, raw.Tools, raw.Actions, routes);
     }
 
     /// <summary>Loads the catalog embedded in this assembly.</summary>

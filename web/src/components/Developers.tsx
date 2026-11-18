@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { CHECKSUMS_FILE, downloadUrl } from "@/lib/downloads";
 import { CONTRIBUTING_URL, ISSUES_URL, LICENSE_URL, RELEASES_URL, REPO_URL, SECURITY_URL, SIGNING_POLICY_URL } from "@/lib/site";
+import { Link } from "@/i18n/navigation";
 import { CopyCode } from "./CopyCode";
 import { GitHubMark } from "./GitHubLink";
 
@@ -74,6 +75,13 @@ export function Developers() {
                 </svg>
                 <span>{t("contribute")}</span>
               </a>
+              <Link href="/cli" prefetch={false} data-testid="dev-cli" className={`${link} glass text-fg hover:border-primary`}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                  <path d="M7 9.5l3 2.5-3 2.5M12.5 15H17" />
+                </svg>
+                <span>{t("cli")}</span>
+              </Link>
             </div>
             <a href={downloadUrl(CHECKSUMS_FILE)} download rel="noopener" data-testid="dev-checksums" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary underline-offset-4 hover:underline">
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

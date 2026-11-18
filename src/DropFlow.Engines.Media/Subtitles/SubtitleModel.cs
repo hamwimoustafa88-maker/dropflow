@@ -1,6 +1,9 @@
 namespace DropFlow.Engines.Media.Subtitles;
 
-public enum SubtitleFormat { Srt, Vtt, Ass, Txt }
+/// <summary>
+/// Subtitle formats. SRT, WebVTT, ASS, TXT, LRC and SBV are written; SAMI, TTML/DFXP and MicroDVD are only read.
+/// </summary>
+public enum SubtitleFormat { Srt, Vtt, Ass, Txt, Smi, Lrc, Ttml, MicroDvd, Sbv }
 
 /// <summary>
 /// One caption. <see cref="Text"/> is canonical: plain text with <c>\n</c> line breaks and only the inline tags

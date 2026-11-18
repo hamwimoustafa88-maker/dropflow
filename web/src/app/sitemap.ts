@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     routing.locales.map((locale) => ({
       url: `${SITE_URL}/${locale}${path}`,
       changeFrequency: path === "" || path === "/app" ? ("weekly" as const) : ("monthly" as const),
-      priority: path === "" ? 1 : path === "/app" ? 0.9 : 0.3,
+      priority: path === "" ? 1 : path === "/app" ? 0.9 : path.startsWith("/convert/") ? 0.7 : path === "/cli" ? 0.5 : 0.3,
       alternates: { languages: languages(path, SITE_URL) },
     })),
   );

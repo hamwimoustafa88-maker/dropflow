@@ -22,13 +22,13 @@ namespace DropFlow.App.Services;
 /// Arabic and English without clicking through the app. Nothing is converted and no file is written except the PNG.
 /// <code>
 /// DropFlow.exe --snapshot-window &lt;name&gt; &lt;out.png&gt; [--lang ar|en] [--dark] [--page N] [files…]
-/// DropFlow.exe --snapshot-wheel &lt;convert|tools|actions&gt; &lt;out.png&gt; [--lang ar|en] [--dark] &lt;files…&gt;
+/// DropFlow.exe --snapshot-wheel &lt;convert|tools|actions&gt; &lt;out.png&gt; [--lang ar|en] [--dark] [--face back] &lt;files…&gt;
 /// </code>
 /// Window names: edit, annotate, crop, redact, background, qr, metadata, welcome, settings, encoder, history.
 /// </summary>
 internal static class Snapshots
 {
-    public static readonly string[] WindowNames = ["edit", "annotate", "crop", "redact", "background", "qr", "metadata", "welcome", "settings", "encoder", "history"];
+    public static readonly string[] WindowNames = ["edit", "annotate", "crop", "redact", "background", "qr", "metadata", "welcome", "settings", "encoder", "history", "arrange", "home", "whatsnew"];
 
     public static bool IsSnapshot(string[] args) =>
         args.Length > 0 && args[0] is "--snapshot-window" or "--snapshot-wheel";
@@ -45,6 +45,7 @@ internal static class Snapshots
         var lang = "en";
         var dark = false;
         var page = 0;
+        var back = false;
         var files = new List<string>();
         for (var i = 3; i < args.Length; i++)
         {
@@ -53,6 +54,7 @@ internal static class Snapshots
                 case "--lang" when i + 1 < args.Length: lang = args[++i] == "ar" ? "ar" : "en"; break;
                 case "--dark": dark = true; break;
                 case "--page" when i + 1 < args.Length: int.TryParse(args[++i], out page); break;
+                case "--face" when i + 1 < args.Length: back = args[++i] == "back"; break;
                 default: files.Add(Path.GetFullPath(args[i])); break;
             }
         }
@@ -67,7 +69,7 @@ internal static class Snapshots
         FileLog.Init(work);
         try
         {
-            if (args[0] == "--snapshot-wheel") return Wheel(ui, loc, name, output, files, work);
+            if (args[0] == "--snapshot-wheel") return Wheel(ui, loc, name, output, files, work, back ? WheelFace.Back : WheelFace.Front);
             if (files.Count == 0) files.Add(name == "metadata" ? SampleJpeg(work) : PracticePhoto.Ensure(work));
             var window = Create(ui, name, files, page, work);
             if (window is null)
@@ -143,6 +145,36 @@ internal static class Snapshots
             case "settings":
                 return new SettingsWindow(ui, new SettingsContext(new AppSettings(), true, false, (_, _, _) => [], [], _ => false,
                     _ => Task.FromResult(false), "0.0.0", [], [], _ => { }, []));
+            case "home":
+            {
+                var store = new Core.History.HistoryStore(Path.Combine(work, "home-history.json"));
+                if (store.Entries.Count == 0)
+                {
+                    var photo = PracticePhoto.Ensure(work);
+                    store.Add("convert:jpg", [photo], Core.Operations.ConversionResult.Ok([photo]));
+                    store.Add("preset:whatsapp-video", [Path.Combine(work, "trip.mp4")], Core.Operations.ConversionResult.Ok([Path.Combine(work, "trip (compressed).mp4")]));
+                    store.Add("pdf.merge", [Path.Combine(work, "a.pdf"), Path.Combine(work, "b.pdf")], Core.Operations.ConversionResult.Fail("A page could not be read."));
+                }
+                return new HomeWindow(ui, new HomeContext(store, new RecycleBinDisposer(), _ => { }, _ => { }, op => op));
+            }
+            case "whatsnew":
+            {
+                var w = new WhatsNewWindow(ui, "0.3.0", WhatsNew.Slides(ui.Loc));
+                w.Go(page);
+                return w;
+            }
+            case "arrange":
+            {
+                var catalog = ToolCatalog.LoadEmbedded();
+                var engines = new EngineLocator(AppPaths.DefaultDir);
+                var registry = new ToolRegistry().Register(Modules.Create(engines, Dispatcher.CurrentDispatcher, Path.Combine(work, "webview"), _ => Task.CompletedTask, new ModelManager(Path.Combine(work, "models"))));
+                var builder = new WheelBuilder(catalog, registry, engines);
+                var layouts = WheelLayouts.None.With(WheelKind.Convert, "image", new WheelLayout(["convert:png"], ["convert:bmp"]));
+                return new WheelEditorWindow(ui, new WheelEditorContext(
+                    catalog.Categories.Select(c => (c.Id, ui.Loc.Language == "ar" ? c.Ar : c.En)).ToList(),
+                    (kind, category) => builder.ArrangeableFor(kind, category, ui.Loc.Language, ActionService.SupportedIds, WheelPins.None),
+                    () => layouts, l => layouts = l, 6));
+            }
             default:
                 return null;
         }
@@ -202,7 +234,7 @@ internal static class Snapshots
         }
     }
 
-    private static int Wheel(UiKit ui, ILocalizer loc, string kindName, string output, IReadOnlyList<string> files, string work)
+    private static int Wheel(UiKit ui, ILocalizer loc, string kindName, string output, IReadOnlyList<string> files, string work, WheelFace face)
     {
         var kind = kindName switch { "tools" => WheelKind.Tools, "actions" => WheelKind.Actions, _ => WheelKind.Convert };
         if (files.Count == 0) files = [PracticePhoto.Ensure(work)];
@@ -211,12 +243,14 @@ internal static class Snapshots
         var engines = new EngineLocator(AppPaths.DefaultDir);
         using var models = new ModelManager(Path.Combine(work, "models"));
         var registry = new ToolRegistry().Register(Modules.Create(engines, Dispatcher.CurrentDispatcher, Path.Combine(work, "webview"), _ => Task.CompletedTask, models));
-        var set = new WheelBuilder(catalog, registry, engines).Build(files, loc.Language, ActionService.SupportedIds);
+        var set = new WheelBuilder(catalog, registry, engines).Build(files, loc.Language, ActionService.SupportedIds, WheelPins.None);
+        var faces = WheelFaces.Split(set.Of(kind), new AppSettings().WheelFrontMax);
 
         var window = new WheelWindow();
         window.Wheel.Theme = ui.Theme;
         var presenter = new WheelPresenter(window, loc);
-        presenter.SetItems(kind, set.Of(kind), files.Count);
+        presenter.SetItems(kind, faces.Of(face), files.Count);
+        presenter.ShowFace(face, faces.HasBack);
         var root = (FrameworkElement)window.Content;
         window.Content = null;
 

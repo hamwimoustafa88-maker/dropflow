@@ -5,7 +5,7 @@ and a radial wheel appears to convert, process, or act on files 100% locally —
 License: **GPL-3.0-or-later — free and open source** (owner's decision 2026-10-21, ADR-0013, supersedes the proprietary ADR-0010).
 The repository is public and open to contributors; the DropFlow name/logo are reserved (TRADEMARK.md). Audience includes Arab developers. Audience: Arabic + English users.
 
-**Status (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
+**Status (2026-11-18):** a feature round adopted ideas from another open-source converter (history entry 2026-11-18; status.md first section). **Earlier (2026-10-21):** The owner told us to build all remaining phases without waiting. The Phase 0 manual gate
 (`docs/phase0-checklist.md`) was our own rule; the owner reports the drag test PASSED on their PC (2026-10-21, per-row results not recorded; Windows 11 and
 multi-monitor/DPI untested) — remaining input-capture risk is tracked in `docs/status.md`, which is the honest
 verified-vs-unverified ledger: read it before claiming anything works. Landing page (`web/`, ar/en, static, noindex) is done; CTAs
@@ -36,9 +36,11 @@ when a program is missing.
 | catalog/tools.json | Single source of truth for all tools/conversions (read by desktop, web, landing) |
 | catalog/build.mjs | Validates the catalog, checks Tangerine parity, regenerates docs/feature-catalog.md |
 | DropFlow.sln | Desktop solution |
-| src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder`, `OutputPathResolver`, settings, history (no UI, no engines) |
+| src/DropFlow.Core | Catalog loader, `IConverter`/`ConversionJob`, `ToolRegistry`, `JobQueue`, `WheelBuilder` (faces, `WheelLayouts`), `OutputPathResolver` + `Output/OutputRules`, settings, history, `Routing/` (RoutePlanner, RouteConverter, PresetConverter, ChainRunner), `Sources/` (UrlDownloader, AddressPolicy, MarkOfTheWeb, DropFormats), `Automation/PresetBook` (no UI, no engines) |
 | src/DropFlow.Engines.Common | `ProcessRunner`, `EngineLocator` (Windows/macOS/Linux names and folders, `engines/` and a `.app`'s `Resources/engines`), winget-based `EngineInstaller` (Windows), `NativeLocks.Pdfium`, `FontFiles` |
 | src/DropFlow.Engines.{Images,Media,Pdf,Archive} | Converters per domain; each exposes `XModule.Create(IEngineProvider)` (split from the planned single Engines project for isolation). Images writes HEIC itself (`Heic/HeicEncoder` = FFmpeg libx265 + own `HeifContainer`; Magick.NET only reads HEIC). Media also has `MediaEncoder` + `EncoderPlanner`/presets for the Encoder window; Archive also has `PhoneShareServer`; Pdf pins PDFsharp to 6.2.4 (6.5+ is AGPL), has `SystemFontResolver` (PDFsharp fonts off Windows), `ChromiumHtmlPdfRenderer` (headless Chrome/Edge HTML→PDF off Windows) and the portable `HtmlToPdfConverter` |
+| src/DropFlow.Engines.Data | JSON/JSONL/XML/YAML/CSV/TSV/XLSX/HTML through one tree model, vCard/iCal ↔ CSV (YamlDotNet 18.1.0); `DataModule.Create`; mapping rules in docs/data-formats.md |
+| src/DropFlow.Engines.Fonts | TTF/OTF ↔ WOFF/WOFF2/EOT (own sfnt code, Brotli/zlib from .NET); `FontsModule.Create` |
 | src/DropFlow.Engines.Web | `HtmlToPdfTool`: HTML → PDF in one reused hidden WebView2 window (network blocked unless the job allows it); needs the UI dispatcher |
 | src/DropFlow.AI | Whisper speech to text, OCR, background removal, auto-redaction, English/Arabic translation (`Translation/`: `MarianModel` beam search, `MarianTokenizer`, `TextSegmenter`, format parsers for SRT/VTT/Markdown/HTML/text, `TextOverlayRenderer`; converters `txt.translate`, `img.translate`, `pdf.translate`), `ModelManager` (resumable, SHA-256 verified, single files or multi-file packs; downloads only after the app asks the user). Multi-targets `net10.0-windows10.0.19041.0` (`Platform/Windows`: Windows OCR, Windows.Data.Pdf, Windows face detection) and `net10.0` (`Platform/Unix`: Tesseract, PDFium pages, UltraFace) |
 | src/DropFlow.Hooks | `DragDetector` (pure drag + modifier-tap state machine), `LowLevelInputHook` (WH_MOUSE_LL/WH_KEYBOARD_LL on a dedicated thread, polls button + cursor while the button is down) and `ShellDragProbe` (is a real file drag in progress?) |
@@ -97,7 +99,7 @@ when a program is missing.
 
 ## Conventions
 - C#: nullable, file-scoped namespaces, async + CancellationToken end-to-end, MVVM source generators, minimal code-behind.
-- Strings: `Resources/Strings.resx` + `Strings.ar.resx` (desktop), `web/messages/{ar,en}.json` (web). No hard-coded
+- Strings: `src/DropFlow.Core/Resources/strings.{en,ar}.json` (desktop; there are no .resx files), `web/messages/{ar,en}.json` (web). No hard-coded
   UI text. Every view must work with RTL.
 - TDD: failing test first; every tool has a test against tests/samples. One tool per change.
 
@@ -114,6 +116,20 @@ After every change to the project (code, docs, decisions, dependencies), before 
 3. Keep at most 30 entries here; move older ones to `docs/history.md`.
 
 ## Project History
+- 2026-11-18 — Feature round from another open-source converter's ideas (owner: "apply every idea and the site colours; no outside parties";
+  own code only, nothing copied, its name never used; approved packages: YamlDotNet and Svg.Skia — Svg.Skia NOT added: it pulls in MS-PL Svg.Custom).
+  Web: violet/mint palette on warm paper + dark mode by system (replaces "always light"), "How it works" timeline, What's new, At a glance,
+  25 popular-conversion pages x2 (`/convert/<pair>`, `src/data/pairs.json`, HowTo JSON-LD, CSP hashes for 60 pages), `/cli` page synced to the real
+  parser by `CliDocsTests`, PageDown/mouse wheel turn web wheel pages. Windows: wheel back face (Tab/mouse wheel; the hook swallows plain Tab only
+  while its wheel is up in a drag, ADR-0015), appearance settings, Arrange the wheels (`WheelLayouts`), progress ring, multi-step routes
+  (`Core/Routing`, catalog `routes`), presets (WhatsApp/Discord/e-mail/Instagram + "Save as a preset", export/import with an allow-list), Home window,
+  output rules, link downloads only to public addresses + Mark of the Web, browser drag of pictures/links, proxy, app exclusions, pause 1 h, portable
+  mode, What's new, clipboard results, CLI `formats`/`--events`/`watch`/exit 3 and an agent guide. Three parallel branches merged: images (RAW, PSD,
+  JXL, EXR, DICOM, FITS…, raster→SVG tracing, SVGZ), subtitles (SAMI/LRC/TTML/MicroDVD/SBV, CP1256) + media (M4R, AC3, WebP/APNG) + Remove macros,
+  `DropFlow.Engines.Data` (JSON/JSONL/XML/YAML/CSV/TSV/XLSX/HTML, vCard/iCal), then (owner: "execute them") fonts (`DropFlow.Engines.Fonts`) + e-books
+  (`Engines.Pdf/Books`: FB2, CBZ/CBR, HTMLZ/TXTZ, MOBI/AZW3 read) and SVG → vector PDF through the browser engine (`Office/SvgPdf`, no Svg.Skia).
+  Next 16.4.6. Catalog 1252 conversions / 73 tools / 13 categories; 4,386 .NET tests + 1016 Vitest + 639 e2e pass; released as v0.3.0. Real drags/browser drags unverified (status.md). — catalog/*, src/DropFlow.Core/{Routing,Output,Sources,Wheel,Settings,Automation,Cli},
+  src/DropFlow.{Hooks,Overlay,App,Engines.*}, web/**, docs/{status,deferred,adr/0015,agent-skill}
 - 2026-11-12 — Vercel cost: the locale proxy no longer runs for /ar/* and /en/* (every real page view), only for paths without a
   language (/app -> /ar/app); `src/lib/proxy-matcher.ts` + test keep the matcher checked; redirects unchanged (checked locally and by
   e2e 548/548). Measured on the live site: /vendor files already revalidate as 304 with 0 bytes and the service worker serves them
@@ -356,12 +372,3 @@ After every change to the project (code, docs, decisions, dependencies), before 
   Arabic-keyboard digits accepted in Encoder fields. Full solution: ~2,380 tests pass, 65 skip (missing engines/models). Honest gaps in
   `docs/status.md`. THIRD-PARTY-NOTICES lists every package, program and model. — src/DropFlow.Engines.*, src/DropFlow.AI, src/DropFlow.App/**,
   src/DropFlow.Core/{Wheel,Runner,Catalog,App}, tests/DropFlow.App.Tests, docs/*
-- 2026-10-21 — Phases 1/4/7/8 app layer: DropFlow.Hooks + Overlay + App run end to end (hooks → wheel → options dialog →
-  JobQueue → toast/history/undo), tray, settings (language, wheel keys, startup, right-click menu, engines), single-instance
-  with pipe forwarding + RequestBatcher for Explorer verbs, Send To, update check (Velopack/GitHub). Images engine (Magick.NET:
-  convert, compress, metadata, crop/resize/rotate, edit, annotate, background, redact, collage). Automation: recipes
-  (RecipeRunner + 4 built-ins), watched folders (`WatchService`, outputs go to `<folder>\DropFlow`), clipboard → wheel
-  (Ctrl+Alt+V, `ClipboardSource`), `dropflow` CLI, CI/release workflows + winget templates. Settings window now edits both
-  shortcuts (validator rejects duplicates) and watched folders. Core tests: 200 passing. Verified by launching the real app
-  and driving it; Windows 11, multi-monitor and in-other-apps hook behaviour are still unverified (docs/status.md).
-  — src/DropFlow.App/**, Overlay/**, Cli/**, Core/Automation/**, Core/Settings/**, installer/**, .github/**

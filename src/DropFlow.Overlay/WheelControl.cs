@@ -46,6 +46,46 @@ public sealed class WheelControl : FrameworkElement
 
     public bool IsMirrored { get; private set; }
 
+    /// <summary>True when the wheel has a back face (more items than fit on the front): two face dots are drawn under the hub.</summary>
+    public bool HasBack { get; private set; }
+
+    /// <summary>True while the back face is shown.</summary>
+    public bool ShowingBack { get; private set; }
+
+    /// <summary>Tab, Shift+Tab, PageUp/PageDown or the mouse wheel asked to turn the wheel over (only raised when it has a back).</summary>
+    public event EventHandler? FlipRequested;
+
+    /// <summary>Which face is shown and whether there is a back at all.</summary>
+    public void SetFace(bool showingBack, bool hasBack)
+    {
+        ShowingBack = showingBack && hasBack;
+        HasBack = hasBack;
+        InvalidateVisual();
+    }
+
+    /// <summary>Asks the host to turn the wheel over (from a key, the mouse wheel or the drag hook).</summary>
+    public void RequestFlip()
+    {
+        if (HasBack) FlipRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private int _wheelDelta;
+    private DateTime _lastWheelFlip = DateTime.MinValue;
+
+    /// <summary>
+    /// Whether animations play. Set by the host from Settings (Auto follows Windows' "Show animations" setting); every animation in the
+    /// wheel asks this instead of the system parameter.
+    /// </summary>
+    public static Func<bool> Animate { get; set; } = () => SystemParameters.ClientAreaAnimation;
+
+    /// <summary>Size factor of the wedge labels (Settings, 0.85-1.3).</summary>
+    public double LabelScale
+    {
+        get => _labelScale;
+        set { _labelScale = Math.Clamp(value, 0.85, 1.3); InvalidateVisual(); }
+    }
+    private double _labelScale = 1;
+
     public WheelTheme Theme
     {
         get => _theme;
@@ -154,6 +194,32 @@ public sealed class WheelControl : FrameworkElement
         ItemContextRequested?.Invoke(this, new WheelItemEventArgs(index, Items[index]));
     }
 
+    /// <summary>Tab must turn the wheel over before WPF's keyboard navigation moves the focus away, so it is taken in the preview.</summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Key is Key.Tab or Key.PageUp or Key.PageDown && HasBack
+            && !Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+        {
+            if (!e.IsRepeat) RequestFlip();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>One notch of the mouse wheel (120 units, or several small touchpad steps) turns the wheel over; at most every 250 ms.</summary>
+    protected override void OnMouseWheel(MouseWheelEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        if (!HasBack) return;
+        e.Handled = true;
+        if (Math.Sign(e.Delta) != Math.Sign(_wheelDelta)) _wheelDelta = 0;
+        _wheelDelta += e.Delta;
+        if (Math.Abs(_wheelDelta) < 120 || DateTime.UtcNow - _lastWheelFlip < TimeSpan.FromMilliseconds(250)) return;
+        _wheelDelta = 0;
+        _lastWheelFlip = DateTime.UtcNow;
+        RequestFlip();
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -192,7 +258,7 @@ public sealed class WheelControl : FrameworkElement
     /// <summary>Pops the wheel open (skipped when Windows animations are turned off).</summary>
     public void PlayOpenAnimation()
     {
-        if (!SystemParameters.ClientAreaAnimation)
+        if (!Animate())
         {
             Opacity = 1;
             RenderTransform = Transform.Identity;
@@ -206,6 +272,21 @@ public sealed class WheelControl : FrameworkElement
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.86, 1, duration) { EasingFunction = ease });
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.86, 1, duration) { EasingFunction = ease });
         BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
+    }
+
+    /// <summary>Turns the wheel over: it narrows to an edge and opens again with the other face (skipped when animations are off).</summary>
+    public void PlayFlipAnimation()
+    {
+        if (!Animate()) return;
+        var scale = RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
+        RenderTransform = scale;
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
+        var half = TimeSpan.FromMilliseconds(100);
+        var flip = new DoubleAnimationUsingKeyFrames { Duration = half + half };
+        flip.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        flip.KeyFrames.Add(new EasingDoubleKeyFrame(0.05, KeyTime.FromTimeSpan(half), ease));
+        flip.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(half + half), ease));
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, flip);
     }
 
     // ----- drawing ----------------------------------------------------------------------------------------------------------
@@ -280,18 +361,20 @@ public sealed class WheelControl : FrameworkElement
 
         var label = item.Label + (item.NeedsOptions ? " …" : "");
         if (item.State == WheelItemState.NeedsEngine) label = "⭳ " + label;
-        if (item.Role == WheelItemRole.Add && !Fits(label, 14, maxWidth, LabelMaxHeight, flow, dpi))
+        var font = 14 * _labelScale;
+        var maxHeight = LabelMaxHeight * _labelScale;
+        if (item.Role == WheelItemRole.Add && !Fits(label, font, maxWidth, maxHeight, flow, dpi))
         {
             var space = label.IndexOf(' ');
             var stacked = space > 0 ? label[..space] + "\n" + label[(space + 1)..] : label;
-            label = Fits(stacked, 14, maxWidth, LabelMaxHeight, flow, dpi) ? stacked : "+";
+            label = Fits(stacked, font, maxWidth, maxHeight, flow, dpi) ? stacked : "+";
         }
 
-        var size = item.Role == WheelItemRole.Add && label == "+" ? 26 : 14;
+        var size = item.Role == WheelItemRole.Add && label == "+" ? 26 : font;
         var text = new FormattedText(label, CultureInfo.CurrentUICulture, flow, LabelFace, size, brush, dpi)
         {
             MaxTextWidth = maxWidth,
-            MaxTextHeight = LabelMaxHeight,
+            MaxTextHeight = maxHeight,
             TextAlignment = TextAlignment.Center,
             Trimming = TextTrimming.CharacterEllipsis,
         };
@@ -329,6 +412,16 @@ public sealed class WheelControl : FrameworkElement
             }
             arc.Freeze();
             dc.DrawGeometry(null, pen, arc);
+        }
+
+        if (HasBack)
+        {
+            // two dots at the bottom of the hub: the filled one is the face shown (front = first in reading order)
+            var y = c.Y + r - 11;
+            var front = IsMirrored ? c.X + 6 : c.X - 6;
+            var back = IsMirrored ? c.X - 6 : c.X + 6;
+            dc.DrawEllipse(ShowingBack ? null : t.Highlight, new Pen(t.Highlight, 1.4), new Point(front, y), 3.2, 3.2);
+            dc.DrawEllipse(ShowingBack ? t.Highlight : null, new Pen(t.Highlight, 1.4), new Point(back, y), 3.2, 3.2);
         }
 
         if (CenterText.Length == 0) return;

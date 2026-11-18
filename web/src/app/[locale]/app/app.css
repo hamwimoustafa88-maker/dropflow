@@ -5,6 +5,13 @@
   --warn: #8a5300;
   --ok: #0b7a4b;
 }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --danger: #ff8b7b;
+    --warn: #f2b54d;
+    --ok: #46c98f;
+  }
+}
 
 .drop-card {
   border: 2px dashed var(--border);
@@ -50,7 +57,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  background: linear-gradient(90deg, var(--primary), var(--violet), var(--mint));
   transition: width 160ms linear;
 }
 

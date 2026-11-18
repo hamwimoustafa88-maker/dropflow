@@ -11,10 +11,13 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-// Browser chrome colour = the page background (--bg in globals.css). The site is always light.
+// Browser chrome colour = the page background (--bg in globals.css), light or dark like the visitor's system.
 export const viewport: Viewport = {
-  themeColor: "#f7f8fc",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f7f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0e16" },
+  ],
+  colorScheme: "light dark",
 };
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {

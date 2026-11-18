@@ -1,9 +1,9 @@
 {
   "stats": {
-    "conversions": 428,
-    "tools": 69,
+    "conversions": 1252,
+    "tools": 73,
     "actions": 7,
-    "categories": 10
+    "categories": 13
   },
   "categories": [
     {
@@ -21,7 +21,27 @@
         "bmp",
         "gif",
         "svg",
-        "ico"
+        "ico",
+        "svgz",
+        "psd",
+        "jxl",
+        "jp2",
+        "tga",
+        "qoi",
+        "dds",
+        "pcx",
+        "exr",
+        "hdr",
+        "dcm",
+        "fits",
+        "dng",
+        "cr2",
+        "cr3",
+        "nef",
+        "arw",
+        "orf",
+        "rw2",
+        "raf"
       ],
       "outputs": [
         "jpg",
@@ -33,7 +53,14 @@
         "bmp",
         "gif",
         "ico",
-        "pdf"
+        "pdf",
+        "svg",
+        "svgz",
+        "jxl",
+        "jp2",
+        "psd",
+        "tga",
+        "qoi"
       ],
       "lateOutputs": {
         "pdf": 2
@@ -58,7 +85,18 @@
         "opus",
         "aiff",
         "wma",
-        "aac"
+        "aac",
+        "amr",
+        "ape",
+        "wv",
+        "tta",
+        "dsf",
+        "dff",
+        "ac3",
+        "dts",
+        "mka",
+        "caf",
+        "m4r"
       ],
       "outputs": [
         "mp3",
@@ -69,7 +107,9 @@
         "opus",
         "aiff",
         "wma",
-        "aac"
+        "aac",
+        "m4r",
+        "ac3"
       ],
       "engine": "ffmpeg",
       "platforms": [
@@ -91,7 +131,16 @@
         "wmv",
         "gif",
         "flv",
-        "m4v"
+        "m4v",
+        "ts",
+        "m2ts",
+        "mts",
+        "3gp",
+        "ogv",
+        "vob",
+        "mpg",
+        "mpeg",
+        "dat"
       ],
       "outputs": [
         "mp4",
@@ -101,6 +150,8 @@
         "wmv",
         "gif",
         "mov",
+        "webp",
+        "apng",
         "mp3",
         "m4a",
         "wav"
@@ -129,7 +180,8 @@
         "txt",
         "md",
         "html",
-        "pdfa"
+        "pdfa",
+        "cbz"
       ],
       "engine": "libreoffice",
       "platforms": [
@@ -193,6 +245,35 @@
       ]
     },
     {
+      "id": "data",
+      "en": "Data",
+      "ar": "البيانات",
+      "phase": 4,
+      "inputs": [
+        "json",
+        "jsonl",
+        "xml",
+        "yaml",
+        "vcf",
+        "ics"
+      ],
+      "outputs": [
+        "json",
+        "jsonl",
+        "xml",
+        "yaml",
+        "csv",
+        "tsv",
+        "xlsx",
+        "html"
+      ],
+      "engine": "dotnet",
+      "platforms": [
+        "windows",
+        "web"
+      ]
+    },
+    {
       "id": "spreadsheet",
       "en": "Spreadsheets",
       "ar": "الجداول",
@@ -203,8 +284,7 @@
         "ods",
         "csv",
         "tsv",
-        "numbers",
-        "json"
+        "numbers"
       ],
       "outputs": [
         "xlsx",
@@ -222,11 +302,16 @@
     },
     {
       "id": "epub",
-      "en": "EPUB",
-      "ar": "كتب EPUB",
+      "en": "E-books",
+      "ar": "الكتب الإلكترونية",
       "phase": 2,
       "inputs": [
-        "epub"
+        "epub",
+        "fb2",
+        "mobi",
+        "azw3",
+        "htmlz",
+        "txtz"
       ],
       "outputs": [
         "pdf",
@@ -235,11 +320,59 @@
         "txt",
         "md",
         "html",
-        "rtf"
+        "rtf",
+        "epub",
+        "fb2",
+        "htmlz",
+        "txtz"
       ],
       "engine": "libreoffice",
       "platforms": [
         "windows"
+      ]
+    },
+    {
+      "id": "comic",
+      "en": "Comics",
+      "ar": "القصص المصوّرة",
+      "phase": 2,
+      "inputs": [
+        "cbz",
+        "cbr",
+        "cb7"
+      ],
+      "outputs": [
+        "pdf",
+        "epub",
+        "cbz"
+      ],
+      "engine": "dotnet",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "font",
+      "en": "Fonts",
+      "ar": "الخطوط",
+      "phase": 4,
+      "inputs": [
+        "ttf",
+        "otf",
+        "woff",
+        "woff2"
+      ],
+      "outputs": [
+        "ttf",
+        "otf",
+        "woff",
+        "woff2",
+        "eot"
+      ],
+      "engine": "dotnet",
+      "platforms": [
+        "windows",
+        "web"
       ]
     },
     {
@@ -250,13 +383,21 @@
       "inputs": [
         "srt",
         "vtt",
-        "ass"
+        "ass",
+        "smi",
+        "lrc",
+        "ttml",
+        "dfxp",
+        "sub",
+        "sbv"
       ],
       "outputs": [
         "srt",
         "vtt",
         "ass",
-        "txt"
+        "txt",
+        "lrc",
+        "sbv"
       ],
       "engine": "dotnet",
       "platforms": [
@@ -531,6 +672,18 @@
         "windows"
       ],
       "phase": 5
+    },
+    {
+      "id": "img.trace",
+      "cat": "image",
+      "wheel": "tools",
+      "en": "Trace to SVG (vector)",
+      "ar": "تحويل إلى رسم متجه SVG",
+      "engine": "dotnet",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 4
     },
     {
       "id": "vid.compress",
@@ -1137,6 +1290,38 @@
       "phase": 5
     },
     {
+      "id": "data.to-vcard",
+      "cat": "data",
+      "alsoIn": [
+        "spreadsheet"
+      ],
+      "wheel": "tools",
+      "en": "Make contacts (vCard)",
+      "ar": "إنشاء جهات اتصال (vCard)",
+      "engine": "dotnet",
+      "platforms": [
+        "windows",
+        "web"
+      ],
+      "phase": 4
+    },
+    {
+      "id": "data.to-ical",
+      "cat": "data",
+      "alsoIn": [
+        "spreadsheet"
+      ],
+      "wheel": "tools",
+      "en": "Make a calendar (iCalendar)",
+      "ar": "إنشاء تقويم (iCalendar)",
+      "engine": "dotnet",
+      "platforms": [
+        "windows",
+        "web"
+      ],
+      "phase": 4
+    },
+    {
       "id": "arc.extract",
       "cat": "archive",
       "wheel": "tools",
@@ -1204,6 +1389,18 @@
         "web"
       ],
       "phase": 4
+    },
+    {
+      "id": "doc.remove-macros",
+      "cat": "general",
+      "wheel": "tools",
+      "en": "Remove macros",
+      "ar": "إزالة الماكرو",
+      "engine": "dotnet",
+      "platforms": [
+        "windows"
+      ],
+      "phase": 2
     }
   ],
   "actions": [

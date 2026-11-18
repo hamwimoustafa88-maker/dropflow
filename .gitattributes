@@ -16,3 +16,6 @@
 *.woff2 binary
 *.zip binary
 *.jar binary
+
+# test fixtures whose exact bytes matter (legacy code pages, CRLF line endings)
+tests/samples/subtitles/** -text

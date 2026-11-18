@@ -22,6 +22,9 @@ public interface IWheelView
     /// </summary>
     void ShowAddList(WheelKind kind, IReadOnlyList<Wedge> addable);
 
+    /// <summary>Which face is shown and whether the wheel has a back at all (draws the face dots and the "Tab" hint). Optional.</summary>
+    void ShowFace(WheelFace face, bool hasBack) { }
+
     void Hide();
 }
 
@@ -72,13 +75,21 @@ public sealed class WheelSession
 
     public bool IsVisible { get; private set; }
     public WheelKind Kind { get; private set; } = WheelKind.Convert;
+
+    /// <summary>The face of the current wheel that is shown.</summary>
+    public WheelFace Face { get; private set; } = WheelFace.Front;
+
+    /// <summary>True when the current wheel has more items than fit on its front.</summary>
+    public bool HasBack => Faces.HasBack;
+
+    private WheelFaces Faces => WheelFaces.Split(_set.Of(Kind), _settings().WheelFrontMax);
     public IReadOnlyList<string> Files { get; private set; } = [];
 
     /// <summary>True while the "+ Add" list replaces the wheel.</summary>
     public bool IsChoosingAddition { get; private set; }
 
-    /// <summary>The wedges of the wheel currently shown.</summary>
-    public IReadOnlyList<Wedge> Items => _set.Of(Kind);
+    /// <summary>The wedges of the face currently shown.</summary>
+    public IReadOnlyList<Wedge> Items => Faces.Of(Face);
 
     /// <summary>What "+ Add" offers on the wheel currently shown.</summary>
     public IReadOnlyList<Wedge> Addable => _set.AddableFor(Kind);
@@ -92,9 +103,11 @@ public sealed class WheelSession
 
         CancelPendingHide();
         IsChoosingAddition = false;
+        if (Kind != kind.Value) Face = WheelFace.Front;
         Kind = kind.Value;
         if (!IsVisible)
         {
+            Face = WheelFace.Front;
             IsVisible = true;
             Files = [];
             _set = WheelSet.Empty;
@@ -109,6 +122,7 @@ public sealed class WheelSession
         CancelPendingHide();
         IsChoosingAddition = false;
         Kind = kind;
+        Face = WheelFace.Front;
         Files = files;
         Rebuild();
         IsVisible = true;
@@ -132,6 +146,15 @@ public sealed class WheelSession
         if (!IsVisible) return;
         IsChoosingAddition = false;
         Kind = kind;
+        Face = WheelFace.Front;
+        Apply();
+    }
+
+    /// <summary>Turns the wheel over (Tab, Shift+Tab, PageUp/PageDown or one mouse-wheel notch). Nothing happens on a wheel without a back.</summary>
+    public void Flip()
+    {
+        if (!IsVisible || IsChoosingAddition || !HasBack) return;
+        Face = Face == WheelFace.Front ? WheelFace.Back : WheelFace.Front;
         Apply();
     }
 
@@ -139,7 +162,7 @@ public sealed class WheelSession
     public async Task OnItemDroppedAsync(IReadOnlyList<string> files, int index)
     {
         CancelPendingHide();
-        var items = _set.Of(Kind);
+        var items = Items;
         if (index < 0 || index >= items.Count || files.Count == 0)
         {
             Dismiss();
@@ -233,9 +256,14 @@ public sealed class WheelSession
         return null;
     }
 
-    private void Rebuild() => _set = _builder.Build(Files, _language(), _actionIds(), _settings().PinnedItems ?? WheelPins.None);
+    private void Rebuild() => _set = _builder.Build(Files, _language(), _actionIds(), _settings().PinnedItems ?? WheelPins.None, _settings().Layouts);
 
-    private void Apply() => _view.SetItems(Kind, _set.Of(Kind), Files.Count);
+    private void Apply()
+    {
+        if (!HasBack) Face = WheelFace.Front; // the selection changed and the back is gone
+        _view.SetItems(Kind, Items, Files.Count);
+        _view.ShowFace(Face, HasBack);
+    }
 
     private void CancelPendingHide()
     {

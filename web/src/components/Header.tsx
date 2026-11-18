@@ -3,7 +3,7 @@ import { GitHubLink } from "./GitHubLink";
 import { Logo } from "./Logo";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
-const links = ["features", "formats", "developers"] as const;
+const links = ["how", "features", "formats", "developers"] as const;
 
 export function Header() {
   const t = useTranslations("nav");

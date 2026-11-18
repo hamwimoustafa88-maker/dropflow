@@ -99,6 +99,30 @@ public class SettingsStoreTests
         Assert.Equal([new WheelPin(WheelKind.Convert, "image", "img.ocr")], odd.PinnedItems.All);
     }
 
+    [Theory]
+    [InlineData("{}", 10)]
+    [InlineData("""{ "WheelFrontMax": 8 }""", 8)]
+    [InlineData("""{ "WheelFrontMax": 0 }""", 10)]
+    [InlineData("""{ "WheelFrontMax": 999 }""", 10)]
+    public void The_front_size_of_a_wheel_loads_within_its_limits(string json, int expected)
+    {
+        using var dir = new TempDir();
+        Assert.Equal(expected, new SettingsStore(dir.File("s.json", json)).Load().WheelFrontMax);
+    }
+
+    [Fact]
+    public void Appearance_values_are_brought_into_range_and_a_bad_accent_is_dropped()
+    {
+        using var dir = new TempDir();
+        var s = new SettingsStore(dir.File("a.json", """{ "WheelOpacity": 0.1, "WheelScale": 9, "LabelScale": -3, "Accent": "purple", "Motion": "Reduce" }""")).Load();
+        Assert.Equal(0.6, s.WheelOpacity);
+        Assert.Equal(1.4, s.WheelScale);
+        Assert.Equal(0.85, s.LabelScale);
+        Assert.Null(s.Accent);
+        Assert.Equal(MotionSetting.Reduce, s.Motion);
+        Assert.Equal("#0A7A5C", (new AppSettings { Accent = "#0A7A5C" }).Normalized().Accent);
+    }
+
     [Fact]
     public void Pins_add_once_and_remove_cleanly()
     {
@@ -210,4 +234,65 @@ public class SettingsValidatorTests
     [InlineData("Win+Alt+Space")]
     public void Other_good_hotkeys_pass(string hotkey) =>
         Assert.Empty(SettingsValidator.Validate(new AppSettings { GlobalHotkey = hotkey }));
+}
+
+public class HistoryOptionsTests
+{
+    [Fact]
+    public void History_keeps_the_options_for_retry_but_never_a_password_or_a_folder()
+    {
+        using var dir = new TempDir();
+        var specs = new[] { new ToolOption("quality", ToolOptionKind.Number), new ToolOption("password", ToolOptionKind.Password), new ToolOption("out", ToolOptionKind.Folder) };
+        var values = new Dictionary<string, object?> { ["quality"] = 70, ["password"] = "hunter2", ["out"] = @"D:\secret" };
+        var path = System.IO.Path.Combine(dir.Path, "history.json");
+        var store = new HistoryStore(path);
+
+        store.Add("img.compress", [@"C:\a.png"], ConversionResult.Ok([@"C:\a (compressed).png"]), HistoryEntry.SafeOptions(specs, values));
+
+        var raw = File.ReadAllText(path);
+        Assert.DoesNotContain("hunter2", raw);
+        Assert.DoesNotContain("secret", raw);
+        Assert.Equal(70d, new HistoryStore(path).Entries[0].Options!["quality"]);
+        Assert.True(HistoryEntry.NeededSecret(specs));
+    }
+
+    [Fact]
+    public void Older_history_files_without_options_still_load()
+    {
+        using var dir = new TempDir();
+        var path = dir.File("h.json", """[{"Id":"7d1f2c5e-0000-0000-0000-000000000001","Time":"2026-10-01T10:00:00+00:00","Operation":"convert:jpg","Inputs":["a.png"],"Outputs":["a.jpg"],"Success":true}]""");
+        var e = Assert.Single(new HistoryStore(path).Entries);
+        Assert.Null(e.Options);
+        Assert.Equal("convert:jpg", e.Operation);
+    }
+}
+
+public class ProxySettingTests
+{
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("none", true)]
+    [InlineData("http://proxy.local:8080", true)]
+    [InlineData("socks5://127.0.0.1:1080", true)]
+    [InlineData("http://user:pass@proxy:8080", false)]   // no secrets in settings.json
+    [InlineData("http://proxy", false)]                  // a port is required
+    [InlineData("ftp://proxy:21", false)]
+    [InlineData("proxy:8080", false)]
+    public void Only_plain_proxy_addresses_are_accepted(string value, bool ok) => Assert.Equal(ok, ProxySetting.IsValid(value));
+
+    [Fact]
+    public void Empty_means_the_system_proxy_and_none_means_direct()
+    {
+        Assert.Null(ProxySetting.Create(""));
+        Assert.True(ProxySetting.Create("none")!.IsBypassed(new Uri("https://example.com")));
+        Assert.Equal(new Uri("http://proxy.local:8080/"), ProxySetting.Create("http://proxy.local:8080")!.GetProxy(new Uri("https://example.com")));
+    }
+
+    [Fact]
+    public void A_bad_proxy_or_excluded_apps_list_in_settings_json_is_cleaned()
+    {
+        var s = new AppSettings { Proxy = "http://u:p@x:1", ExcludedApps = [" photoshop ", "Photoshop", "", "game.exe"] }.Normalized();
+        Assert.Equal("", s.Proxy);
+        Assert.Equal(["photoshop", "game.exe"], s.ExcludedApps);
+    }
 }

@@ -11,20 +11,21 @@ the repository; planned components are in `docs/plan.md` §3. DropFlow itself is
 | H.NotifyIcon.Wpf | 2.4.1 | MIT | Tray icon | App |
 | Velopack | 1.2.161 | MIT | Installer and updates (GitHub Releases) | App |
 | Microsoft.Web.WebView2 | 1.0.4258.31 | BSD-style (Microsoft, file `LICENSE.txt` read) | HTML to PDF through the Edge WebView2 runtime that ships with Windows | Engines.Web |
-| Magick.NET-Q8-AnyCPU (+ Magick.NET.Core) | 15.0.0 | Apache-2.0 | Image decode/encode and drawing | Engines.Images, Engines.Pdf, Engines.Archive, AI |
+| Magick.NET-Q8-AnyCPU (+ Magick.NET.Core) | 15.0.0 | Apache-2.0 | Image decode/encode and drawing | Engines.Images, Engines.Pdf, Engines.Archive, AI (and Engines.Fonts.Tests, test only) |
 | PDFsharp | **6.2.4** | MIT | PDF page work, stamping, image embedding. **Do not upgrade:** 6.5.0 and later are AGPL-3.0-only | Engines.Pdf |
 | PdfPig | 0.1.16 | Apache-2.0 | PDF text and geometry extraction | Engines.Pdf (tests too) |
 | PDFtoImage | 5.4.0 | MIT | Rendering PDF pages (replaced PDFiumCore, which had Windows x64/x86 natives only); DropFlow also calls five PDFium C functions directly for page count, sizes and permission flags | Engines.Pdf, AI (`pdf.ocr` page renderer on macOS/Linux) |
 | bblanchon.PDFium.Win32 / .Linux / .macOS (via PDFtoImage) | 152.0.7961 | Apache-2.0 (packaging; PDFium itself BSD-3-Clause/Apache-2.0) | The PDFium native library for win-x64/x86/arm64, linux-x64/arm64 (glibc and musl) and osx-x64/arm64 | Engines.Pdf, AI |
 | SkiaSharp + SkiaSharp.NativeAssets.Win32 / .Linux.NoDependencies / .macOS (via PDFtoImage) | 4.150.1 | MIT (Skia: BSD-3-Clause) | The bitmap PDFtoImage draws into | Engines.Pdf, AI |
 | DocumentFormat.OpenXml | 3.5.1 | MIT | Writing/reading DOCX and PPTX | Engines.Pdf |
-| ClosedXML | 0.104.2 | MIT | XLSX (its SixLabors.Fonts 1.0.0 is Apache-2.0) | Engines.Pdf |
+| ClosedXML | 0.104.2 | MIT | XLSX (its SixLabors.Fonts 1.0.0 is Apache-2.0) | Engines.Pdf, Engines.Data |
 | Markdig | 1.4.2 | BSD-2-Clause | Markdown to HTML | Engines.Pdf |
 | ReverseMarkdown | 6.2.1 | MIT | HTML to Markdown | Engines.Pdf |
 | AngleSharp | 1.5.2 | MIT | Cleaning EPUB HTML | Engines.Pdf |
 | System.Security.Cryptography.Pkcs | 10.0.13 | MIT | Pinned to a patched version (PDFsharp pulls 8.0.1 with advisories) | Engines.Pdf |
-| SharpCompress | 0.50.7 | MIT | Reading ZIP/TAR/7z/RAR | Engines.Archive |
+| SharpCompress | 0.50.7 | MIT | Reading ZIP/TAR/7z/RAR (archives; comic books CBZ/CBR/CB7) | Engines.Archive, Engines.Pdf |
 | ZXing.Net | 0.16.11 | Apache-2.0 | Creating and reading QR codes | Engines.Archive |
+| YamlDotNet | 18.1.0 | MIT | Reading and writing YAML through its event parser and emitter (never its object deserializer); added 2026-11-18 with the owner's approval | Engines.Data |
 | Whisper.net, Whisper.net.Runtime | 1.9.1 | MIT (bundles whisper.cpp, MIT) | Speech to text (CPU runtime; Apple-only Metal runtime rides along unused) | AI |
 | Microsoft.ML.OnnxRuntime | 1.31.0 | MIT | Background removal, face detection and the English/Arabic translation networks (Opus-MT) | AI |
 | Microsoft.ML.Tokenizers | 2.0.1 | MIT | Cuts text into SentencePiece pieces for the translation models (reads their `source.spm`, incl. the NFKC normalisation); added 2026-10-23 with the owner's approval | AI |
@@ -123,7 +124,7 @@ Windows.Media.Ocr (OCR), Windows.Data.Pdf (page rendering for OCR), Windows.Medi
 | IBM Plex Sans Arabic, IBM Plex Mono (fonts) | — | SIL OFL 1.1 | Typography, self-hosted at build via `next/font/google` |
 | pdf-lib | 1.17.1 | MIT (dependencies MIT, one MIT AND Zlib, one 0BSD) | In-browser PDF merge/split/rotate/watermark/metadata |
 | pdfjs-dist (pdf.js) | 6.4.299 | Apache-2.0 | In-browser PDF rendering and text extraction |
-| fflate | 0.8.3 | MIT | ZIP/GZIP in the browser |
+| fflate | 0.8.3 | MIT | ZIP/GZIP in the browser; zlib for WOFF fonts |
 | @ffmpeg/core (ffmpeg.wasm core, single-thread) | 0.12.10 | **GPL-2.0-or-later** (built with x264 and others; source: github.com/ffmpegwasm/ffmpeg.wasm) | In-browser audio/video conversion, served from `/vendor/ffmpeg` with its notice in `public/vendor/NOTICE.txt`. GPL-2.0-or-later is compatible with DropFlow's GPL-3.0-or-later (restored 2026-10-21 after the GPL switch, ADR-0013) |
 | @ffmpeg/ffmpeg | 0.12.15 | MIT | Only its vendored worker files are used (a small own client speaks its protocol) |
 | vitest | 5.0.5 | MIT | Web unit tests (dev only; `@types/node` bumped to 24.19.2 because it requires it) |

@@ -50,7 +50,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
   // The web app's strings (`app` namespace) ship only with /app (its own layout); the long legal texts (`privacy`, `terms`)
   // and the <head> metadata (`meta`) are rendered on the server and never sent to the browser as JSON.
-  const SERVER_ONLY = new Set(["app", "privacy", "terms", "meta", "faq"]);
+  const SERVER_ONLY = new Set(["app", "privacy", "terms", "meta", "faq", "pairs", "cli", "steps", "glance", "news"]);
   const messages = Object.fromEntries(Object.entries(await getMessages()).filter(([key]) => !SERVER_ONLY.has(key)));
 
   return (

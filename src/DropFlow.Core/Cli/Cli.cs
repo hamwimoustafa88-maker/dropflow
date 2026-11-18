@@ -8,7 +8,7 @@ using DropFlow.Core.Registry;
 
 namespace DropFlow.Core.Cli;
 
-public enum CliKind { Help, Version, List, Convert, Run, RecipeList, RecipeRun, Engines }
+public enum CliKind { Help, Version, List, Convert, Run, RecipeList, RecipeRun, Engines, Formats, Watch }
 
 public sealed record CliCommand(
     CliKind Kind,
@@ -18,7 +18,8 @@ public sealed record CliCommand(
     string? OutputDirectory = null,
     string? Category = null,
     bool Json = false,
-    string? Recipe = null);
+    string? Recipe = null,
+    bool Events = false);
 
 public sealed record CliParseResult(CliCommand? Command, string? Error);
 
@@ -29,18 +30,23 @@ public static class CliParser
         dropflow — convert and process files locally
 
         USAGE
-          dropflow list [--category image|audio|video|pdf|document|slides|spreadsheet|epub|subtitle|archive] [--json]
-          dropflow convert <files...> --to <format> [--opt key=value]... [--out <folder>] [--json]
-          dropflow run <tool-id> <files...> [--opt key=value]... [--out <folder>] [--json]
+          dropflow list [--category image|audio|video|pdf|document|slides|data|spreadsheet|epub|subtitle|archive] [--json]
+          dropflow formats [--json]                                        (every input format and what it converts to)
+          dropflow convert <files...> --to <format> [--opt key=value]... [--out <folder>] [--json | --events]
+          dropflow run <tool-id> <files...> [--opt key=value]... [--out <folder>] [--json | --events]
+          dropflow watch <folder> --to <format> [--opt key=value]... [--out <folder>]   (converts every file that lands there; Ctrl+C stops)
           dropflow recipe list [--json]
-          dropflow recipe run <name> <files...> [--out <folder>] [--json]
+          dropflow recipe run <name> <files...> [--out <folder>] [--json | --events]
           dropflow engines [--json]
           dropflow doctor [--json]                                          (version, Windows, engines and their versions, encoders, models, WebView2)
           dropflow models list | download <id> [--yes] | delete <id>     (AI models; nothing downloads without --yes)
           dropflow version
 
         Results are written next to each source (or into --out). Originals are never changed.
-        Exit codes: 0 success, 1 a job failed, 2 usage error.
+        --json prints one object at the end; --events prints one JSON object per line while it works
+        (start, progress, output, summary), for scripts and AI agents.
+        Exit codes: 0 success, 1 a job failed (or a needed engine is missing), 2 usage error (bad arguments, missing file),
+        3 nothing to convert (DropFlow has no tool for these files).
         """;
 
     public static CliParseResult Parse(IReadOnlyList<string> args)
@@ -57,6 +63,10 @@ public static class CliParser
                 return WithFlags(rest, CliKind.Engines, positional: 0);
             case "list":
                 return WithFlags(rest, CliKind.List, positional: 0);
+            case "formats":
+                return WithFlags(rest, CliKind.Formats, positional: 0);
+            case "watch":
+                return Files(rest, CliKind.Watch, needsTarget: true);
             case "convert":
                 return Files(rest, CliKind.Convert, needsTarget: true);
             case "run":
@@ -92,7 +102,8 @@ public static class CliParser
             if (!flags.TryGetValue("to", out var to) || string.IsNullOrWhiteSpace(to)) return Fail("convert needs --to <format>.");
             operation = Operation.Convert(ToolCatalog.Normalize(to));
         }
-        return Ok(new CliCommand(kind, operation, free, options, flags.GetValueOrDefault("out"), Json: flags.ContainsKey("json"), Recipe: recipe));
+        if (flags.ContainsKey("json") && flags.ContainsKey("events")) return Fail("Use either --json or --events, not both.");
+        return Ok(new CliCommand(kind, operation, free, options, flags.GetValueOrDefault("out"), Json: flags.ContainsKey("json"), Recipe: recipe, Events: flags.ContainsKey("events")));
     }
 
     private static (Dictionary<string, string> Flags, List<string> Free, string? Error) Split(List<string> args)
@@ -111,6 +122,7 @@ public static class CliParser
         {
             var a = args[i];
             if (a == "--json") { flags["json"] = "true"; continue; }
+            if (a == "--events") { flags["events"] = "true"; continue; }
             if (a is "--to" or "--out" or "--category" or "--opt")
             {
                 if (i + 1 >= args.Count) return (flags, free, $"{a} needs a value.", options);
@@ -151,7 +163,8 @@ public sealed class CliRunner(
     IFileDisposer disposer,
     TextWriter stdout,
     TextWriter stderr,
-    string version)
+    string version,
+    TimeSpan? watchPoll = null)
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
@@ -173,6 +186,8 @@ public sealed class CliRunner(
             case CliKind.Help: await stdout.WriteLineAsync(CliParser.Usage); return 0;
             case CliKind.Version: await stdout.WriteLineAsync($"dropflow {version}"); return 0;
             case CliKind.List: return await ListAsync(c);
+            case CliKind.Formats: return await FormatsAsync(c);
+            case CliKind.Watch: return await WatchAsync(c, ct);
             case CliKind.Engines: return await EnginesAsync(c);
             case CliKind.RecipeList: return await RecipesAsync(c);
             default: return await ExecuteAsync(c, ct);
@@ -200,6 +215,65 @@ public sealed class CliRunner(
 
         if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(rows, Json));
         else foreach (var r in rows) await stdout.WriteLineAsync(JsonSerializer.Serialize(r));
+        return 0;
+    }
+
+    /// <summary>Every input extension the registry really reads, with the formats it converts to directly.</summary>
+    private async Task<int> FormatsAsync(CliCommand c)
+    {
+        var inputs = catalog.Categories.SelectMany(x => x.Inputs).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.Ordinal);
+        var targets = catalog.Categories.SelectMany(x => x.Outputs).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var rows = new List<FormatRow>();
+        foreach (var input in inputs)
+        {
+            var to = targets.Where(t => !t.Equals(input, StringComparison.OrdinalIgnoreCase) && registry.Supports(Operation.Convert(t), input)).ToArray();
+            if (to.Length > 0) rows.Add(new FormatRow(input, to));
+        }
+        if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(rows.Select(r => new { input = r.Input, targets = r.Targets }), Json));
+        else foreach (var r in rows) await stdout.WriteLineAsync($"{r.Input,-8} -> {string.Join(", ", r.Targets)}");
+        return 0;
+    }
+
+    private sealed record FormatRow(string Input, string[] Targets);
+
+    /// <summary>
+    /// Converts every file that finishes arriving in the folder (results in "&lt;folder&gt;\DropFlow" or --out) until Ctrl+C. Files DropFlow
+    /// cannot convert are skipped with a line on stderr. Stopping is a normal end (exit 0).
+    /// </summary>
+    private async Task<int> WatchAsync(CliCommand c, CancellationToken ct)
+    {
+        var folder = Path.GetFullPath(c.Files![0]);
+        if (!Directory.Exists(folder))
+        {
+            await stderr.WriteLineAsync($"Folder not found: {folder}");
+            return 2;
+        }
+        var output = c.OutputDirectory is { } o ? Path.GetFullPath(o) : Path.Combine(folder, "DropFlow");
+        Directory.CreateDirectory(output);
+        var queue = new JobQueue(registry, catalog, Math.Max(1, Environment.ProcessorCount / 2));
+        WatchService? watch = null;
+        watch = new WatchService(async (_, files) =>
+        {
+            foreach (var file in files)
+            {
+                if (!registry.Supports(c.Operation!, ToolCatalog.ExtensionOf(file)))
+                {
+                    lock (stderr) stderr.WriteLine($"skipped (cannot {c.Operation}): {file}");
+                    continue;
+                }
+                var result = await queue.Enqueue(new ConversionJob([file], c.Operation!, c.Options, output)).Completion.ConfigureAwait(false);
+                watch!.MarkProduced(result.Outputs);
+                if (result.Success) lock (stdout) foreach (var path in result.Outputs) stdout.WriteLine(path);
+                else lock (stderr) stderr.WriteLine($"failed: {file}: {Localization.NoteText.Localize(result.Error, English.Value)}");
+            }
+        }, poll: watchPoll);
+        using (watch)
+        {
+            watch.Apply([new WatchRule("cli", folder, [], null, OutputSubfolder: Path.GetRelativePath(folder, output) is var rel && !rel.StartsWith("..", StringComparison.Ordinal) ? rel : "")]);
+            await stderr.WriteLineAsync($"watching {folder} → {c.Operation} (Ctrl+C to stop)");
+            try { await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { /* Ctrl+C: a normal end */ }
+        }
         return 0;
     }
 
@@ -241,6 +315,7 @@ public sealed class CliRunner(
                     await stderr.WriteLineAsync($"Unknown recipe '{c.Recipe}'. See 'dropflow recipe list'.");
                     return 2;
                 }
+                Event(c, new { @event = "start", recipe = recipe.Name, files });
                 result = await new RecipeRunner(queue, disposer).RunAsync(recipe, files, c.OutputDirectory, ct);
             }
             else
@@ -249,8 +324,8 @@ public sealed class CliRunner(
                 var converter = registry.Find(c.Operation!, ext);
                 if (converter is null)
                 {
-                    await stderr.WriteLineAsync($"DropFlow cannot run '{c.Operation}' on .{ext} files. See 'dropflow list'.");
-                    return 2;
+                    await stderr.WriteLineAsync($"DropFlow cannot run '{c.Operation}' on .{ext} files. See 'dropflow formats' or 'dropflow list'.");
+                    return 3;
                 }
                 var engine = converter.EngineFor(c.Operation!, c.Options ?? ConversionJob.NoOptions);
                 if (engine != EngineId.None && engines.Locate(engine) is null)
@@ -258,10 +333,22 @@ public sealed class CliRunner(
                     await stderr.WriteLineAsync($"{engine} is required but not installed. Install it from the DropFlow app (Settings > Engines) or with winget.");
                     return 1;
                 }
+                Event(c, new { @event = "start", operation = c.Operation, files });
                 var batch = queue.Enqueue(new ConversionJob(files, c.Operation!, c.Options, c.OutputDirectory));
-                queue.Changed += b => { if (!c.Json) stderr.Write($"\r{b.Progress * 100:0}%   "); };
+                var lastProgress = DateTime.MinValue;
+                queue.Changed += b =>
+                {
+                    if (c.Events)
+                    {
+                        var now = DateTime.UtcNow;
+                        if (now - lastProgress < TimeSpan.FromMilliseconds(250) && b.Progress < 1) return;
+                        lastProgress = now;
+                        Event(c, new { @event = "progress", value = Math.Round(b.Progress, 3) });
+                    }
+                    else if (!c.Json) stderr.Write($"\r{b.Progress * 100:0}%   ");
+                };
                 result = await batch.Completion.WaitAsync(ct);
-                if (!c.Json) await stderr.WriteLineAsync();
+                if (!c.Json && !c.Events) await stderr.WriteLineAsync();
             }
         }
         catch (OperationCanceledException)
@@ -271,13 +358,30 @@ public sealed class CliRunner(
         }
 
         var note = Localization.NoteText.Localize(result.Note, English.Value);
-        if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(new { success = result.Success, outputs = result.Outputs, error = result.Error, note }, Json));
+        var error = Localization.NoteText.Localize(result.Error, English.Value);
+        var exit = result.Success ? 0 : 1;
+        if (c.Events)
+        {
+            foreach (var o in result.Outputs) Event(c, new { @event = "output", path = o });
+            Event(c, new { @event = "summary", success = result.Success, outputs = result.Outputs, error, note, exitCode = exit });
+            return exit;
+        }
+        if (c.Json) await stdout.WriteLineAsync(JsonSerializer.Serialize(new { success = result.Success, outputs = result.Outputs, error, note }, Json));
         else
         {
             foreach (var o in result.Outputs) await stdout.WriteLineAsync(o);
             if (note is not null) await stderr.WriteLineAsync(note);
-            if (!result.Success) await stderr.WriteLineAsync($"Failed: {result.Error}");
+            if (!result.Success) await stderr.WriteLineAsync($"Failed: {error}");
         }
-        return result.Success ? 0 : 1;
+        return exit;
+    }
+
+    private static readonly JsonSerializerOptions Line = new() { WriteIndented = false };
+
+    /// <summary>One event line on stdout (only with --events). Lines are written whole, so a reader can parse each as it arrives.</summary>
+    private void Event(CliCommand c, object payload)
+    {
+        if (!c.Events) return;
+        lock (stdout) stdout.WriteLine(JsonSerializer.Serialize(payload, Line));
     }
 }

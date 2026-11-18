@@ -3,7 +3,32 @@
 Updated by hand whenever a milestone lands. **Verified** means an automated test or a real run on this machine
 (Windows 10 Pro 19045, standard user) proved it. Anything else is **built, unverified**. Read this before claiming anything works.
 
-Last updated: 2026-10-23 (English/Arabic translation: text, Markdown, HTML, subtitles, PDF text and pictures; earlier on 2026-10-22: lossless rotation, trim silence, multi-box redaction, strict target size, drag robustness, `dropflow doctor`; bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
+Last updated: 2026-11-18 (feature round, see the first section; before that 2026-10-23: English/Arabic translation: text, Markdown, HTML, subtitles, PDF text and pictures; earlier on 2026-10-22: lossless rotation, trim silence, multi-box redaction, strict target size, drag robustness, `dropflow doctor`; bundled engines, PDF/A, link import, release prep). Everything postponed on purpose, with the reason and how to resume, is in [deferred.md](deferred.md).
+
+**Feature round 2026-11-18 (ideas adopted from another open-source converter, all code our own; plan in the owner's session):**
+- **Verified by tests on this PC** (`dotnet test DropFlow.sln`: every project green; web 1009 Vitest + lint + tsc; e2e 662 checks before the format merges):
+  wheel back face (model, drawing, Tab/PageUp/PageDown/mouse wheel in click mode, `WheelGestureFilter` for drags, ADR-0015), appearance
+  settings (accent, opacity, size, labels, motion), "Arrange the wheels" (order, hide, front/back, migration-free `WheelLayouts`), progress ring
+  (rendered), multi-step routes (`RouteConverter`, catalog `routes`; real runs: CSV→XLSX→PNG with Arabic, Markdown→DOCX→PPTX), presets
+  (`PresetConverter`: WhatsApp/Discord/e-mail video, Instagram photo; real run: a 27.5 MB video → 9.4 MB with the Discord preset), "Save as a
+  preset" + export/import with an allow-list (`PresetBook`), Home window (drop zone, collected files, recent results with thumbnails, Open /
+  Open with / Retry / Undo; history keeps options without passwords), output rules (name pattern, overwrite-never-originals, keep dates),
+  link downloads only to public addresses on every hop (`AddressPolicy` + `ConnectCallback`) with the Mark of the Web carried to results,
+  browser drag parsing (`DropFormats`), proxy setting, app exclusions, pause for an hour, portable mode (`dropflow.portable`), What's new
+  slides, clipboard results, CLI `formats` / `--events` / `watch` / exit code 3, agent guide `docs/agent-skill/dropflow-cli/SKILL.md`.
+- **New formats merged from three parallel branches:** 20 image inputs (camera RAW via LibRaw, PSD, JXL, JP2, EXR, DICOM, FITS…), JXL/JP2/PSD/TGA/QOI
+  outputs, raster → SVG tracing (own Otsu/k-means/Schneider), SVG↔SVGZ; subtitles SAMI/LRC/TTML/MicroDVD/SBV with Arabic CP1256 detection (desktop and web);
+  M4R ringtones, AC3, animated WebP/APNG, 9 video and 11 audio inputs; "Remove macros" for Office; a Data engine (JSON/JSONL/XML/YAML/CSV/TSV/XLSX/HTML,
+  vCard/iCal ↔ CSV; YamlDotNet 18.1.0, the one approved package used); fonts (TTF/OTF ↔ WOFF/WOFF2/EOT, own code, `DropFlow.Engines.Fonts`) and e-books
+  (FB2 ↔ EPUB, CBZ/CBR → PDF/EPUB, PDF → CBZ, HTMLZ/TXTZ, MOBI/AZW3 reading; `Engines.Pdf/Books`). SVG/SVGZ → **vector** PDF through the app's own browser
+  engine (`Office/SvgPdf`: the drawing as an `<img>`, so no script and no network; page = the drawing's size, no margins; verified with real WebView2 and
+  headless Chrome: text stays selectable, no embedded picture). Catalog: 1252 conversions, 73 tools, 13 categories.
+- **Built, NOT verified with real input** (the shell cannot drag): Tab and the mouse wheel during a real OLE drag, the browser drag from Chrome/Edge/Firefox
+  (formats, placeholder, download after the pick), the Home window's drop zone with a real Explorer drop, the progress ring on screen during a real job,
+  "Open with", clipboard results with other apps holding the clipboard, the portable zip marker in a real release, What's new after a real Velopack update.
+  Real camera RAW files other than a hand-made DNG, real DICOM/FITS, real Office files with macros, APE/DSD audio were not available.
+- **Not done:** Svg.Skia was not added (it pulls in Svg.Custom, MS-PL, GPL-incompatible); SVG → vector PDF uses the browser engine instead. Without a
+  browser engine (the CLI) SVG → PDF is still a picture. Real MOBI/AZW3/CBR files from other tools were not available (hand-made samples only).
 
 **Conversion matrix (2026-11-12, [conversion-matrix.md](conversion-matrix.md)):** every wheel item on 67 real, independently produced
 files on Windows (1290 cells, outputs re-opened by other readers, Arabic words checked in logical order) and on 62 files in the

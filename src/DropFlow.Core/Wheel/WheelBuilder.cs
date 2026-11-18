@@ -9,6 +9,32 @@ public enum WheelKind { Convert, Tools, Actions }
 
 public enum WedgeState { Ready, NeedsEngine }
 
+/// <summary>A wheel has a front and, when it holds more items than fit, a back (turned over with Tab or the mouse wheel).</summary>
+public enum WheelFace { Front, Back }
+
+/// <summary>The two faces of one wheel.</summary>
+public sealed record WheelFaces(IReadOnlyList<Wedge> Front, IReadOnlyList<Wedge> Back)
+{
+    /// <summary>Default number of slices on the front of a wheel (Settings can change it).</summary>
+    public const int DefaultFrontMax = 10;
+    public const int MinFrontMax = 4;
+    public const int MaxFrontMax = 16;
+
+    public bool HasBack => Back.Count > 0;
+
+    public IReadOnlyList<Wedge> Of(WheelFace face) => face == WheelFace.Back ? Back : Front;
+
+    /// <summary>
+    /// The first <paramref name="frontMax"/> items stay in front in their order; the rest (and so the "+ Add" slot, always last) go to the
+    /// back. A wheel that fits has no back.
+    /// </summary>
+    public static WheelFaces Split(IReadOnlyList<Wedge> items, int frontMax)
+    {
+        var max = Math.Clamp(frontMax, 1, MaxFrontMax);
+        return items.Count <= max ? new WheelFaces(items, []) : new WheelFaces(items.Take(max).ToList(), items.Skip(max).ToList());
+    }
+}
+
 /// <summary>
 /// One slice of a wheel. <paramref name="Wheel"/> is the family the operation belongs to (it decides how the item runs); a pinned
 /// wedge keeps its family even when it sits on another wheel. <paramref name="Pinned"/> marks items the user added with "+ Add".
@@ -61,6 +87,9 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
     /// <summary>Category key for mixed selections, unknown files and folders (they still get general tools and actions).</summary>
     public const string OtherCategory = "other";
 
+    /// <summary>Presets shown at the end of the Tools wheel (built-in templates and the user's saved options). Null = none.</summary>
+    public Func<IReadOnlyList<Automation.Recipe>>? Presets { get; init; }
+
     /// <summary>The input category a selection's pins belong to.</summary>
     public string CategoryKey(IReadOnlyList<string> files)
     {
@@ -73,7 +102,7 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
     /// "+ Add" slot when anything else applies (an item of another wheel, such as "Extract text (OCR)" on the Convert wheel of a
     /// picture). Pins that do not apply to this selection (no converter, too few or too many files) are kept but not shown.
     /// </summary>
-    public WheelSet Build(IReadOnlyList<string> files, string language, IReadOnlyCollection<string> availableActionIds, WheelPins pins)
+    public WheelSet Build(IReadOnlyList<string> files, string language, IReadOnlyCollection<string> availableActionIds, WheelPins pins, WheelLayouts? layouts = null)
     {
         var own = Build(files, language, availableActionIds);
         if (files.Count == 0) return own;
@@ -86,12 +115,9 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
         var addable = new Dictionary<WheelKind, IReadOnlyList<Wedge>>();
         foreach (var kind in Enum.GetValues<WheelKind>())
         {
-            var wedges = own.Of(kind).ToList();
-            foreach (var id in pins.For(kind, category))
-            {
-                if (wedges.Any(w => w.Id == id) || !everything.TryGetValue(id, out var pinned)) continue;
-                wedges.Add(pinned with { Pinned = true });
-            }
+            var wedges = WithPins(own.Of(kind), kind, category, pins, everything);
+            // the user's arrangement: their order, and hidden items out of the wheel (they stay reachable through "+ Add")
+            wedges = (layouts ?? WheelLayouts.None).For(kind, category).Apply(wedges).ToList();
 
             var onWheel = wedges.Select(w => w.Id).ToHashSet(StringComparer.Ordinal);
             var rest = everything.Values.Where(w => !onWheel.Contains(w.Id)).ToList();
@@ -105,6 +131,40 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
             Category = category,
             Addable = addable,
         };
+    }
+
+    private static List<Wedge> WithPins(IReadOnlyList<Wedge> own, WheelKind kind, string category, WheelPins pins, IReadOnlyDictionary<string, Wedge> everything)
+    {
+        var wedges = own.ToList();
+        foreach (var id in pins.For(kind, category))
+        {
+            if (wedges.Any(w => w.Id == id) || !everything.TryGetValue(id, out var pinned)) continue;
+            wedges.Add(pinned with { Pinned = true });
+        }
+        return wedges;
+    }
+
+    /// <summary>
+    /// Everything that can be arranged on one wheel for one kind of input (Settings → Arrange the wheels): the wheel's own items for a typical
+    /// file of that category plus the items pinned to it, in their default order, without "+ Add".
+    /// </summary>
+    public IReadOnlyList<Wedge> ArrangeableFor(WheelKind kind, string category, string language, IReadOnlyCollection<string> availableActionIds, WheelPins pins)
+    {
+        // Every input of the category contributes (a JPG has no "JPG" wedge, a PNG does): the union, in catalog order.
+        var samples = catalog.Category(category)?.Inputs.Select(e => $"sample.{e}").ToList() ?? ["sample"];
+        var everything = new Dictionary<string, Wedge>(StringComparer.Ordinal);
+        var onWheel = new Dictionary<string, Wedge>(StringComparer.Ordinal);
+        foreach (var sample in samples)
+        {
+            var own = Build([sample], language, availableActionIds);
+            foreach (var wedge in own.Convert.Concat(own.Tools).Concat(own.Actions)) everything.TryAdd(wedge.Id, wedge);
+            foreach (var wedge in own.Of(kind)) onWheel.TryAdd(wedge.Id, wedge);
+        }
+        var outputs = catalog.Category(category)?.Outputs.ToList() ?? [];
+        var tools = catalog.Tools.Select(t => t.Id).ToList();
+        int Rank(Wedge w) => Operation.IsConvert(w.Id) ? outputs.IndexOf(Operation.TargetOf(w.Id)) : 1000 + tools.IndexOf(w.Id);
+        var ordered = kind == WheelKind.Actions ? onWheel.Values.ToList() : onWheel.Values.OrderBy(Rank).ToList();
+        return WithPins(ordered, kind, category, pins, everything);
     }
 
     /// <summary>Each wheel's own items only (no pins, no "+ Add"): the catalog's view of what the selection supports.</summary>
@@ -135,7 +195,8 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
     private List<Wedge> BuildConvert(CatalogCategory category, List<string> extensions)
     {
         var wedges = new List<Wedge>();
-        foreach (var target in category.Outputs)
+        // direct outputs, then the targets DropFlow reaches by chaining conversions (catalog "routes")
+        foreach (var target in category.Outputs.Concat(catalog.RoutedTargets(category.Id)))
         {
             var op = Operation.Convert(target);
             var converters = extensions.Select(e => registry.Find(op, e)).ToList();
@@ -156,6 +217,15 @@ public sealed class WheelBuilder(ToolCatalog catalog, ToolRegistry registry, IEn
             if (converters.Any(c => c is null)) continue;
 
             wedges.Add(MakeWedge(tool.Id, WheelKind.Tools, tool.Name(language), tool.Id, converters[0]!, tool.Multi));
+        }
+
+        foreach (var preset in Presets?.Invoke().Where(p => p.OnWheel) ?? [])
+        {
+            if (preset.Categories is { Count: > 0 } cats && (categoryId is null || !cats.Contains(categoryId))) continue;
+            var op = preset.PresetOperation;
+            var converters = extensions.Select(e => registry.Find(op, e)).ToList();
+            if (converters.Count == 0 || converters.Any(c => c is null)) continue;
+            wedges.Add(MakeWedge(op, WheelKind.Tools, preset.DisplayName(language), op, converters[0]!, multi: false));
         }
         return wedges;
     }

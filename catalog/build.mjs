@@ -63,6 +63,20 @@ for (const c of cat.categories) {
 }
 if (!cat.categories.find((c) => c.id === "pdf").outputs.includes("pptx")) fail("parity: pdf → pptx");
 
+// ---- routes: targets reached by chaining conversions (src/DropFlow.Core/Routing) ----
+let routed = 0;
+const allOutputs = new Set(cat.categories.flatMap((c) => c.outputs));
+for (const [id, targets] of Object.entries(cat.routes ?? {})) {
+  if (id.startsWith("_")) continue;
+  const c = cats.get(id);
+  if (!c) { fail(`routes: unknown category ${id}`); continue; }
+  for (const t of targets) {
+    if (c.outputs.includes(t)) fail(`routes: ${id} → ${t} is already a direct output`);
+    if (!allOutputs.has(t)) fail(`routes: ${t} is no category's output, so no last step can write it`);
+    routed += c.inputs.filter((i) => i !== t).length;
+  }
+}
+
 const toolCount = cat.tools.length;
 const TARGET = { conversions: 275, tools: 26, actions: 6 };
 if (conversions < TARGET.conversions) fail(`conversions ${conversions} < ${TARGET.conversions}`);
@@ -79,6 +93,10 @@ md += `## Conversions\n\n| Category | Inputs | Outputs | Pairs | Phase | Platfor
 for (const [c, n] of perCat) {
   const late = c.lateOutputs ? ` (${Object.entries(c.lateOutputs).map(([k, v]) => `${k.toUpperCase()}: phase ${v}`).join(", ")})` : "";
   md += `| ${c.en} | ${c.inputs.join(", ")} | ${c.outputs.join(", ")}${late} | ${n} | ${c.phase} | ${c.platforms.join(", ")} |\n`;
+}
+if (routed) {
+  md += `\n**Multi-step conversions** (DropFlow chains 2-3 conversions through a temporary file; ${routed} more pairs on Windows):\n\n| Category | Also converts to |\n|---|---|\n`;
+  for (const [id, targets] of Object.entries(cat.routes)) if (!id.startsWith("_")) md += `| ${cats.get(id).en} | ${targets.join(", ")} |\n`;
 }
 md += `\nWindows adaptations: Pages / Keynote / Numbers are **input-only**; AirDrop → Windows share sheet; Terminal → Windows Terminal/PowerShell.\n\n`;
 md += `## Tools and actions by phase\n\n`;

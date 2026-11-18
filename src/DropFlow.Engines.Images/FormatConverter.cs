@@ -3,7 +3,8 @@ using DropFlow.Core.Operations;
 namespace DropFlow.Engines.Images;
 
 /// <summary>
-/// Image format conversion: <c>convert:jpg|png|webp|heic|tiff|avif|bmp|gif|ico</c>.
+/// Image format conversion: <c>convert:jpg|png|webp|heic|tiff|avif|bmp|gif|ico|jxl|jp2|psd|tga|qoi</c> from every image input (camera RAW,
+/// Photoshop, DICOM, FITS, HDR/EXR ... included; see <see cref="ImageIo.Inputs"/>).
 /// Options (all optional, UI never asks): <c>quality</c> 1-100 (lossy targets, default 90), <c>stripMetadata</c> bool.
 /// Orientation is applied and transparency is flattened onto white when the target has no alpha channel.
 /// </summary>

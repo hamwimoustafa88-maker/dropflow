@@ -316,10 +316,38 @@ export function AppShell() {
   }, []);
 
   // ---- keyboard: tap Shift / Ctrl / Alt to switch wheels, Esc to close ------------------------------------------
-  const live = useRef({ open: false, pending: false, adding: false, files: 0 });
+  const live = useRef({ open: false, pending: false, adding: false, files: 0, pages: 1 });
   useEffect(() => {
-    live.current = { open, pending: pending !== null, adding, files: files.length };
+    live.current = { open, pending: pending !== null, adding, files: files.length, pages: pages.length };
   });
+  /** Turns a paged wheel by one page (+1 next, -1 previous), wrapping around like the "more" wedge. */
+  const flipPage = useCallback((step: 1 | -1) => {
+    const n = live.current.pages;
+    if (n < 2) return;
+    setPage((p) => (((Math.min(p, n - 1) + step) % n) + n) % n);
+    setFocusToken((k) => k + 1);
+  }, []);
+  // Mouse wheel over the open wheel turns its pages (desktop app: the mouse wheel flips the wheel's face). Tab stays focus
+  // navigation here: on a web page it must keep moving between wedges and controls.
+  const wheelArea = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = wheelArea.current;
+    if (!el) return;
+    let sum = 0;
+    let last = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (live.current.pages < 2 || !live.current.open || live.current.adding || live.current.pending) return;
+      e.preventDefault();
+      sum += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      const now = Date.now();
+      if (Math.abs(sum) < 50 || now - last < 250) return;
+      flipPage(sum > 0 ? 1 : -1);
+      sum = 0;
+      last = now;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [flipPage, open, adding]);
   const selectWheel = useCallback((kind: WheelKind) => {
     setWheelKind(kind);
     setPage(0);
@@ -336,6 +364,11 @@ export function AppShell() {
         return;
       }
       tap = null;
+      if ((e.key === "PageDown" || e.key === "PageUp") && live.current.open && !live.current.adding && !live.current.pending && live.current.pages > 1 && !isTyping(e.target)) {
+        e.preventDefault();
+        flipPage(e.key === "PageDown" ? 1 : -1);
+        return;
+      }
       if (e.key === "Escape") {
         if (live.current.pending) setPending(null);
         else if (live.current.adding) {
@@ -358,7 +391,7 @@ export function AppShell() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, [selectWheel]);
+  }, [selectWheel, flipPage]);
 
   // ---- running things ------------------------------------------------------------------------------------------
   const converterFor = useCallback((operation: string): Converter | undefined => registry.find(operation, extensionOf(files[0]?.name ?? "")), [files]);
@@ -715,7 +748,7 @@ export function AppShell() {
                     }}
                   />
                 ) : open ? (
-                  <>
+                  <div ref={wheelArea}>
                     <Wheel
                       items={items}
                       label={`${t(`wheels.${activeKind}`)}${pageLabel}`}
@@ -729,7 +762,12 @@ export function AppShell() {
                       focusToken={focusToken}
                     />
                     {wedges.length === 0 && !engineLoading ? <p className="mt-2 text-center font-semibold text-muted">{t("wheel.empty")}</p> : null}
-                  </>
+                    {pages.length > 1 ? (
+                      <p className="mt-2 text-center text-sm text-muted" data-testid="wheel-page-hint">
+                        {t("wheel.pageHint", { page: pageIndex + 1, total: pages.length })}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="glass mx-auto grid aspect-square w-full max-w-md place-items-center rounded-full">
                     <button

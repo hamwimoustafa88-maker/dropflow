@@ -19,6 +19,10 @@ import { jsonLdString, softwareJsonLd } from "@/lib/seo";
 import { REPO_URL } from "@/lib/site";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SiteCredit } from "@/components/SiteCredit";
+import { Steps } from "@/components/Steps";
+import { WhatsNew } from "@/components/WhatsNew";
+import { AtAGlance } from "@/components/AtAGlance";
+import { PAIRS, formatName } from "@/lib/pairs";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -31,8 +35,8 @@ function Hero() {
   // overflow-x-clip (not hidden): an opened download list may extend below the hero.
   return (
     <section id="top" className="relative overflow-x-clip">
+      <div aria-hidden="true" className="blobs" />
       <div aria-hidden="true" className="bg-grid absolute inset-0" />
-      <div aria-hidden="true" className="hero-glow absolute inset-0" />
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-8 lg:pb-28 lg:pt-24">
         <div>
           <p className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
@@ -78,6 +82,7 @@ function Numbers() {
 
 function Formats() {
   const t = useTranslations("formats");
+  const tp = useTranslations("pairs");
   const locale = useLocale() as Locale;
   return (
     <section id="formats" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:pb-24">
@@ -85,6 +90,18 @@ function Formats() {
       <div className="mt-8">
         <CategoryExplorer categories={exploreCategories(locale)} />
       </div>
+      <nav aria-label={tp("popular")} className="mt-8" data-testid="popular-links">
+        <p className="text-sm font-semibold text-muted">{tp("popular")}</p>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {PAIRS.map((p) => (
+            <li key={p.slug}>
+              <Link href={`/convert/${p.slug}`} prefetch={false} className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3.5 text-sm font-medium transition-colors duration-200 hover:border-primary hover:text-primary">
+                {tp("short", { from: formatName(p.from, locale), to: formatName(p.to, locale) })}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </section>
   );
 }
@@ -93,7 +110,7 @@ function Cta() {
   const t = useTranslations("cta");
   return (
     <section className="relative overflow-x-clip">
-      <div aria-hidden="true" className="hero-glow absolute inset-0 opacity-70" />
+      <div aria-hidden="true" className="blobs" />
       <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 lg:py-32">
         <h2 className="reveal text-gradient pb-3 text-5xl font-bold tracking-tight sm:text-7xl">{t("title")}</h2>
         <div className="mt-10">
@@ -173,9 +190,12 @@ export default async function Home({ params }: Props) {
       <main>
         <Hero />
         <Marquee />
+        <Steps />
         <Numbers />
         <Features />
+        <WhatsNew />
         <Formats />
+        <AtAGlance />
         <About />
         <Developers />
         <Faq />

@@ -11,7 +11,25 @@ public sealed record HistoryEntry(
     IReadOnlyList<string> Outputs,
     bool Success,
     string? Error = null,
-    bool Undone = false);
+    bool Undone = false,
+    IReadOnlyDictionary<string, object?>? Options = null)
+{
+    /// <summary>
+    /// The options worth keeping for "Retry": everything except passwords and folders (never written to history.json). Values are reduced to
+    /// text, numbers and booleans so the file stays plain JSON.
+    /// </summary>
+    public static IReadOnlyDictionary<string, object?>? SafeOptions(IReadOnlyList<ToolOption> specs, IReadOnlyDictionary<string, object?>? values)
+    {
+        if (values is null || values.Count == 0) return null;
+        var secret = specs.Where(o => o.Kind is ToolOptionKind.Password or ToolOptionKind.Folder).Select(o => o.Key).ToHashSet();
+        var kept = values.Where(v => !secret.Contains(v.Key) && v.Value is null or string or bool or int or long or double or float or decimal)
+            .ToDictionary(v => v.Key, v => v.Value is int or long or float or decimal ? Convert.ToDouble(v.Value, System.Globalization.CultureInfo.InvariantCulture) : v.Value);
+        return kept.Count == 0 ? null : kept;
+    }
+
+    /// <summary>True when the run needed a password the history does not keep (Retry then asks again).</summary>
+    public static bool NeededSecret(IReadOnlyList<ToolOption> specs) => specs.Any(o => o.Kind == ToolOptionKind.Password);
+}
 
 /// <summary>Remembers what DropFlow produced so the user can open the folder or undo (move the outputs to the Recycle Bin).</summary>
 public sealed class HistoryStore(string path, int maxEntries = 500, TimeProvider? time = null)
@@ -26,11 +44,11 @@ public sealed class HistoryStore(string path, int maxEntries = 500, TimeProvider
         get { lock (_gate) return Load().ToList(); }
     }
 
-    public HistoryEntry Add(string operation, IReadOnlyList<string> inputs, ConversionResult result)
+    public HistoryEntry Add(string operation, IReadOnlyList<string> inputs, ConversionResult result, IReadOnlyDictionary<string, object?>? safeOptions = null)
     {
         lock (_gate)
         {
-            var entry = new HistoryEntry(Guid.NewGuid(), _time.GetUtcNow(), operation, inputs, result.Outputs, result.Success, result.Error);
+            var entry = new HistoryEntry(Guid.NewGuid(), _time.GetUtcNow(), operation, inputs, result.Outputs, result.Success, result.Error, Options: safeOptions);
             var list = Load();
             list.Insert(0, entry);
             if (list.Count > maxEntries) list.RemoveRange(maxEntries, list.Count - maxEntries);
@@ -72,6 +90,8 @@ public sealed class HistoryStore(string path, int maxEntries = 500, TimeProvider
         try
         {
             _entries = File.Exists(path) ? JsonSerializer.Deserialize<List<HistoryEntry>>(File.ReadAllText(path), Options) ?? [] : [];
+            // options come back as JsonElement: make them plain values again for Retry
+            _entries = _entries.Select(e => e.Options is null ? e : e with { Options = Automation.RecipeStore.Normalize(e.Options) }).ToList();
         }
         catch (JsonException)
         {

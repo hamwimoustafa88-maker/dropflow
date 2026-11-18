@@ -20,6 +20,8 @@ internal sealed class FakeView : IWheelView
     public IReadOnlyList<Wedge>? AddList { get; private set; }
     public void ShowAddList(WheelKind kind, IReadOnlyList<Wedge> addable) { AddList = addable; Log.Add($"add-list {kind} {addable.Count}"); }
     public void Hide() { Visible = false; Log.Add("hide"); }
+    public List<(WheelFace Face, bool HasBack)> Faces { get; } = [];
+    public void ShowFace(WheelFace face, bool hasBack) => Faces.Add((face, hasBack));
 }
 
 /// <summary>Collects scheduled actions; the test decides when time "passes".</summary>
@@ -335,5 +337,90 @@ public class WheelSessionTests
         var r = new Rig();
         r.Session.ShowFor([@"C:\a.png"], WheelKind.Convert, 50, 60);
         Assert.Equal(["show Convert @50,60", "items Convert 3 files=1"], r.View.Log);
+    }
+
+    // ---- back face: a wheel with more items than fit on its front turns over (Tab / mouse wheel) to show the rest ----
+
+    [Fact]
+    public void A_wheel_that_fits_has_no_back_face_and_flipping_does_nothing()
+    {
+        var r = new Rig();
+        r.Session.ShowFor([@"C:.png"], WheelKind.Convert, 0, 0);
+
+        Assert.False(r.Session.HasBack);
+        Assert.Equal((WheelFace.Front, false), r.View.Faces[^1]);
+        r.Session.Flip();
+        Assert.Equal(WheelFace.Front, r.Session.Face);
+        Assert.Equal(3, r.Session.Items.Count);
+    }
+
+    [Fact]
+    public void A_long_wheel_keeps_its_first_items_in_front_and_the_rest_with_add_on_the_back()
+    {
+        var r = new Rig { Settings = new AppSettings { WheelFrontMax = 1 } };
+        r.Session.ShowFor([@"C:.png"], WheelKind.Convert, 0, 0);
+
+        Assert.True(r.Session.HasBack);
+        Assert.Equal(["convert:jpg"], r.Session.Items.Select(w => w.Id));
+        Assert.Equal((WheelFace.Front, true), r.View.Faces[^1]);
+
+        r.Session.Flip();
+
+        Assert.Equal(WheelFace.Back, r.Session.Face);
+        Assert.Equal(["convert:webp", Wedge.AddId], r.Session.Items.Select(w => w.Id));
+        Assert.Equal(["convert:webp", Wedge.AddId], r.View.LastItems.Select(w => w.Id));
+        Assert.Equal((WheelFace.Back, true), r.View.Faces[^1]);
+        r.Session.Flip();
+        Assert.Equal(WheelFace.Front, r.Session.Face);
+    }
+
+    [Fact]
+    public async Task Dropping_on_a_back_face_item_runs_that_item()
+    {
+        var r = new Rig { Settings = new AppSettings { WheelFrontMax = 1 } };
+        r.Session.OnKeyTapped(TriggerKey.Shift, 0, 0);
+        r.Session.OnFilesEntered([@"C:.png"]);
+        r.Session.Flip();
+
+        await r.Session.OnItemDroppedAsync([@"C:.png"], 0);
+
+        Assert.Equal("convert:webp", Assert.Single(r.Selected).Wedge.Id);
+    }
+
+    [Fact]
+    public void Switching_wheels_or_opening_again_starts_on_the_front()
+    {
+        var r = new Rig { Settings = new AppSettings { WheelFrontMax = 1 } };
+        r.Session.ShowFor([@"C:.png"], WheelKind.Convert, 0, 0);
+        r.Session.Flip();
+        r.Session.SwitchTo(WheelKind.Tools);
+        Assert.Equal(WheelFace.Front, r.Session.Face);
+
+        r.Session.Flip();
+        r.Session.Dismiss();
+        r.Session.ShowFor([@"C:.png"], WheelKind.Convert, 0, 0);
+        Assert.Equal(WheelFace.Front, r.Session.Face);
+    }
+
+    [Fact]
+    public void Flipping_is_ignored_while_hidden_or_while_the_add_list_is_open()
+    {
+        var r = new Rig { Settings = new AppSettings { WheelFrontMax = 1 } };
+        r.Session.Flip();
+        Assert.Equal(WheelFace.Front, r.Session.Face);
+    }
+
+    [Theory]
+    [InlineData(5, 10, 5, 0)]     // fits: everything in front
+    [InlineData(10, 10, 10, 0)]
+    [InlineData(11, 10, 10, 1)]   // one too many: the last goes to the back
+    [InlineData(25, 8, 8, 17)]
+    public void Faces_split_by_the_front_size(int count, int frontMax, int front, int back)
+    {
+        var items = Enumerable.Range(0, count).Select(i => new Wedge($"w{i}", WheelKind.Tools, $"W{i}", $"w{i}")).ToList();
+        var faces = WheelFaces.Split(items, frontMax);
+        Assert.Equal(front, faces.Front.Count);
+        Assert.Equal(back, faces.Back.Count);
+        Assert.Equal(items, faces.Front.Concat(faces.Back));
     }
 }

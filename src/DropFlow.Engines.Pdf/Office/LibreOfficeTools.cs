@@ -132,7 +132,7 @@ internal sealed class LibreOfficeTools(IEngineProvider engines, IEngineRunner ru
             }
             case LoPre.EpubToHtml:
             {
-                var book = EpubReader.Read(input, EpubImages.ToFolder, Path.Combine(inputDir, "images"));
+                var book = Books.BookReader.Read(input, EpubImages.ToFolder, Path.Combine(inputDir, "images"));
                 var path = Path.Combine(inputDir, "input.html");
                 File.WriteAllText(path, EpubReader.ToHtmlDocument(book), TextFile.Utf8);
                 return path;

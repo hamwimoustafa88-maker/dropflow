@@ -15,8 +15,8 @@ namespace DropFlow.Engines.Pdf.Office;
 /// </summary>
 internal static partial class DocumentTools
 {
-    // The single list of in-process document pairs lives in ManagedPairs (LibreOffice is never asked for these); EPUB is handled by EpubTools.
-    private static readonly (string Input, string[] Targets)[] Pairs = ManagedPairs.Documents.Where(d => d.Input != "epub").ToArray();
+    // The single list of in-process document pairs lives in ManagedPairs (LibreOffice is never asked for these); e-books are handled by BookTools.
+    private static readonly (string Input, string[] Targets)[] Pairs = ManagedPairs.Documents.Where(d => !Books.BookFormats.IsBook(d.Input)).ToArray();
 
     public static IEnumerable<OperationSpec> Specs()
     {

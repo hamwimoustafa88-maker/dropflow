@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using DropFlow.Core.App;
 using DropFlow.Core.Catalog;
 using DropFlow.Core.History;
+using DropFlow.Core.Localization;
 using DropFlow.Core.Operations;
 using DropFlow.Core.Queue;
 using DropFlow.Core.Registry;
@@ -110,6 +111,9 @@ internal sealed class AppController : IDesktopPrompts
             ? new Engines.Common.EngineLocator(_dirs.Data)
             : new UnixEngineProvider(_session.Os, AppContext.BaseDirectory.TrimEnd('/', '\\'), _dirs.Data);
         _registry = new ToolRegistry().Register(CreateModules(_engines));
+        _registry.Register(new Core.Routing.RouteConverter(_registry, _catalog, _engines)); // chains such as EPUB → PDF → PNG
+        var presets = Core.Automation.BuiltInRecipes.All.Where(r => r.OnWheel).ToList();
+        _registry.Register(new Core.Routing.PresetConverter(_registry, _catalog, () => presets)); // ready-made presets (WhatsApp video…)
         _queue = new JobQueue(_registry, _catalog, _settings.MaxConcurrency);
         _history = new HistoryStore(_dirs.HistoryFile);
         _disposer = _session.Os switch
@@ -118,7 +122,7 @@ internal sealed class AppController : IDesktopPrompts
             OsKind.MacOS => new FolderTrash(AppDirectories.Join(_dirs.Home, ".Trash")),
             _ => new DeletingDisposer(),
         };
-        _builder = new WheelBuilder(_catalog, _registry, _engines);
+        _builder = new WheelBuilder(_catalog, _registry, _engines) { Presets = () => presets };
 
         _wheel = new WheelWindow { UseOverrideRedirect = DragWatcherFactory.Choose(_session) is DragWatcherKind.X11 or DragWatcherKind.GnomeShell };
         _presenter = new WheelPresenter(_wheel, _loc);
@@ -166,6 +170,8 @@ internal sealed class AppController : IDesktopPrompts
         .. Engines.Media.MediaModule.Create(engines),
         .. Engines.Pdf.PdfModule.Create(engines),
         .. Engines.Archive.ArchiveModule.Create(engines),
+        .. Engines.Data.DataModule.Create(engines),
+        .. Engines.Fonts.FontsModule.Create(engines),
     ];
 
     /// <summary>GNOME Shell extension, file-manager entries and the login item, kept in step with the settings.</summary>
@@ -312,7 +318,7 @@ internal sealed class AppController : IDesktopPrompts
         if (!result.Success && result.Outputs.Count == 0)
         {
             Log.Error($"{batch.Job.Operation} failed: {result.Error}");
-            ShowToast(_loc.Format("result.failed", result.Error ?? ""), null, null, [], TimeSpan.FromSeconds(10));
+            ShowToast(_loc.Format("result.failed", NoteText.Localize(result.Error, _loc) ?? ""), null, null, [], TimeSpan.FromSeconds(10));
             return;
         }
 
@@ -325,8 +331,8 @@ internal sealed class AppController : IDesktopPrompts
         }
         var title = result.Success
             ? _loc.Format("result.done", _loc.Format("result.files", Math.Max(1, result.Outputs.Count)))
-            : _loc.Format("result.failed", result.Error ?? "");
-        ShowToast(title, result.Note ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
+            : _loc.Format("result.failed", NoteText.Localize(result.Error, _loc) ?? "");
+        ShowToast(title, NoteText.Localize(result.Note, _loc) ?? (result.Outputs.Count == 1 ? Path.GetFileName(result.Outputs[0]) : null), null, actions, TimeSpan.FromSeconds(9));
     }
 
     internal void ShowToast(string title, string? detail, double? progress, IReadOnlyList<(string Label, Action Run)> actions, TimeSpan? autoHide)
@@ -469,7 +475,7 @@ internal sealed class AppController : IDesktopPrompts
         if (errors.Count > 0) return errors;
         var loginChanged = desktop.StartAtLogin != _desktop.StartAtLogin;
         var menusChanged = desktop.FileManagerEntries != _desktop.FileManagerEntries;
-        SaveShared(shared with { PinnedItems = _settings.PinnedItems, Paused = _settings.Paused });
+        SaveShared(shared with { PinnedItems = _settings.PinnedItems, Layouts = _settings.Layouts, Paused = _settings.Paused });
         SaveDesktop(desktop);
         try
         {

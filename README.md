@@ -244,7 +244,8 @@ DropFlow is free software under the **GNU General Public License, version 3 or (
 
 ## Credits
 
-Developed by the **ScoutHub** teams; lead developer **Moustafa Al-Hamwi** (Lebanon). Contact: see [Contact](#contact).
+Developed by [ScoutHub Lab](https://scouthub.dev/en/), a digital innovation lab in Beirut, Lebanon, founded by **Moustafa Hamwi**,
+who leads development. Project page: [scouthub.dev/en/projects/dropflow](https://scouthub.dev/en/projects/dropflow/). Contact: see [Contact](#contact).
 
 DropFlow stands on the work of many projects, including FFmpeg, qpdf, Tesseract OCR, Magick.NET (ImageMagick), PDFsharp, PdfPig,
 PDFium, Open XML SDK, ClosedXML, Markdig, SharpCompress, ZXing.Net, Whisper.net (whisper.cpp), ONNX Runtime, Velopack, Avalonia,

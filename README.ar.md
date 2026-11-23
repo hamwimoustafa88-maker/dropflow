@@ -252,7 +252,8 @@ DropFlow برنامج حر وفق **رخصة جنو العمومية العام�
 
 ## الفريق والشكر
 
-من تطوير فرق **ScoutHub**، ورئيس فريق التطوير **مصطفى الحموي** (لبنان). للتواصل: انظر [التواصل](#التواصل).
+من تطوير [ScoutHub Lab](https://scouthub.dev/)، مختبر ابتكار رقمي في بيروت أسّسه **مصطفى الحموي** ويقود فريق تطويره.
+صفحة المشروع: [scouthub.dev/projects/dropflow](https://scouthub.dev/projects/dropflow/). للتواصل: انظر [التواصل](#التواصل).
 
 يقوم DropFlow على جهود مشاريع كثيرة، منها: FFmpeg وqpdf وTesseract OCR وMagick.NET ‏(ImageMagick) وPDFsharp وPdfPig وPDFium
 وOpen XML SDK وClosedXML وMarkdig وSharpCompress وZXing.Net وWhisper.net ‏(whisper.cpp) وONNX Runtime وVelopack وAvalonia

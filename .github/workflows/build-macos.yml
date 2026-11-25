@@ -30,8 +30,8 @@ jobs:
     runs-on: macos-latest   # Apple Silicon; the x64 app is cross-published and runs under Rosetta for the smoke check
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -63,7 +63,7 @@ jobs:
           done
           ls -la build/macos/snapshots
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dropflow-macos
           path: |
@@ -72,7 +72,7 @@ jobs:
             build/macos/packages/SHA256SUMS-macos.txt
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dropflow-macos-snapshots

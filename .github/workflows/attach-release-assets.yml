@@ -23,16 +23,16 @@ jobs:
   attach:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { name: win-arm64-release, path: dl/win-arm64, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { name: dropflow-macos, path: dl/macos, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { name: dropflow-linux, path: dl/linux, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { name: DropFlow-android.apk, path: dl/android, run-id: "${{ inputs.run_id }}", github-token: "${{ secrets.GITHUB_TOKEN }}" }
 

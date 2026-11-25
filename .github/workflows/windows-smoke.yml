@@ -14,8 +14,8 @@ jobs:
         os: [windows-2022, windows-2025]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - name: OS version
@@ -46,7 +46,7 @@ jobs:
           if (-not $log) { throw "the app did not report 'input hooks installed' within 40 s" }
           if ($p.HasExited) { throw "the app exited early with code $($p.ExitCode)" }
           "OK: running on $((Get-CimInstance Win32_OperatingSystem).BuildNumber), hooks installed."
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: screen-${{ matrix.os }}
